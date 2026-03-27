@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StatusTime — Automatic Time Tracking via Slack &amp; Teams</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#080c14;--surface:#0f1623;--surface2:#151e2e;
+      --border:rgba(99,179,237,0.12);--accent:#38bdf8;--accent2:#818cf8;
+      --green:#34d399;--text:#e2e8f0;--muted:#64748b;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;line-height:1.6;overflow-x:hidden}
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;background:rgba(8,12,20,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+    .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;color:var(--accent);letter-spacing:-0.5px}
+    .logo span{color:var(--text)}
+    .nav-links{display:flex;gap:2rem;align-items:center}
+    .nav-links a{color:var(--muted);text-decoration:none;font-size:0.9rem;transition:color 0.2s}
+    .nav-links a:hover{color:var(--text)}
+    .btn-nav{background:var(--accent);color:#000;padding:0.5rem 1.25rem;border-radius:6px;font-weight:600;font-size:0.875rem;text-decoration:none;transition:opacity 0.2s}
+    .btn-nav:hover{opacity:0.85;color:#000}
+    .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6rem 1.5rem 4rem;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(56,189,248,0.08) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 80%,rgba(129,140,248,0.06) 0%,transparent 50%)}
+    .badge{display:inline-flex;align-items:center;gap:0.5rem;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);padding:0.35rem 1rem;border-radius:100px;font-size:0.8rem;color:var(--accent);font-weight:500;margin-bottom:2rem;animation:fadeUp 0.6s ease both}
+    .badge .dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+    h1{font-family:'Syne',sans-serif;font-size:clamp(2.5rem,6vw,5rem);font-weight:800;line-height:1.05;letter-spacing:-2px;margin-bottom:1.5rem;animation:fadeUp 0.6s ease 0.1s both}
+    h1 .highlight{color:var(--accent)}
+    h1 .highlight2{color:var(--accent2)}
+    .hero-sub{font-size:clamp(1rem,2vw,1.25rem);color:var(--muted);max-width:560px;margin:0 auto 2.5rem;animation:fadeUp 0.6s ease 0.2s both}
+    .hero-cta{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;animation:fadeUp 0.6s ease 0.3s both}
+    .btn-primary{background:var(--accent);color:#000;padding:0.875rem 2rem;border-radius:8px;font-weight:700;font-size:1rem;text-decoration:none;border:none;cursor:pointer;transition:transform 0.15s,opacity 0.15s;display:inline-flex;align-items:center;gap:0.5rem}
+    .btn-primary:hover{transform:translateY(-1px);opacity:0.9}
+    .btn-secondary{background:transparent;color:var(--text);padding:0.875rem 2rem;border-radius:8px;font-weight:600;font-size:1rem;text-decoration:none;border:1px solid var(--border);transition:border-color 0.2s,background 0.2s}
+    .btn-secondary:hover{border-color:var(--accent);background:rgba(56,189,248,0.05)}
+    .hero-meta{margin-top:3rem;color:var(--muted);font-size:0.85rem;animation:fadeUp 0.6s ease 0.4s both}
+    .preview-wrap{max-width:1000px;margin:0 auto;padding:1rem 1.5rem 5rem;position:relative}
+    .preview-wrap::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 60%,var(--bg));z-index:2;pointer-events:none}
+    .preview-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.5)}
+    .preview-topbar{background:var(--surface2);padding:0.75rem 1rem;display:flex;align-items:center;gap:0.5rem;border-bottom:1px solid var(--border)}
+    .dot-red,.dot-yellow,.dot-green{width:10px;height:10px;border-radius:50%}
+    .dot-red{background:#ff5f57}.dot-yellow{background:#febc2e}.dot-green{background:#28c840}
+    .preview-url{background:rgba(255,255,255,0.05);border-radius:4px;padding:0.2rem 0.75rem;font-size:0.75rem;color:var(--muted);margin-left:0.5rem}
+    .preview-body{padding:1.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+    .stat-mini{background:var(--surface2);border-radius:10px;padding:1rem;border:1px solid var(--border)}
+    .stat-mini .label{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em}
+    .stat-mini .value{font-family:'Syne',sans-serif;font-size:1.75rem;font-weight:800;margin-top:0.25rem}
+    .stat-mini .value.green{color:var(--green)}.stat-mini .value.blue{color:var(--accent)}.stat-mini .value.purple{color:var(--accent2)}
+    .user-row{display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)}
+    .user-row:last-child{border-bottom:none}
+    .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#000;flex-shrink:0}
+    .user-info{flex:1}.user-info .name{font-size:0.85rem;font-weight:500}.user-info .status{font-size:0.7rem;color:var(--muted)}
+    .hours-bar{display:flex;align-items:center;gap:0.5rem}.bar-bg{width:80px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden}.bar-fill{height:100%;background:var(--accent);border-radius:3px}.hours-label{font-size:0.75rem;color:var(--muted);width:36px;text-align:right}
+    .preview-users{grid-column:1/-1;background:var(--surface2);border-radius:10px;padding:1rem;border:1px solid var(--border)}
+    .preview-users h4{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .logos{text-align:center;padding:2rem 1.5rem 4rem}
+    .logos p{color:var(--muted);font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:1.5rem}
+    .logo-row{display:flex;align-items:center;justify-content:center;gap:3rem;flex-wrap:wrap}
+    .logo-item{display:flex;align-items:center;gap:0.5rem;color:var(--muted);font-weight:600;font-size:0.95rem;opacity:0.6}
+    .logo-icon{width:28px;height:28px}
+    section{max-width:1100px;margin:0 auto;padding:5rem 1.5rem}
+    .section-label{color:var(--accent);font-size:0.8rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem}
+    .section-title{font-family:'Syne',sans-serif;font-size:clamp(1.75rem,4vw,2.75rem);font-weight:800;letter-spacing:-1px;margin-bottom:1rem}
+    .section-sub{color:var(--muted);font-size:1.05rem;max-width:500px}
+    .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;margin-top:3rem}
+    .step{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.75rem;transition:border-color 0.2s}
+    .step:hover{border-color:rgba(56,189,248,0.3)}
+    .step-num{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--accent);opacity:0.3;margin-bottom:0.75rem}
+    .step h3{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:0.5rem}
+    .step p{color:var(--muted);font-size:0.9rem}
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;margin-top:3rem}
+    .feat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.75rem}
+    .feat-icon{font-size:1.75rem;margin-bottom:1rem}
+    .feat h3{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;margin-bottom:0.5rem}
+    .feat p{color:var(--muted);font-size:0.875rem}
+    .pricing-card{max-width:420px;margin:3rem auto 0;background:var(--surface);border:1.5px solid var(--accent);border-radius:16px;padding:2.5rem;text-align:center;box-shadow:0 0 60px rgba(56,189,248,0.08)}
+    .price{font-family:'Syne',sans-serif;font-size:3.5rem;font-weight:800;color:var(--accent);margin:1rem 0 0.25rem}
+    .price-sub{color:var(--muted);font-size:0.9rem;margin-bottom:2rem}
+    .feat-list{list-style:none;text-align:left;margin-bottom:2rem}
+    .feat-list li{display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.9rem}
+    .feat-list li:last-child{border-bottom:none}
+    .feat-list .check{color:var(--green);font-size:1rem;flex-shrink:0}
+    .trial-note{color:var(--muted);font-size:0.8rem;margin-top:1rem}
+    footer{border-top:1px solid var(--border);padding:2rem 1.5rem;text-align:center;color:var(--muted);font-size:0.85rem}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:100%;max-width:420px;position:relative}
+    .modal h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;margin-bottom:1.5rem}
+    .modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.25rem}
+    .form-group{margin-bottom:1rem}
+    .form-group label{display:block;font-size:0.85rem;color:var(--muted);margin-bottom:0.4rem}
+    .form-group input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;color:var(--text);font-size:0.95rem;outline:none;transition:border-color 0.2s}
+    .form-group input:focus{border-color:var(--accent)}
+    .form-tabs{display:flex;gap:0;margin-bottom:1.5rem;background:var(--surface2);border-radius:8px;padding:3px}
+    .form-tab{flex:1;padding:0.5rem;text-align:center;border-radius:6px;cursor:pointer;font-size:0.875rem;font-weight:500;color:var(--muted);transition:all 0.2s;border:none;background:none}
+    .form-tab.active{background:var(--accent);color:#000;font-weight:700}
+    .error-msg{color:#f87171;font-size:0.8rem;margin-top:0.5rem;display:none}
+    .error-msg.show{display:block}
+    @media(max-width:600px){nav .nav-links{display:none}.preview-body{grid-template-columns:1fr}.logo-row{gap:1.5rem}}
+  </style>
+</head>
+<body>
+<nav>
+  <div class="logo">Status<span>Time</span></div>
+  <div class="nav-links">
+    <a href="#how-it-works">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a class="btn-nav" href="#" onclick="openModal()">Get Started</a>
+  </div>
+</nav>
+<div class="hero">
+  <div class="badge"><span class="dot"></span> Now live — Slack &amp; Microsoft Teams</div>
+  <h1>Track remote hours<br><span class="highlight">automatically</span> via<br><span class="highlight2">status changes</span></h1>
+  <p class="hero-sub">StatusTime reads your team's Slack and Teams presence to calculate exact working hours — no timers, no manual input, no friction.</p>
+  <div class="hero-cta">
+    <a href="#" class="btn-primary" onclick="openModal()">Start free 14-day trial →</a>
+    <a href="#how-it-works" class="btn-secondary">See how it works</a>
+  </div>
+  <p class="hero-meta">$9 / user / month &nbsp;·&nbsp; No credit card for trial &nbsp;·&nbsp; Cancel anytime</p>
+</div>
+<div class="preview-wrap">
+  <div class="preview-card">
+    <div class="preview-topbar">
+      <div class="dot-red"></div><div class="dot-yellow"></div><div class="dot-green"></div>
+      <div class="preview-url">app.statustime.io/dashboard</div>
+    </div>
+    <div class="preview-body">
+      <div class="stat-mini"><div class="label">Today's hours</div><div class="value green">42.5h</div></div>
+      <div class="stat-mini"><div class="label">Active now</div><div class="value blue">9 / 12</div></div>
+      <div class="stat-mini"><div class="label">This week</div><div class="value purple">198h</div></div>
+      <div class="preview-users">
+        <h4>Team members — Today</h4>
+        <div class="user-row"><div class="avatar">SR</div><div class="user-info"><div class="name">Sarah R.</div><div class="status">🟢 Active · Slack</div></div><div class="hours-bar"><div class="bar-bg"><div class="bar-fill" style="width:80%"></div></div><div class="hours-label">6.4h</div></div></div>
+        <div class="user-row"><div class="avatar">JM</div><div class="user-info"><div class="name">James M.</div><div class="status">🟢 Active · Teams</div></div><div class="hours-bar"><div class="bar-bg"><div class="bar-fill" style="width:70%"></div></div><div class="hours-label">5.6h</div></div></div>
+        <div class="user-row"><div class="avatar">AL</div><div class="user-info"><div class="name">Anna L.</div><div class="status">⚪ Away · Slack</div></div><div class="hours-bar"><div class="bar-bg"><div class="bar-fill" style="width:55%;background:#818cf8"></div></div><div class="hours-label">4.4h</div></div></div>
+        <div class="user-row"><div class="avatar">TK</div><div class="user-info"><div class="name">Tom K.</div><div class="status">🟢 Active · Slack</div></div><div class="hours-bar"><div class="bar-bg"><div class="bar-fill" style="width:90%"></div></div><div class="hours-label">7.2h</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="logos">
+  <p>Works with your existing tools</p>
+  <div class="logo-row">
+    <div class="logo-item">
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="#4A154B"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.527 2.527 0 012.521 2.522v2.52H8.834zm0 1.271a2.527 2.527 0 012.521 2.521 2.527 2.527 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.527 2.527 0 01-2.522 2.521h-2.522V8.834zm-1.268 0a2.527 2.527 0 01-2.521 2.521 2.527 2.527 0 01-2.521-2.521V2.522A2.528 2.528 0 0115.165 0a2.528 2.528 0 012.521 2.522v6.312zm-2.521 10.122a2.528 2.528 0 012.521 2.522A2.528 2.528 0 0115.165 24a2.527 2.527 0 01-2.521-2.522v-2.522h2.521zm0-1.268a2.527 2.527 0 01-2.521-2.521 2.527 2.527 0 012.521-2.521h6.313A2.528 2.528 0 0124 15.165a2.528 2.528 0 01-2.522 2.521h-6.313z"/></svg> Slack
+    </div>
+    <div class="logo-item">
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="#6264A7"><path d="M24 12c0 6.627-5.373 12-12 12S0 18.627 0 12 5.373 0 12 0s12 5.373 12 12zm-6-1.5h-4.5V6h-3v4.5H6v3h4.5V18h3v-4.5H18v-3z"/></svg> Microsoft Teams
+    </div>
+    <div class="logo-item">
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="#635BFF"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/></svg> Stripe Billing
+    </div>
+  </div>
+</div>
+<section id="how-it-works">
+  <div class="section-label">How it works</div>
+  <h2 class="section-title">Zero effort for your team</h2>
+  <p class="section-sub">No apps to install, no buttons to click. If they're active on Slack or Teams, we know they're working.</p>
+  <div class="steps">
+    <div class="step"><div class="step-num">01</div><h3>Connect your workspace</h3><p>OAuth in 30 seconds. We import all your Slack or Teams users automatically.</p></div>
+    <div class="step"><div class="step-num">02</div><h3>We watch presence</h3><p>Every 5 minutes, we poll each user's status — Active, Away, or DND — and log work sessions precisely.</p></div>
+    <div class="step"><div class="step-num">03</div><h3>See hours instantly</h3><p>Open your dashboard and see who worked, for how long, every single day.</p></div>
+    <div class="step"><div class="step-num">04</div><h3>Export &amp; report</h3><p>Download CSV reports by date range. Share with payroll, clients, or keep for compliance.</p></div>
+  </div>
+</section>
+<section id="features" style="padding-top:0">
+  <div class="section-label">Features</div>
+  <h2 class="section-title">Everything you need</h2>
+  <div class="features">
+    <div class="feat"><div class="feat-icon">⚡</div><h3>Automatic status tracking</h3><p>Works silently in the background. No manual clock-ins, no browser extensions.</p></div>
+    <div class="feat"><div class="feat-icon">📊</div><h3>Per-user daily dashboard</h3><p>See hours per person per day. Sort, filter, and compare across your whole team.</p></div>
+    <div class="feat"><div class="feat-icon">📄</div><h3>CSV export &amp; reports</h3><p>Export any date range to CSV. Perfect for payroll, invoicing, and compliance.</p></div>
+    <div class="feat"><div class="feat-icon">🏖️</div><h3>Leave &amp; PTO tracking</h3><p>Managers approve leave requests. Days off excluded from work hour calculations.</p></div>
+    <div class="feat"><div class="feat-icon">🔗</div><h3>Slack + Teams support</h3><p>Connect one or both platforms. Works for hybrid teams using multiple tools.</p></div>
+    <div class="feat"><div class="feat-icon">💳</div><h3>Simple per-user billing</h3><p>$9/user/month. Scales up and down automatically as your team grows or shrinks.</p></div>
+  </div>
+</section>
+<section id="pricing" style="text-align:center;padding-top:0">
+  <div class="section-label">Pricing</div>
+  <h2 class="section-title">One plan, no surprises</h2>
+  <p class="section-sub" style="margin:0 auto">Pay only for active users. Add or remove anytime.</p>
+  <div class="pricing-card">
+    <div style="font-size:0.85rem;color:var(--muted);font-weight:500">Per user</div>
+    <div class="price">$9</div>
+    <div class="price-sub">/ user / month · billed monthly</div>
+    <ul class="feat-list">
+      <li><span class="check">✓</span> Automatic Slack &amp; Teams tracking</li>
+      <li><span class="check">✓</span> Daily hours dashboard</li>
+      <li><span class="check">✓</span> CSV &amp; report exports</li>
+      <li><span class="check">✓</span> Leave &amp; PTO management</li>
+      <li><span class="check">✓</span> Unlimited history</li>
+      <li><span class="check">✓</span> Email support</li>
+    </ul>
+    <a href="#" class="btn-primary" style="width:100%;justify-content:center" onclick="openModal()">Start free 14-day trial</a>
+    <p class="trial-note">No credit card required for trial.</p>
+  </div>
+</section>
+<footer><p>© 2026 StatusTime &middot; <a href="#" style="color:var(--muted)">Privacy</a> &middot; <a href="#" style="color:var(--muted)">Terms</a></p></footer>
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2 id="modalTitle">Get started free</h2>
+    <div class="form-tabs">
+      <button class="form-tab active" onclick="setTab('register')">Sign up</button>
+      <button class="form-tab" onclick="setTab('login')">Log in</button>
+    </div>
+    <div id="registerForm">
+      <div class="form-group"><label>Company name</label><input id="regName" type="text" placeholder="Acme Inc." /></div>
+      <div class="form-group"><label>Work email</label><input id="regEmail" type="email" placeholder="you@company.com" /></div>
+      <div class="form-group"><label>Password</label><input id="regPassword" type="password" placeholder="Min 8 characters" /></div>
+      <div class="error-msg" id="regError"></div>
+      <button class="btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem" onclick="register()">Create account →</button>
+    </div>
+    <div id="loginForm" style="display:none">
+      <div class="form-group"><label>Email</label><input id="loginEmail" type="email" placeholder="you@company.com" /></div>
+      <div class="form-group"><label>Password</label><input id="loginPassword" type="password" placeholder="Password" /></div>
+      <div class="error-msg" id="loginError"></div>
+      <button class="btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem" onclick="login()">Log in →</button>
+    </div>
+  </div>
+</div>
+<script>
+const API='';
+function openModal(){document.getElementById('authModal').classList.add('open')}
+function closeModal(){document.getElementById('authModal').classList.remove('open')}
+function setTab(tab){
+  document.querySelectorAll('.form-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='register')||(i===1&&tab==='login')));
+  document.getElementById('registerForm').style.display=tab==='register'?'':'none';
+  document.getElementById('loginForm').style.display=tab==='login'?'':'none';
+  document.getElementById('modalTitle').textContent=tab==='register'?'Get started free':'Welcome back';
+}
+async function register(){
+  const name=document.getElementById('regName').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const password=document.getElementById('regPassword').value;
+  const errEl=document.getElementById('regError');
+  errEl.classList.remove('show');
+  if(!name||!email||!password){errEl.textContent='All fields required';errEl.classList.add('show');return}
+  try{
+    const res=await fetch(`${API}/api/auth/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password})});
+    const data=await res.json();
+    if(!res.ok){errEl.textContent=data.error||'Registration failed';errEl.classList.add('show');return}
+    localStorage.setItem('st_token',data.token);
+    window.location.href='/dashboard';
+  }catch(e){errEl.textContent='Network error';errEl.classList.add('show');}
+}
+async function login(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPassword').value;
+  const errEl=document.getElementById('loginError');
+  errEl.classList.remove('show');
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+    const data=await res.json();
+    if(!res.ok){errEl.textContent=data.error||'Login failed';errEl.classList.add('show');return}
+    localStorage.setItem('st_token',data.token);
+    window.location.href='/dashboard';
+  }catch(e){errEl.textContent='Network error';errEl.classList.add('show');}
+}
+document.getElementById('authModal').addEventListener('click',function(e){if(e.target===this)closeModal()});
+</script>
+</body>
+</html>
