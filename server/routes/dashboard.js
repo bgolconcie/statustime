@@ -1,19 +1,66 @@
 const router = require('express').Router();
 const db = require('../db');
 const auth = require('../middleware/auth');
+const { WebClient } = require('@slack/web-api');
 
+// Get all tracked users for org with today/week minutes
 router.get('/users', auth, async (req, res) => {
   try {
-    const result = await db.query(`SELECT tu.*, i.platform, i.team_name,
-      COALESCE(today.minutes,0) as today_minutes, COALESCE(week.minutes,0) as week_minutes
-      FROM tracked_users tu JOIN integrations i ON tu.integration_id=i.id
-      LEFT JOIN (SELECT user_id,SUM(duration_minutes) as minutes FROM time_sessions WHERE date=CURRENT_DATE GROUP BY user_id) today ON tu.id=today.user_id
-      LEFT JOIN (SELECT user_id,SUM(duration_minutes) as minutes FROM time_sessions WHERE date>=CURRENT_DATE-6 GROUP BY user_id) week ON tu.id=week.user_id
-      WHERE tu.org_id=$1 AND tu.is_active=true ORDER BY tu.display_name`, [req.org.id]);
+    const result = await db.query(
+      `SELECT tu.*, i.platform, i.team_name,
+        COALESCE(today.minutes,0) as today_minutes, COALESCE(week.minutes,0) as week_minutes
+        FROM tracked_users tu JOIN integrations i ON tu.integration_id=i.id
+        LEFT JOIN (SELECT user_id,SUM(duration_minutes) as minutes FROM time_sessions WHERE date=CURRENT_DATE GROUP BY user_id) today ON tu.id=today.user_id
+        LEFT JOIN (SELECT user_id,SUM(duration_minutes) as minutes FROM time_sessions WHERE date>=CURRENT_DATE-6 GROUP BY user_id) week ON tu.id=week.user_id
+        WHERE tu.org_id=$1 AND tu.is_active=true ORDER BY tu.display_name`,
+      [req.org.id]
+    );
     res.json(result.rows);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+// Live presence endpoint - polls Slack for current status of all users
+router.get('/presence', auth, async (req, res) => {
+  try {
+    const integrations = await db.query(
+      `SELECT i.access_token, i.platform, tu.id as user_id, tu.platform_user_id
+       FROM integrations i
+       JOIN tracked_users tu ON tu.integration_id = i.id
+       WHERE i.org_id = $1 AND tu.is_active = true`,
+      [req.org.id]
+    );
+
+    const presenceMap = {};
+
+    // Group by integration to reuse WebClient
+    const byIntegration = {};
+    for (const row of integrations.rows) {
+      const key = row.access_token;
+      if (!byIntegration[key]) byIntegration[key] = { token: key, platform: row.platform, users: [] };
+      byIntegration[key].users.push({ userId: row.user_id, platformUserId: row.platform_user_id });
+    }
+
+    for (const { token, platform, users } of Object.values(byIntegration)) {
+      if (platform === 'slack') {
+        const client = new WebClient(token);
+        for (const { userId, platformUserId } of users) {
+          try {
+            const presence = await client.users.getPresence({ user: platformUserId });
+            presenceMap[userId] = presence.presence === 'active' ? 'active' : 'away';
+          } catch {
+            presenceMap[userId] = 'unknown';
+          }
+          // Respect rate limit
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+    }
+
+    res.json(presenceMap);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// Get daily hours for all users (last N days)
 router.get('/hours', auth, async (req, res) => {
   const { days=7, userId } = req.query;
   try {
@@ -49,12 +96,14 @@ router.get('/stats', auth, async (req, res) => {
 router.get('/export', auth, async (req, res) => {
   const { from, to } = req.query;
   try {
-    const result = await db.query(`SELECT tu.display_name,tu.email,i.platform,i.team_name,ts.date,
-      SUM(ts.duration_minutes) as total_minutes, ROUND(SUM(ts.duration_minutes)::numeric/60,2) as total_hours
-      FROM time_sessions ts JOIN tracked_users tu ON ts.user_id=tu.id JOIN integrations i ON tu.integration_id=i.id
-      WHERE ts.org_id=$1 AND ts.date>=$2 AND ts.date<=$3
-      GROUP BY tu.display_name,tu.email,i.platform,i.team_name,ts.date ORDER BY ts.date DESC,tu.display_name`,
-      [req.org.id, from||'2024-01-01', to||new Date().toISOString().split('T')[0]]);
+    const result = await db.query(
+      `SELECT tu.display_name,tu.email,i.platform,i.team_name,ts.date,
+        SUM(ts.duration_minutes) as total_minutes, ROUND(SUM(ts.duration_minutes)::numeric/60,2) as total_hours
+        FROM time_sessions ts JOIN tracked_users tu ON ts.user_id=tu.id JOIN integrations i ON tu.integration_id=i.id
+        WHERE ts.org_id=$1 AND ts.date>=$2 AND ts.date<=$3
+        GROUP BY tu.display_name,tu.email,i.platform,i.team_name,ts.date ORDER BY ts.date DESC,tu.display_name`,
+      [req.org.id, from||'2024-01-01', to||new Date().toISOString().split('T')[0]]
+    );
     const csv = ['Name,Email,Platform,Team,Date,Minutes,Hours',
       ...result.rows.map(r => `"${r.display_name}","${r.email||''}","${r.platform}","${r.team_name}","${r.date}",${r.total_minutes},${r.total_hours}`)].join('\n');
     res.setHeader('Content-Type','text/csv');
@@ -65,8 +114,11 @@ router.get('/export', auth, async (req, res) => {
 
 router.get('/leave', auth, async (req, res) => {
   try {
-    const result = await db.query(`SELECT lr.*,tu.display_name,tu.avatar_url FROM leave_requests lr
-      JOIN tracked_users tu ON lr.user_id=tu.id WHERE lr.org_id=$1 ORDER BY lr.created_at DESC LIMIT 50`, [req.org.id]);
+    const result = await db.query(
+      `SELECT lr.*,tu.display_name,tu.avatar_url FROM leave_requests lr
+       JOIN tracked_users tu ON lr.user_id=tu.id WHERE lr.org_id=$1 ORDER BY lr.created_at DESC LIMIT 50`,
+      [req.org.id]
+    );
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
