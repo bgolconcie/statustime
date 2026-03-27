@@ -19,8 +19,7 @@
     .sidebar-bottom{margin-top:auto;padding:1rem 1.25rem;border-top:1px solid var(--border)}
     .org-name{font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.25rem}
     .plan-badge{font-size:0.7rem;color:var(--muted)}
-    .plan-badge.trial{color:var(--yellow)}
-    .plan-badge.active{color:var(--green)}
+    .plan-badge.trial{color:var(--yellow)}.plan-badge.active{color:var(--green)}
     .btn-upgrade{display:block;margin-top:0.75rem;background:var(--accent);color:#000;text-align:center;padding:0.5rem;border-radius:6px;font-size:0.8rem;font-weight:700;cursor:pointer;border:none;width:100%;transition:opacity 0.2s}
     .btn-upgrade:hover{opacity:0.85}
     .btn-logout{display:block;margin-top:0.5rem;background:transparent;color:var(--muted);text-align:center;padding:0.4rem;border-radius:6px;font-size:0.75rem;cursor:pointer;border:1px solid var(--border);width:100%}
@@ -50,9 +49,22 @@
     tr:last-child td{border-bottom:none}
     tr:hover td{background:rgba(255,255,255,0.015)}
     .user-cell{display:flex;align-items:center;gap:0.75rem}
-    .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#000;flex-shrink:0}
+    .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#000;flex-shrink:0;position:relative}
     .user-name{font-weight:500}.user-email{font-size:0.75rem;color:var(--muted)}
-    .platform-badge{display:inline-flex;align-items:center;gap:0.3rem;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);color:var(--accent);padding:0.2rem 0.6rem;border-radius:100px;font-size:0.7rem;font-weight:500}
+
+    /* Live status badge */
+    .status-badge{display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.7rem;border-radius:100px;font-size:0.72rem;font-weight:600;white-space:nowrap}
+    .status-badge.active{background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.25);color:var(--green)}
+    .status-badge.away{background:rgba(100,116,139,0.12);border:1px solid rgba(100,116,139,0.2);color:var(--muted)}
+    .status-badge.dnd{background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.2);color:var(--red)}
+    .status-badge.loading{background:rgba(99,179,237,0.06);border:1px solid var(--border);color:var(--muted)}
+    .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .status-dot.active{background:var(--green);box-shadow:0 0 6px var(--green);animation:glow 2s infinite}
+    .status-dot.away{background:var(--muted)}
+    .status-dot.dnd{background:var(--red)}
+    .status-dot.loading{background:var(--muted);opacity:0.4}
+    @keyframes glow{0%,100%{box-shadow:0 0 4px var(--green)}50%{box-shadow:0 0 10px var(--green)}}
+
     .hours-bar-wrap{display:flex;align-items:center;gap:0.6rem}
     .hours-bar{width:90px;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
     .hours-fill{height:100%;background:var(--accent);border-radius:3px;transition:width 0.4s}
@@ -78,6 +90,7 @@
     .toast.show{transform:translateY(0);opacity:1}
     .toast.success{border-color:rgba(52,211,153,0.3);color:var(--green)}
     .toast.error{border-color:rgba(248,113,113,0.3);color:var(--red)}
+    .presence-refreshing{font-size:0.7rem;color:var(--muted);display:flex;align-items:center;gap:0.3rem}
     @media(max-width:768px){.sidebar{display:none}.main{padding:1rem}}
   </style>
 </head>
@@ -97,35 +110,60 @@
   </div>
 </div>
 <div class="main">
+
+  <!-- OVERVIEW PAGE -->
   <div class="page active" id="page-overview">
-    <div class="page-header"><h1>Overview</h1><p id="todayDate">Today</p></div>
+    <div class="page-header">
+      <h1>Overview</h1>
+      <p id="todayDate">Today</p>
+    </div>
     <div class="stats-row">
       <div class="stat-card"><div class="label">Today's total hours</div><div class="value green" id="stat-today">—</div><div class="sub">across all users</div></div>
       <div class="stat-card"><div class="label">This week</div><div class="value blue" id="stat-week">—</div><div class="sub">last 7 days</div></div>
       <div class="stat-card"><div class="label">Team size</div><div class="value purple" id="stat-users">—</div><div class="sub">tracked users</div></div>
     </div>
     <div class="card">
-      <div class="card-header"><h3>Team — Today at a glance</h3><div class="card-actions"><button class="btn-sm btn-ghost" onclick="refreshAll()">↻ Refresh</button></div></div>
-      <table><thead><tr><th>Member</th><th>Platform</th><th>Today</th><th>This Week</th></tr></thead>
-      <tbody id="overviewTable"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody></table>
+      <div class="card-header">
+        <h3>Team — Today at a glance</h3>
+        <div class="card-actions">
+          <span class="presence-refreshing" id="presenceStatus"></span>
+          <button class="btn-sm btn-ghost" onclick="refreshAll()">↻ Refresh</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Member</th><th>Status</th><th>Today</th><th>This Week</th></tr></thead>
+        <tbody id="overviewTable"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody>
+      </table>
     </div>
   </div>
+
+  <!-- TEAM PAGE -->
   <div class="page" id="page-team">
     <div class="page-header"><h1>Team Hours</h1><p>Detailed breakdown by user and day</p></div>
     <div class="card">
-      <div class="card-header"><h3>Hours by member</h3><div class="card-actions"><select class="filter-select" id="daysFilter" onchange="loadHours()"><option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="30">Last 30 days</option></select></div></div>
+      <div class="card-header"><h3>Hours by member</h3>
+        <div class="card-actions">
+          <select class="filter-select" id="daysFilter" onchange="loadHours()">
+            <option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="30">Last 30 days</option>
+          </select>
+        </div>
+      </div>
       <table><thead><tr><th>Member</th><th>Date</th><th>Hours</th></tr></thead>
       <tbody id="teamTable"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody></table>
     </div>
   </div>
+
+  <!-- LEAVE PAGE -->
   <div class="page" id="page-leave">
-    <div class="page-header"><h1>Leave &amp; PTO</h1><p>Manage team time off requests</p></div>
+    <div class="page-header"><h1>Leave & PTO</h1><p>Manage team time off requests</p></div>
     <div class="card">
       <div class="card-header"><h3>Leave requests</h3></div>
       <table><thead><tr><th>Member</th><th>Type</th><th>Dates</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="leaveTable"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody></table>
     </div>
   </div>
+
+  <!-- INTEGRATIONS PAGE -->
   <div class="page" id="page-integrations">
     <div class="page-header"><h1>Integrations</h1><p>Connect your Slack or Teams workspace</p></div>
     <div class="card">
@@ -135,6 +173,8 @@
       </div>
     </div>
   </div>
+
+  <!-- REPORTS PAGE -->
   <div class="page" id="page-reports">
     <div class="page-header"><h1>Reports</h1><p>Export time data for payroll, billing, or compliance</p></div>
     <div class="card">
@@ -146,18 +186,26 @@
       </div>
     </div>
   </div>
+
 </div>
 <div class="toast" id="toast"></div>
+
 <script>
 const API='';
 const token=localStorage.getItem('st_token');
 if(!token)window.location.href='/';
 const authHeaders={'Content-Type':'application/json','Authorization':`Bearer ${token}`};
+
 document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 const today=new Date().toISOString().split('T')[0];
 const weekAgo=new Date(Date.now()-6*86400000).toISOString().split('T')[0];
 document.getElementById('exportFrom').value=weekAgo;
 document.getElementById('exportTo').value=today;
+
+// Presence cache
+let presenceCache = {};
+let presenceLoading = false;
+
 function showPage(name,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -175,6 +223,50 @@ function showToast(msg,type='success'){
 function logout(){localStorage.removeItem('st_token');window.location.href='/';}
 function minsToHours(m){const h=Math.floor(m/60),min=m%60;return h>0?`${h}h${min>0?' '+min+'m':''}`:`${min}m`;}
 function initials(name){return(name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+
+function statusBadge(userId) {
+  const status = presenceCache[userId];
+  if (!status || status === 'loading') return `<span class="status-badge loading"><span class="status-dot loading"></span>—</span>`;
+  if (status === 'active') return `<span class="status-badge active"><span class="status-dot active"></span>Online</span>`;
+  if (status === 'away') return `<span class="status-badge away"><span class="status-dot away"></span>Away</span>`;
+  if (status === 'dnd') return `<span class="status-badge dnd"><span class="status-dot dnd"></span>Do not disturb</span>`;
+  return `<span class="status-badge away"><span class="status-dot away"></span>Offline</span>`;
+}
+
+async function loadPresence(users) {
+  if (presenceLoading) return;
+  presenceLoading = true;
+  const statusEl = document.getElementById('presenceStatus');
+  if (statusEl) statusEl.textContent = '↻ Fetching live status...';
+
+  // Set all to loading first
+  users.forEach(u => { presenceCache[u.id] = 'loading'; });
+  renderPresenceBadges(users);
+
+  try {
+    const res = await fetch(`${API}/api/dashboard/presence`, { headers: authHeaders });
+    if (res.ok) {
+      const data = await res.json();
+      presenceCache = { ...presenceCache, ...data };
+      renderPresenceBadges(users);
+      if (statusEl) {
+        const activeCount = Object.values(presenceCache).filter(v => v === 'active').length;
+        statusEl.textContent = `${activeCount} online now`;
+      }
+    }
+  } catch (e) {
+    if (statusEl) statusEl.textContent = '';
+  }
+  presenceLoading = false;
+}
+
+function renderPresenceBadges(users) {
+  users.forEach(u => {
+    const el = document.getElementById(`presence-${u.id}`);
+    if (el) el.innerHTML = statusBadge(u.id);
+  });
+}
+
 async function loadOrg(){
   try{
     const res=await fetch(`${API}/api/auth/me`,{headers:authHeaders});
@@ -185,6 +277,7 @@ async function loadOrg(){
     else{const days=Math.max(0,Math.ceil((new Date(org.trial_ends_at)-new Date())/86400000));planEl.textContent=`Trial — ${days} days left`;planEl.className='plan-badge trial';}
   }catch(e){}
 }
+
 async function loadStats(){
   try{
     const res=await fetch(`${API}/api/dashboard/stats`,{headers:authHeaders});
@@ -194,25 +287,33 @@ async function loadStats(){
     document.getElementById('stat-users').textContent=d.totalUsers;
   }catch(e){}
 }
+
+let currentUsers = [];
 async function loadOverview(){
   try{
     const res=await fetch(`${API}/api/dashboard/users`,{headers:authHeaders});
     const users=await res.json();
+    currentUsers = users;
     const tbody=document.getElementById('overviewTable');
     if(!users.length){
       tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><div class="icon">👥</div><p>No users yet. Connect Slack or Teams to get started.</p><button class="btn-sm btn-accent" onclick="showPage('integrations')">Connect workspace</button></div></td></tr>`;
       return;
     }
     const maxMins=Math.max(...users.map(u=>u.today_minutes),1);
+    const maxWeek=Math.max(...users.map(u=>u.week_minutes),1);
     tbody.innerHTML=users.map(u=>`
       <tr>
         <td><div class="user-cell"><div class="avatar">${initials(u.display_name)}</div><div><div class="user-name">${u.display_name}</div><div class="user-email">${u.email||''}</div></div></div></td>
-        <td><span class="platform-badge">${u.platform==='slack'?'🟣':'🔵'} ${u.platform}</span></td>
+        <td><span id="presence-${u.id}">${statusBadge(u.id)}</span></td>
         <td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill" style="width:${Math.round(u.today_minutes/maxMins*100)}%"></div></div><div class="hours-text">${u.today_minutes?minsToHours(u.today_minutes):'—'}</div></div></td>
-        <td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill purple" style="width:${Math.round(u.week_minutes/Math.max(...users.map(u=>u.week_minutes),1)*100)}%"></div></div><div class="hours-text">${u.week_minutes?minsToHours(u.week_minutes):'—'}</div></div></td>
+        <td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill purple" style="width:${Math.round(u.week_minutes/maxWeek*100)}%"></div></div><div class="hours-text">${u.week_minutes?minsToHours(u.week_minutes):'—'}</div></div></td>
       </tr>`).join('');
+
+    // Load live presence after rendering
+    loadPresence(users);
   }catch(e){}
 }
+
 async function loadHours(){
   const days=document.getElementById('daysFilter')?.value||7;
   try{
@@ -223,6 +324,7 @@ async function loadHours(){
     tbody.innerHTML=rows.map(r=>`<tr><td><div class="user-cell"><div class="avatar">${initials(r.display_name)}</div><span>${r.display_name}</span></div></td><td>${new Date(r.date).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</td><td><strong>${minsToHours(r.total_minutes)}</strong></td></tr>`).join('');
   }catch(e){}
 }
+
 async function loadLeave(){
   try{
     const res=await fetch(`${API}/api/dashboard/leave`,{headers:authHeaders});
@@ -232,11 +334,12 @@ async function loadLeave(){
     tbody.innerHTML=rows.map(r=>`<tr><td><div class="user-cell"><div class="avatar">${initials(r.display_name)}</div><span>${r.display_name}</span></div></td><td style="text-transform:capitalize">${r.leave_type}</td><td>${r.start_date} → ${r.end_date}</td><td><span class="leave-badge ${r.status}">${r.status}</span></td><td>${r.status==='pending'?`<button class="approve-btn" onclick="updateLeave('${r.id}','approved')">Approve</button><button class="reject-btn" onclick="updateLeave('${r.id}','rejected')">Reject</button>`:'—'}</td></tr>`).join('');
   }catch(e){}
 }
+
 async function updateLeave(id,status){
   await fetch(`${API}/api/dashboard/leave/${id}`,{method:'PATCH',headers:authHeaders,body:JSON.stringify({status})});
-  showToast(`Leave ${status}!`);
-  loadLeave();
+  showToast(`Leave ${status}!`);loadLeave();
 }
+
 async function loadIntegrations(){
   try{
     const res=await fetch(`${API}/api/dashboard/integrations`,{headers:authHeaders});
@@ -245,6 +348,7 @@ async function loadIntegrations(){
     if(slack)document.getElementById('slackStatus').innerHTML=`<span class="connected-badge">✓ Connected — ${slack.team_name}</span>`;
   }catch(e){}
 }
+
 async function connectSlack(){
   try{
     const res=await fetch(`${API}/api/slack/install`,{headers:authHeaders});
@@ -252,6 +356,7 @@ async function connectSlack(){
     window.location.href=url;
   }catch(e){showToast('Failed to get Slack auth URL','error');}
 }
+
 async function openBilling(){
   try{
     const org=await fetch(`${API}/api/auth/me`,{headers:authHeaders}).then(r=>r.json());
@@ -261,14 +366,30 @@ async function openBilling(){
     window.location.href=url;
   }catch(e){showToast('Billing unavailable','error');}
 }
+
 function exportCSV(){
   const from=document.getElementById('exportFrom').value;
   const to=document.getElementById('exportTo').value;
   window.location.href=`${API}/api/dashboard/export?from=${from}&to=${to}`;
 }
-function refreshAll(){loadStats();loadOverview();showToast('Refreshed!');}
+
+function refreshAll(){
+  presenceCache={};
+  loadStats();
+  loadOverview();
+  showToast('Refreshed!');
+}
+
+// Auto-refresh presence every 60 seconds
+setInterval(() => {
+  if (currentUsers.length > 0 && document.getElementById('page-overview').classList.contains('active')) {
+    loadPresence(currentUsers);
+  }
+}, 60000);
+
 if(window.location.hash==='#slack_connected'){showToast('🎉 Slack connected!');history.replaceState(null,'','/dashboard');}
 else if(window.location.hash==='#billing_success'){showToast('🎉 Subscription activated!');history.replaceState(null,'','/dashboard');}
+
 loadOrg();loadStats();loadOverview();
 </script>
 </body>
