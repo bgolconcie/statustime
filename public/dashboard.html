@@ -3,165 +3,128 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard â StatusTime</title>
+  <title>Dashboard — StatusTime</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    /* ââ DARK THEME (default fallback) ââ */
-    :root {
-      --bg:#f0f4f8;--surface:#ffffff;--surface2:#f8fafc;--border:#e2e8f0;
-      --accent:#0284c7;--accent2:#7c3aed;--green:#059669;--red:#dc2626;
-      --yellow:#d97706;--text:#0f172a;--muted:#64748b;--shadow:0 1px 3px rgba(0,0,0,0.08);
-    }
-    [data-theme="dark"] {
-      --bg:#080c14;--surface:#0f1623;--surface2:#151e2e;--border:rgba(99,179,237,0.12);
-      --accent:#38bdf8;--accent2:#818cf8;--green:#34d399;--red:#f87171;
-      --yellow:#fbbf24;--text:#e2e8f0;--muted:#64748b;--shadow:none;
-    }
+    :root{--bg:#f0f4f8;--surface:#fff;--surface2:#f8fafc;--border:#e2e8f0;--accent:#0284c7;--accent2:#7c3aed;--green:#059669;--red:#dc2626;--yellow:#d97706;--text:#0f172a;--muted:#64748b;--shadow:0 1px 3px rgba(0,0,0,0.08)}
+    [data-theme="dark"]{--bg:#080c14;--surface:#0f1623;--surface2:#151e2e;--border:rgba(99,179,237,0.12);--accent:#38bdf8;--accent2:#818cf8;--green:#34d399;--red:#f87171;--yellow:#fbbf24;--text:#e2e8f0;--muted:#64748b;--shadow:none}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
-    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;transition:background 0.2s,color 0.2s}
-
-    /* SIDEBAR */
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;transition:background .2s,color .2s}
     .sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;box-shadow:var(--shadow)}
     .sidebar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:var(--accent);padding:0 1.25rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:1rem}
     .sidebar-logo span{color:var(--text)}
-    .nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 1.25rem;color:var(--muted);font-size:0.875rem;cursor:pointer;transition:all 0.15s;border-left:3px solid transparent;text-decoration:none}
+    .nav-item{display:flex;align-items:center;gap:.75rem;padding:.65rem 1.25rem;color:var(--muted);font-size:.875rem;cursor:pointer;transition:all .15s;border-left:3px solid transparent;text-decoration:none}
     .nav-item:hover{color:var(--text);background:var(--surface2)}
-    .nav-item.active{color:var(--accent);background:rgba(2,132,199,0.06);border-left-color:var(--accent)}
-    [data-theme="dark"] .nav-item.active{background:rgba(56,189,248,0.06)}
+    .nav-item.active{color:var(--accent);background:rgba(2,132,199,.06);border-left-color:var(--accent)}
+    [data-theme="dark"] .nav-item.active{background:rgba(56,189,248,.06)}
     .nav-item .icon{font-size:1rem;width:18px;text-align:center}
     .sidebar-bottom{margin-top:auto;padding:1rem 1.25rem;border-top:1px solid var(--border)}
-    .org-name{font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.25rem}
-    .plan-badge{font-size:0.7rem;color:var(--muted)}
+    .org-name{font-size:.8rem;font-weight:600;color:var(--text);margin-bottom:.25rem}
+    .plan-badge{font-size:.7rem;color:var(--muted)}
     .plan-badge.trial{color:var(--yellow)}.plan-badge.pro{color:var(--green)}
-    .btn-upgrade{display:block;margin-top:0.75rem;background:var(--accent);color:#fff;text-align:center;padding:0.5rem;border-radius:6px;font-size:0.8rem;font-weight:700;cursor:pointer;border:none;width:100%;transition:opacity 0.2s}
+    .btn-upgrade{display:block;margin-top:.75rem;background:var(--accent);color:#fff;text-align:center;padding:.5rem;border-radius:6px;font-size:.8rem;font-weight:700;cursor:pointer;border:none;width:100%;transition:opacity .2s}
     [data-theme="dark"] .btn-upgrade{color:#000}
-    .btn-upgrade:hover{opacity:0.85}
-    .btn-logout{display:block;margin-top:0.5rem;background:transparent;color:var(--muted);text-align:center;padding:0.4rem;border-radius:6px;font-size:0.75rem;cursor:pointer;border:1px solid var(--border);width:100%}
+    .btn-upgrade:hover{opacity:.85}
+    .btn-logout{display:block;margin-top:.5rem;background:transparent;color:var(--muted);text-align:center;padding:.4rem;border-radius:6px;font-size:.75rem;cursor:pointer;border:1px solid var(--border);width:100%}
     .btn-logout:hover{color:var(--text)}
-
-    /* THEME TOGGLE */
-    .theme-toggle{display:flex;align-items:center;gap:0.5rem;margin-top:0.75rem;padding:0.4rem 0.6rem;background:var(--surface2);border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:0.75rem;color:var(--muted);width:100%;justify-content:center;transition:all 0.15s}
+    .theme-toggle{display:flex;align-items:center;gap:.5rem;margin-top:.75rem;padding:.4rem .6rem;background:var(--surface2);border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:.75rem;color:var(--muted);width:100%;justify-content:center;transition:all .15s}
     .theme-toggle:hover{color:var(--text)}
-    .toggle-track{width:32px;height:18px;background:var(--border);border-radius:100px;position:relative;transition:background 0.2s;flex-shrink:0}
+    .toggle-track{width:32px;height:18px;background:var(--border);border-radius:100px;position:relative;transition:background .2s;flex-shrink:0}
     .toggle-track.on{background:var(--accent)}
-    .toggle-thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
+    .toggle-thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
     .toggle-track.on .toggle-thumb{transform:translateX(14px)}
-
-    /* MAIN */
     .main{flex:1;overflow-y:auto;padding:2rem}
     .page-header{margin-bottom:1.5rem}
-    .page-header h1{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;letter-spacing:-0.5px}
-    .page-header p{color:var(--muted);font-size:0.875rem;margin-top:0.25rem}
-
-    /* STATS */
+    .page-header h1{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;letter-spacing:-.5px}
+    .page-header p{color:var(--muted);font-size:.875rem;margin-top:.25rem}
     .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem}
     .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;box-shadow:var(--shadow)}
-    .stat-card .label{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem}
+    .stat-card .label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem}
     .stat-card .value{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800}
     .stat-card .value.green{color:var(--green)}.stat-card .value.blue{color:var(--accent)}.stat-card .value.purple{color:var(--accent2)}
-    .stat-card .sub{font-size:0.75rem;color:var(--muted);margin-top:0.25rem}
-
-    /* CARD */
+    .stat-card .sub{font-size:.75rem;color:var(--muted);margin-top:.25rem}
     .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1.5rem;box-shadow:var(--shadow)}
-    .card-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:0.75rem}
-    .card-header h3{font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem}
-    .card-actions{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap}
-
-    /* FILTER PILLS */
-    .filter-bar{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap}
+    .card-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:.75rem}
+    .card-header h3{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem}
+    .card-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
     .filter-group{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
-    .filter-pill{padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all 0.15s;white-space:nowrap}
+    .filter-pill{padding:.3rem .75rem;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s;white-space:nowrap}
     .filter-pill:hover{color:var(--text)}
     .filter-pill.active{background:var(--accent);color:#fff}
     [data-theme="dark"] .filter-pill.active{color:#000}
-
-    .btn-sm{padding:0.35rem 0.85rem;border-radius:6px;font-size:0.775rem;font-weight:600;cursor:pointer;border:none;transition:all 0.15s}
+    .btn-sm{padding:.35rem .85rem;border-radius:6px;font-size:.775rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
     .btn-accent{background:var(--accent);color:#fff}
     [data-theme="dark"] .btn-accent{color:#000}
     .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
     .btn-ghost:hover{color:var(--text);border-color:var(--accent)}
-    select.filter-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.3rem 0.6rem;font-size:0.775rem;outline:none}
-
-    /* TABLE */
+    select.filter-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:.3rem .6rem;font-size:.775rem;outline:none}
     table{width:100%;border-collapse:collapse}
-    th{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);padding:0.75rem 1.25rem;text-align:left;border-bottom:1px solid var(--border);font-weight:500}
-    td{padding:0.85rem 1.25rem;border-bottom:1px solid var(--border);font-size:0.875rem}
-    [data-theme="dark"] td{border-bottom-color:rgba(99,179,237,0.06)}
+    th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:.75rem 1.25rem;text-align:left;border-bottom:1px solid var(--border);font-weight:500}
+    td{padding:.8rem 1.25rem;border-bottom:1px solid var(--border);font-size:.875rem}
+    [data-theme="dark"] td{border-bottom-color:rgba(99,179,237,.06)}
     tr:last-child td{border-bottom:none}
-    tr:hover td{background:var(--surface2)}
-    .user-cell{display:flex;align-items:center;gap:0.75rem}
-    .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
+    tr[data-user-id]:hover td{background:var(--surface2)}
+    tr[data-user-id]{cursor:pointer;transition:background .1s}
+    .user-cell{display:flex;align-items:center;gap:.75rem}
+    .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
     [data-theme="dark"] .avatar{color:#000}
     .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-    .user-name{font-weight:500;color:var(--text)}.user-email{font-size:0.75rem;color:var(--muted)}
-    .type-badge{display:inline-flex;align-items:center;gap:0.3rem;font-size:0.68rem;font-weight:600;padding:0.15rem 0.55rem;border-radius:100px}
-    .type-badge.member{background:rgba(2,132,199,0.1);color:var(--accent);border:1px solid rgba(2,132,199,0.2)}
-    [data-theme="dark"] .type-badge.member{background:rgba(56,189,248,0.08);border-color:rgba(56,189,248,0.2)}
-    .type-badge.external{background:rgba(124,58,237,0.1);color:var(--accent2);border:1px solid rgba(124,58,237,0.2)}
-    [data-theme="dark"] .type-badge.external{background:rgba(129,140,248,0.08)}
-
-    /* STATUS BADGES */
-    .status-badge{display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.7rem;border-radius:100px;font-size:0.72rem;font-weight:600;white-space:nowrap}
-    .status-badge.active{background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.2);color:var(--green)}
-    [data-theme="dark"] .status-badge.active{background:rgba(52,211,153,0.12);border-color:rgba(52,211,153,0.25)}
-    .status-badge.away{background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.15);color:var(--muted)}
+    .user-name{font-weight:500;color:var(--text)}.user-email{font-size:.75rem;color:var(--muted)}
+    .type-badge{font-size:.68rem;font-weight:600;padding:.15rem .5rem;border-radius:100px;white-space:nowrap}
+    .type-badge.member{background:rgba(2,132,199,.1);color:var(--accent);border:1px solid rgba(2,132,199,.2)}
+    [data-theme="dark"] .type-badge.member{background:rgba(56,189,248,.08)}
+    .type-badge.external{background:rgba(124,58,237,.1);color:var(--accent2);border:1px solid rgba(124,58,237,.2)}
+    [data-theme="dark"] .type-badge.external{background:rgba(129,140,248,.08)}
+    .status-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .7rem;border-radius:100px;font-size:.72rem;font-weight:600;white-space:nowrap}
+    .status-badge.active{background:rgba(5,150,105,.1);border:1px solid rgba(5,150,105,.2);color:var(--green)}
+    [data-theme="dark"] .status-badge.active{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.25)}
+    .status-badge.away{background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.15);color:var(--muted)}
     .status-badge.loading{background:transparent;border:1px solid var(--border);color:var(--muted)}
     .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
     .status-dot.active{background:var(--green);box-shadow:0 0 5px var(--green);animation:glow 2s infinite}
-    .status-dot.away{background:var(--muted)}
-    .status-dot.loading{background:var(--border)}
-    @keyframes glow{0%,100%{opacity:1}50%{opacity:0.5}}
-
-    /* HOURS BAR */
-    .hours-bar-wrap{display:flex;align-items:center;gap:0.6rem}
+    .status-dot.away{background:var(--muted)}.status-dot.loading{background:var(--border)}
+    @keyframes glow{0%,100%{opacity:1}50%{opacity:.5}}
+    .tz-time{font-size:.82rem;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+    .tz-label{font-size:.68rem;color:var(--muted)}
+    .hours-bar-wrap{display:flex;align-items:center;gap:.6rem}
     .hours-bar{width:80px;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)}
-    .hours-fill{height:100%;background:var(--accent);border-radius:3px;transition:width 0.4s}
+    .hours-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
     .hours-fill.purple{background:var(--accent2)}
-    .hours-text{font-size:0.8rem;color:var(--text);font-weight:500;min-width:32px;text-align:right}
-
-    /* INTEGRATIONS */
+    .hours-text{font-size:.8rem;color:var(--text);font-weight:500;min-width:32px;text-align:right}
     .integrations-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;padding:1.25rem}
-    .integration-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem}
-    .integration-card h4{font-weight:600;font-size:0.95rem}
-    .integration-card p{font-size:0.8rem;color:var(--muted)}
-    .connected-badge{font-size:0.7rem;background:rgba(5,150,105,0.1);color:var(--green);border:1px solid rgba(5,150,105,0.2);padding:0.2rem 0.6rem;border-radius:100px;display:inline-block}
-    .btn-connect{background:var(--accent);color:#fff;border:none;padding:0.5rem 1rem;border-radius:6px;font-size:0.8rem;font-weight:700;cursor:pointer;width:100%}
+    .integration-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;display:flex;flex-direction:column;gap:.75rem}
+    .integration-card h4{font-weight:600;font-size:.95rem}
+    .integration-card p{font-size:.8rem;color:var(--muted)}
+    .connected-badge{font-size:.7rem;background:rgba(5,150,105,.1);color:var(--green);border:1px solid rgba(5,150,105,.2);padding:.2rem .6rem;border-radius:100px;display:inline-block}
+    .btn-connect{background:var(--accent);color:#fff;border:none;padding:.5rem 1rem;border-radius:6px;font-size:.8rem;font-weight:700;cursor:pointer;width:100%}
     [data-theme="dark"] .btn-connect{color:#000}
-
-    /* LEAVE */
-    .leave-badge{font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:100px;font-weight:500}
-    .leave-badge.pending{background:rgba(217,119,6,0.1);color:var(--yellow);border:1px solid rgba(217,119,6,0.2)}
-    .leave-badge.approved{background:rgba(5,150,105,0.1);color:var(--green);border:1px solid rgba(5,150,105,0.2)}
-    .leave-badge.rejected{background:rgba(220,38,38,0.1);color:var(--red);border:1px solid rgba(220,38,38,0.2)}
-    .approve-btn{background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.2);color:var(--green);padding:0.25rem 0.6rem;border-radius:5px;font-size:0.75rem;cursor:pointer;margin-right:0.3rem}
-    .reject-btn{background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);color:var(--red);padding:0.25rem 0.6rem;border-radius:5px;font-size:0.75rem;cursor:pointer}
-
+    .leave-badge{font-size:.75rem;padding:.2rem .6rem;border-radius:100px;font-weight:500}
+    .leave-badge.pending{background:rgba(217,119,6,.1);color:var(--yellow);border:1px solid rgba(217,119,6,.2)}
+    .leave-badge.approved{background:rgba(5,150,105,.1);color:var(--green);border:1px solid rgba(5,150,105,.2)}
+    .leave-badge.rejected{background:rgba(220,38,38,.1);color:var(--red);border:1px solid rgba(220,38,38,.2)}
+    .approve-btn{background:rgba(5,150,105,.1);border:1px solid rgba(5,150,105,.2);color:var(--green);padding:.25rem .6rem;border-radius:5px;font-size:.75rem;cursor:pointer;margin-right:.3rem}
+    .reject-btn{background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.2);color:var(--red);padding:.25rem .6rem;border-radius:5px;font-size:.75rem;cursor:pointer}
     .page{display:none}.page.active{display:block}
-    .empty{text-align:center;padding:3rem 1.5rem;color:var(--muted)}
-    .empty .icon{font-size:3rem;margin-bottom:1rem;opacity:0.4}
-    .empty p{margin-bottom:1.5rem}
     .hidden-row{display:none!important}
-    .presence-info{font-size:0.72rem;color:var(--muted)}
-    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1.25rem;font-size:0.875rem;z-index:999;transform:translateY(100px);opacity:0;transition:all 0.3s;box-shadow:0 4px 20px rgba(0,0,0,0.1)}
+    .presence-info{font-size:.72rem;color:var(--muted)}
+    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.75rem 1.25rem;font-size:.875rem;z-index:999;transform:translateY(100px);opacity:0;transition:all .3s;box-shadow:0 4px 20px rgba(0,0,0,.1)}
     .toast.show{transform:translateY(0);opacity:1}
-    .toast.success{border-color:rgba(5,150,105,0.3);color:var(--green)}
-    .toast.error{border-color:rgba(220,38,38,0.3);color:var(--red)}
+    .toast.success{border-color:rgba(5,150,105,.3);color:var(--green)}
+    .toast.error{border-color:rgba(220,38,38,.3);color:var(--red)}
     @media(max-width:768px){.sidebar{display:none}.main{padding:1rem}}
   </style>
 </head>
 <body>
 <div class="sidebar">
   <div class="sidebar-logo">Status<span>Time</span></div>
-  <a class="nav-item active" onclick="showPage('overview',this)" href="#"><span class="icon">ð</span> Overview</a>
-  <a class="nav-item" onclick="showPage('team',this)" href="#"><span class="icon">ð¥</span> Team Hours</a>
-  <a class="nav-item" onclick="showPage('leave',this)" href="#"><span class="icon">ðï¸</span> Leave</a>
-  <a class="nav-item" onclick="showPage('integrations',this)" href="#"><span class="icon">ð</span> Integrations</a>
-  <a class="nav-item" onclick="showPage('reports',this)" href="#"><span class="icon">ð</span> Reports</a>
+  <a class="nav-item active" onclick="showPage('overview',this)" href="#"><span class="icon">&#128202;</span> Overview</a>
+  <a class="nav-item" onclick="showPage('team',this)" href="#"><span class="icon">&#128101;</span> Team Hours</a>
+  <a class="nav-item" onclick="showPage('leave',this)" href="#"><span class="icon">&#127958;</span> Leave</a>
+  <a class="nav-item" onclick="showPage('integrations',this)" href="#"><span class="icon">&#128279;</span> Integrations</a>
+  <a class="nav-item" onclick="showPage('reports',this)" href="#"><span class="icon">&#128196;</span> Reports</a>
   <div class="sidebar-bottom">
     <div class="org-name" id="sidebarOrgName">Loading...</div>
-    <div class="plan-badge" id="sidebarPlan">â</div>
-    <!-- Theme toggle -->
+    <div class="plan-badge" id="sidebarPlan">&mdash;</div>
     <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtn">
       <div class="toggle-track" id="themeTrack"><div class="toggle-thumb"></div></div>
       <span id="themeLabel">Dark mode</span>
@@ -170,48 +133,38 @@
     <button class="btn-logout" onclick="logout()">Log out</button>
   </div>
 </div>
-
 <div class="main">
-
-  <!-- OVERVIEW -->
   <div class="page active" id="page-overview">
-    <div class="page-header">
-      <h1>Overview</h1>
-      <p id="todayDate">Today</p>
-    </div>
+    <div class="page-header"><h1>Overview</h1><p id="todayDate">Today</p></div>
     <div class="stats-row">
-      <div class="stat-card"><div class="label">Today's total hours</div><div class="value green" id="stat-today">â</div><div class="sub">across all users</div></div>
-      <div class="stat-card"><div class="label">This week</div><div class="value blue" id="stat-week">â</div><div class="sub">last 7 days</div></div>
-      <div class="stat-card"><div class="label">Team size</div><div class="value purple" id="stat-users">â</div><div class="sub">tracked users</div></div>
+      <div class="stat-card"><div class="label">Today's total hours</div><div class="value green" id="stat-today">&mdash;</div><div class="sub">across all users</div></div>
+      <div class="stat-card"><div class="label">This week</div><div class="value blue" id="stat-week">&mdash;</div><div class="sub">last 7 days</div></div>
+      <div class="stat-card"><div class="label">Team size</div><div class="value purple" id="stat-users">&mdash;</div><div class="sub">tracked users</div></div>
     </div>
     <div class="card">
       <div class="card-header">
-        <h3>Team â Today at a glance</h3>
+        <h3>Team &mdash; Today at a glance</h3>
         <div class="card-actions">
-          <!-- Status filter -->
           <div class="filter-group" id="statusFilter">
-            <button class="filter-pill active" data-status="all" onclick="setFilter('status','all',this)">All</button>
-            <button class="filter-pill" data-status="active" onclick="setFilter('status','active',this)">ð¢ Online</button>
-            <button class="filter-pill" data-status="away" onclick="setFilter('status','away',this)">â« Away</button>
+            <button class="filter-pill active" onclick="setFilter('status','all',this)">All</button>
+            <button class="filter-pill" onclick="setFilter('status','active',this)">&#128994; Online</button>
+            <button class="filter-pill" onclick="setFilter('status','away',this)">&#9899; Away</button>
           </div>
-          <!-- User type filter -->
           <div class="filter-group" id="typeFilter">
-            <button class="filter-pill active" data-type="all" onclick="setFilter('type','all',this)">All</button>
-            <button class="filter-pill" data-type="member" onclick="setFilter('type','member',this)">ð¤ Members</button>
-            <button class="filter-pill" data-type="external" onclick="setFilter('type','external',this)">ð Externals</button>
+            <button class="filter-pill active" onclick="setFilter('type','all',this)">All</button>
+            <button class="filter-pill" onclick="setFilter('type','member',this)">&#128100; Members</button>
+            <button class="filter-pill" onclick="setFilter('type','external',this)">&#128279; Externals</button>
           </div>
           <span class="presence-info" id="presenceInfo"></span>
-          <button class="btn-sm btn-ghost" onclick="refreshAll()">â» Refresh</button>
+          <button class="btn-sm btn-ghost" onclick="refreshAll()">&#8635; Refresh</button>
         </div>
       </div>
       <table>
         <thead><tr><th>Member</th><th>Status</th><th>Local Time</th><th>Today</th><th>This Week</th></tr></thead>
-        <tbody id="overviewTable"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody>
+        <tbody id="overviewTable"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody>
       </table>
     </div>
   </div>
-
-  <!-- TEAM HOURS -->
   <div class="page" id="page-team">
     <div class="page-header"><h1>Team Hours</h1><p>Detailed breakdown by user and day</p></div>
     <div class="card">
@@ -224,354 +177,294 @@
       <tbody id="teamTable"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody></table>
     </div>
   </div>
-
-  <!-- LEAVE -->
   <div class="page" id="page-leave">
-    <div class="page-header"><h1>Leave & PTO</h1><p>Manage team time off requests</p></div>
+    <div class="page-header"><h1>Leave &amp; PTO</h1><p>Manage team time off requests</p></div>
     <div class="card">
       <div class="card-header"><h3>Leave requests</h3></div>
       <table><thead><tr><th>Member</th><th>Type</th><th>Dates</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="leaveTable"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody></table>
     </div>
   </div>
-
-  <!-- INTEGRATIONS -->
   <div class="page" id="page-integrations">
     <div class="page-header"><h1>Integrations</h1><p>Connect your Slack or Teams workspace</p></div>
     <div class="card">
       <div class="integrations-grid">
         <div class="integration-card">
-          <h4>ð£ Slack</h4>
+          <h4>&#128995; Slack</h4>
           <p>Connect your Slack workspace. Members vs guest users are detected automatically.</p>
           <div id="slackStatus"><button class="btn-connect" onclick="connectSlack()">Connect Slack</button></div>
-          <button class="btn-sm btn-ghost" onclick="syncSlack()" id="syncBtn" style="display:none">â» Re-sync users</button>
+          <button class="btn-sm btn-ghost" onclick="syncSlack()" id="syncBtn" style="display:none">&#8635; Re-sync users</button>
         </div>
         <div class="integration-card">
-          <h4>ðµ Microsoft Teams</h4>
+          <h4>&#128309; Microsoft Teams</h4>
           <p>Connect your Teams workspace to track presence for Microsoft 365 users.</p>
           <button class="btn-connect" onclick="showToast('Teams coming soon!','success')">Coming soon</button>
         </div>
       </div>
     </div>
   </div>
-
-  <!-- REPORTS -->
   <div class="page" id="page-reports">
     <div class="page-header"><h1>Reports</h1><p>Export time data for payroll, billing, or compliance</p></div>
     <div class="card">
       <div class="card-header"><h3>Export to CSV</h3></div>
       <div style="padding:1.5rem;display:flex;flex-direction:column;gap:1rem;max-width:400px">
-        <div><label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:0.4rem">From date</label><input type="date" id="exportFrom" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.9rem;color:var(--text);font-size:0.875rem;outline:none;width:100%"></div>
-        <div><label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:0.4rem">To date</label><input type="date" id="exportTo" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.9rem;color:var(--text);font-size:0.875rem;outline:none;width:100%"></div>
-        <button class="btn-sm btn-accent" style="font-size:0.875rem;padding:0.7rem 1.5rem;border-radius:8px" onclick="exportCSV()">â¬ Download CSV</button>
+        <div><label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:.4rem">From date</label><input type="date" id="exportFrom" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem;color:var(--text);font-size:.875rem;outline:none;width:100%"></div>
+        <div><label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:.4rem">To date</label><input type="date" id="exportTo" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem;color:var(--text);font-size:.875rem;outline:none;width:100%"></div>
+        <button class="btn-sm btn-accent" style="font-size:.875rem;padding:.7rem 1.5rem;border-radius:8px" onclick="exportCSV()">&#11015; Download CSV</button>
       </div>
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
-
 <script>
-const API = '';
-const token = localStorage.getItem('st_token');
-if (!token) window.location.href = '/';
-const authHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+const API='';
+const token=localStorage.getItem('st_token');
+if(!token)window.location.href='/';
+const authHeaders={'Content-Type':'application/json','Authorization':`Bearer ${token}`};
 
-// ââ THEME ââââââââââââââââââââââââââââââââââââââ
-const savedTheme = localStorage.getItem('st_theme') || 'light';
+// THEME
+const savedTheme=localStorage.getItem('st_theme')||'light';
 applyTheme(savedTheme);
-
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  const track = document.getElementById('themeTrack');
-  const label = document.getElementById('themeLabel');
-  if (track) track.classList.toggle('on', theme === 'dark');
-  if (label) label.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
-  localStorage.setItem('st_theme', theme);
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  const track=document.getElementById('themeTrack');
+  const label=document.getElementById('themeLabel');
+  if(track)track.classList.toggle('on',t==='dark');
+  if(label)label.textContent=t==='dark'?'Light mode':'Dark mode';
+  localStorage.setItem('st_theme',t);
 }
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  applyTheme(current === 'dark' ? 'light' : 'dark');
-}
+function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
 
-// ââ INIT ââââââââââââââââââââââââââââââââââââââ
-document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-const today = new Date().toISOString().split('T')[0];
-const weekAgo = new Date(Date.now() - 6*86400000).toISOString().split('T')[0];
-document.getElementById('exportFrom').value = weekAgo;
-document.getElementById('exportTo').value = today;
+// INIT
+document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const today=new Date().toISOString().split('T')[0];
+const weekAgo=new Date(Date.now()-6*86400000).toISOString().split('T')[0];
+document.getElementById('exportFrom').value=weekAgo;
+document.getElementById('exportTo').value=today;
 
-// ââ FILTERS âââââââââââââââââââââââââââââââââââ
-let activeFilters = { status: 'all', type: 'all' };
-
-function setFilter(dimension, value, btn) {
-  activeFilters[dimension] = value;
-  // Update pill active state within this group
-  const groupId = dimension === 'status' ? 'statusFilter' : 'typeFilter';
-  document.querySelectorAll(`#${groupId} .filter-pill`).forEach(p => p.classList.remove('active'));
+// FILTERS
+let activeFilters={status:'all',type:'all'};
+function setFilter(dim,val,btn){
+  activeFilters[dim]=val;
+  const gId=dim==='status'?'statusFilter':'typeFilter';
+  document.querySelectorAll(`#${gId} .filter-pill`).forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   applyFilters();
 }
-
-function applyFilters() {
-  const rows = document.querySelectorAll('#overviewTable tr[data-user-id]');
-  let visible = 0;
-  rows.forEach(row => {
-    const status = presenceCache[row.dataset.userId] || 'unknown';
-    const type = row.dataset.userType || 'member';
-    const statusMatch = activeFilters.status === 'all' || status === activeFilters.status;
-    const typeMatch = activeFilters.type === 'all' || type === activeFilters.type;
-    row.classList.toggle('hidden-row', !(statusMatch && typeMatch));
-    if (statusMatch && typeMatch) visible++;
+function applyFilters(){
+  const rows=document.querySelectorAll('#overviewTable tr[data-user-id]');
+  let visible=0;
+  rows.forEach(row=>{
+    const status=presenceCache[row.dataset.userId]||'unknown';
+    const type=row.dataset.userType||'member';
+    const sm=activeFilters.status==='all'||status===activeFilters.status;
+    const tm=activeFilters.type==='all'||type===activeFilters.type;
+    row.classList.toggle('hidden-row',!(sm&&tm));
+    if(sm&&tm)visible++;
   });
-  // Show empty state if nothing visible
-  const emptyRow = document.getElementById('filterEmptyRow');
-  if (emptyRow) emptyRow.style.display = visible === 0 ? '' : 'none';
+  const emptyRow=document.getElementById('filterEmptyRow');
+  if(emptyRow)emptyRow.style.display=visible===0?'':'none';
 }
 
-// ââ PRESENCE ââââââââââââââââââââââââââââââââââ
-let presenceCache = {};
-let presenceLoading = false;
-let currentUsers = [];
-
-function statusBadge(userId) {
-  const s = presenceCache[userId];
-  if (!s || s === 'loading') return '<span class="status-badge loading"><span class="status-dot loading"></span>â</span>';
-  if (s === 'active') return '<span class="status-badge active"><span class="status-dot active"></span>Online</span>';
+// PRESENCE
+let presenceCache={};
+let presenceLoading=false;
+let currentUsers=[];
+function statusBadge(uid){
+  const s=presenceCache[uid];
+  if(!s||s==='loading')return '<span class="status-badge loading"><span class="status-dot loading"></span>&mdash;</span>';
+  if(s==='active')return '<span class="status-badge active"><span class="status-dot active"></span>Online</span>';
   return '<span class="status-badge away"><span class="status-dot away"></span>Away</span>';
 }
-
-async function loadPresence(users) {
-  if (presenceLoading || !users.length) return;
-  presenceLoading = true;
-  const info = document.getElementById('presenceInfo');
-  if (info) info.textContent = 'Fetching live statusâ¦';
-  users.forEach(u => { presenceCache[u.id] = 'loading'; });
+async function loadPresence(users){
+  if(presenceLoading||!users.length)return;
+  presenceLoading=true;
+  const info=document.getElementById('presenceInfo');
+  if(info)info.textContent='Fetching status…';
+  users.forEach(u=>{presenceCache[u.id]='loading';});
   renderPresenceBadges(users);
-  try {
-    const res = await fetch(`${API}/api/dashboard/presence`, { headers: authHeaders });
-    if (res.ok) {
-      const data = await res.json();
-      presenceCache = { ...presenceCache, ...data };
+  try{
+    const res=await fetch(`${API}/api/dashboard/presence`,{headers:authHeaders});
+    if(res.ok){
+      const data=await res.json();
+      presenceCache={...presenceCache,...data};
       renderPresenceBadges(users);
-      const onlineCount = Object.values(data).filter(v => v === 'active').length;
-      if (info) info.textContent = `${onlineCount} online now`;
+      const on=Object.values(data).filter(v=>v==='active').length;
+      if(info)info.textContent=`${on} online now`;
       applyFilters();
     }
-  } catch {}
-  presenceLoading = false;
+  }catch{}
+  presenceLoading=false;
 }
-
-function renderPresenceBadges(users) {
-  users.forEach(u => {
-    const el = document.getElementById(`presence-${u.id}`);
-    if (el) el.innerHTML = statusBadge(u.id);
+function renderPresenceBadges(users){
+  users.forEach(u=>{
+    const el=document.getElementById(`presence-${u.id}`);
+    if(el)el.innerHTML=statusBadge(u.id);
   });
   applyFilters();
 }
 
-// ââ DATA LOADING ââââââââââââââââââââââââââââââ
-function showPage(name, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  if (el) el.classList.add('active');
-  if (name === 'team') loadHours();
-  if (name === 'leave') loadLeave();
-  if (name === 'integrations') loadIntegrations();
-}
-
-function showToast(msg, type = 'success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = `toast show ${type}`;
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-function logout() { localStorage.removeItem('st_token'); window.location.href = '/'; }
-function minsToHours(m) { const h = Math.floor(m/60), min = m%60; return h > 0 ? `${h}h${min > 0 ? ' ' + min + 'm' : ''}` : `${min}m`; }
-function initials(name) { return (name||'?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase(); }
-
-async function loadOrg() {
-  try {
-    const res = await fetch(`${API}/api/auth/me`, { headers: authHeaders });
-    const org = await res.json();
-    document.getElementById('sidebarOrgName').textContent = org.name;
-    const planEl = document.getElementById('sidebarPlan');
-    if (org.subscription_status === 'active') {
-      planEl.textContent = 'â Pro plan'; planEl.className = 'plan-badge pro';
-      document.getElementById('upgradeBtn').textContent = 'Manage billing';
-    } else {
-      const days = Math.max(0, Math.ceil((new Date(org.trial_ends_at) - new Date()) / 86400000));
-      planEl.textContent = `Trial â ${days} days left`; planEl.className = 'plan-badge trial';
-    }
-  } catch {}
-}
-
-async function loadStats() {
-  try {
-    const res = await fetch(`${API}/api/dashboard/stats`, { headers: authHeaders });
-    const d = await res.json();
-    document.getElementById('stat-today').textContent = minsToHours(d.todayMinutes);
-    document.getElementById('stat-week').textContent = minsToHours(d.weekMinutes);
-    document.getElementById('stat-users').textContent = d.totalUsers;
-  } catch {}
-}
-
-async function loadOverview() {
-  try {
-    const res = await fetch(`${API}/api/dashboard/users`, { headers: authHeaders });
-    const users = await res.json();
-    currentUsers = users;
-    const tbody = document.getElementById('overviewTable');
-    if (!users.length) {
-      tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="icon">ð¥</div><p>No users yet. Connect Slack to get started.</p><button class="btn-sm btn-accent" onclick="showPage('integrations')">Connect workspace</button></div></td></tr>`;
-      return;
-    }
-    const maxToday = Math.max(...users.map(u => parseInt(u.today_minutes)||0), 1);
-    const maxWeek = Math.max(...users.map(u => parseInt(u.week_minutes)||0), 1);
-    tbody.innerHTML = users.map(u => {
-      const todayMins = parseInt(u.today_minutes) || 0;
-      const weekMins = parseInt(u.week_minutes) || 0;
-      const type = u.user_type || 'member';
-      const typeBadge = type === 'external'
-        ? '<span class="type-badge external">ð External</span>'
-        : '<span class="type-badge member">ð¤ Member</span>';
-      const avatarContent = u.avatar_url
-        ? `<img src="${u.avatar_url}" alt="" onerror="this.style.display='none'">`
-        : initials(u.display_name);
-      return `<tr data-user-id="${u.id}" data-user-type="${type}" onclick="window.location.href='/user?id=${u.id}'" style="cursor:pointer">
-        <td><div class="user-cell">
-          <div class="avatar">${avatarContent}</div>
-          <div><div class="user-name">${u.display_name} ${typeBadge}</div><div class="user-email">${u.email||''}</div></div>
-        </div></td>
-        <td><span id="presence-${u.id}">${statusBadge(u.id)}</span></td>
-        <td><span id="tz-${u.id}" style="font-size:0.8rem;color:var(--muted);font-variant-numeric:tabular-nums">—</span></td>
-        <td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill" style="width:${Math.round(todayMins/maxToday*100)}%"></div></div><div class="hours-text">${todayMins ? minsToHours(todayMins) : 'â'}</div></div></td>
-        <td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill purple" style="width:${Math.round(weekMins/maxWeek*100)}%"></div></div><div class="hours-text">${weekMins ? minsToHours(weekMins) : 'â'}</div></div></td>
-      </tr>`;
-    }).join('') + '<tr id="filterEmptyRow" style="display:none"><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No users match this filter</td></tr>';
-    applyFilters();
-    loadPresence(users);
-  } catch(e) { console.error(e); }
-}
-
-async function loadHours() {
-  const days = document.getElementById('daysFilter')?.value || 7;
-  try {
-    const res = await fetch(`${API}/api/dashboard/hours?days=${days}`, { headers: authHeaders });
-    const rows = await res.json();
-    const tbody = document.getElementById('teamTable');
-    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:2rem">No time data for this period</td></tr>'; return; }
-    tbody.innerHTML = rows.map(r => `<tr>
-      <td><div class="user-cell"><div class="avatar">${initials(r.display_name)}</div><span>${r.display_name}</span></div></td>
-      <td>${new Date(r.date).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</td>
-      <td><strong>${minsToHours(r.total_minutes)}</strong></td>
-    </tr>`).join('');
-  } catch {}
-}
-
-async function loadLeave() {
-  try {
-    const res = await fetch(`${API}/api/dashboard/leave`, { headers: authHeaders });
-    const rows = await res.json();
-    const tbody = document.getElementById('leaveTable');
-    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No leave requests</td></tr>'; return; }
-    tbody.innerHTML = rows.map(r => `<tr>
-      <td><div class="user-cell"><div class="avatar">${initials(r.display_name)}</div><span>${r.display_name}</span></div></td>
-      <td style="text-transform:capitalize">${r.leave_type}</td>
-      <td>${r.start_date} â ${r.end_date}</td>
-      <td><span class="leave-badge ${r.status}">${r.status}</span></td>
-      <td>${r.status==='pending' ? `<button class="approve-btn" onclick="updateLeave('${r.id}','approved')">Approve</button><button class="reject-btn" onclick="updateLeave('${r.id}','rejected')">Reject</button>` : 'â'}</td>
-    </tr>`).join('');
-  } catch {}
-}
-
-async function updateLeave(id, status) {
-  await fetch(`${API}/api/dashboard/leave/${id}`, { method:'PATCH', headers: authHeaders, body: JSON.stringify({ status }) });
-  showToast(`Leave ${status}!`); loadLeave();
-}
-
-async function loadIntegrations() {
-  try {
-    const res = await fetch(`${API}/api/dashboard/integrations`, { headers: authHeaders });
-    const integrations = await res.json();
-    const slack = integrations.find(i => i.platform === 'slack');
-    if (slack) {
-      document.getElementById('slackStatus').innerHTML = `<span class="connected-badge">â Connected â ${slack.team_name}</span>`;
-      document.getElementById('syncBtn').style.display = '';
-    }
-  } catch {}
-}
-
-async function connectSlack() {
-  try {
-    const res = await fetch(`${API}/api/slack/install`, { headers: authHeaders });
-    const { url } = await res.json();
-    window.location.href = url;
-  } catch { showToast('Failed to get Slack auth URL', 'error'); }
-}
-
-async function syncSlack() {
-  const btn = document.getElementById('syncBtn');
-  btn.textContent = 'â» Syncingâ¦'; btn.disabled = true;
-  try {
-    const res = await fetch(`${API}/api/slack/sync`, { method: 'POST', headers: authHeaders });
-    if (res.ok) { showToast('â Users re-synced! Member/External status updated.'); loadOverview(); }
-    else showToast('Sync failed', 'error');
-  } catch { showToast('Sync failed', 'error'); }
-  btn.textContent = 'â» Re-sync users'; btn.disabled = false;
-}
-
-async function openBilling() {
-  try {
-    const org = await fetch(`${API}/api/auth/me`, { headers: authHeaders }).then(r => r.json());
-    const endpoint = org.subscription_status === 'active' ? '/api/billing/portal' : '/api/billing/checkout';
-    const res = await fetch(`${API}${endpoint}`, { method:'POST', headers: authHeaders });
-    const { url } = await res.json();
-    window.location.href = url;
-  } catch { showToast('Billing unavailable', 'error'); }
-}
-
-function exportCSV() {
-  const from = document.getElementById('exportFrom').value;
-  const to = document.getElementById('exportTo').value;
-  window.location.href = `${API}/api/dashboard/export?from=${from}&to=${to}`;
-}
-
-let tzClockInterval = null;
-function startTzClocks(users) {
-  if (tzClockInterval) clearInterval(tzClockInterval);
-  const updateClocks = () => {
-    users.forEach(u => {
-      const el = document.getElementById('tz-' + u.id);
-      if (!el) return;
-      const tz = u.timezone || 'UTC';
-      try {
-        el.textContent = new Intl.DateTimeFormat('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz}).format(new Date());
-        el.title = tz.replace(/_/g,' ');
-      } catch { el.textContent = '—'; }
+// TIMEZONE CLOCKS
+let tzClockInterval=null;
+function startTzClocks(users){
+  if(tzClockInterval)clearInterval(tzClockInterval);
+  const update=()=>{
+    users.forEach(u=>{
+      const el=document.getElementById(`tz-${u.id}`);
+      if(!el)return;
+      const tz=u.timezone||'UTC';
+      try{
+        const time=new Intl.DateTimeFormat('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz}).format(new Date());
+        el.innerHTML=`<div class="tz-time">${time}</div><div class="tz-label">${tz.replace('_',' ').split('/').pop()}</div>`;
+        el.title=tz.replace(/_/g,' ');
+      }catch{el.textContent='—';}
     });
   };
-  updateClocks();
-  tzClockInterval = setInterval(updateClocks, 30000);
+  update();
+  tzClockInterval=setInterval(update,30000);
 }
 
-function refreshAll() {
-  presenceCache = {};
-  loadStats(); loadOverview();
-  showToast('Refreshed!');
+// NAVIGATION
+function showPage(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(el)el.classList.add('active');
+  if(name==='team')loadHours();
+  if(name==='leave')loadLeave();
+  if(name==='integrations')loadIntegrations();
 }
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className=`toast show ${type}`;
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+function logout(){localStorage.removeItem('st_token');window.location.href='/';}
+function minsToHours(m){m=parseInt(m)||0;const h=Math.floor(m/60),min=m%60;return h>0?(min>0?`${h}h ${min}m`:`${h}h`):`${min}m`;}
+function initials(name){return(name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
 
-// Auto-refresh presence every 60s
-setInterval(() => {
-  if (currentUsers.length && document.getElementById('page-overview').classList.contains('active')) {
-    loadPresence(currentUsers);
-  }
-}, 60000);
-
-if (window.location.hash === '#slack_connected') { showToast('ð Slack connected!'); history.replaceState(null,'','/dashboard'); }
-if (window.location.hash === '#billing_success') { showToast('ð Subscription activated!'); history.replaceState(null,'','/dashboard'); }
-
-loadOrg(); loadStats(); loadOverview();
+async function loadOrg(){
+  try{
+    const res=await fetch(`${API}/api/auth/me`,{headers:authHeaders});
+    const org=await res.json();
+    document.getElementById('sidebarOrgName').textContent=org.name;
+    const planEl=document.getElementById('sidebarPlan');
+    if(org.subscription_status==='active'){planEl.textContent='✓ Pro plan';planEl.className='plan-badge pro';document.getElementById('upgradeBtn').textContent='Manage billing';}
+    else{const days=Math.max(0,Math.ceil((new Date(org.trial_ends_at)-new Date())/86400000));planEl.textContent=`Trial — ${days} days left`;planEl.className='plan-badge trial';}
+  }catch{}
+}
+async function loadStats(){
+  try{
+    const res=await fetch(`${API}/api/dashboard/stats`,{headers:authHeaders});
+    const d=await res.json();
+    document.getElementById('stat-today').textContent=minsToHours(d.todayMinutes);
+    document.getElementById('stat-week').textContent=minsToHours(d.weekMinutes);
+    document.getElementById('stat-users').textContent=d.totalUsers;
+  }catch{}
+}
+async function loadOverview(){
+  try{
+    const res=await fetch(`${API}/api/dashboard/users`,{headers:authHeaders});
+    const users=await res.json();
+    currentUsers=users;
+    const tbody=document.getElementById('overviewTable');
+    if(!users.length){
+      tbody.innerHTML='<tr><td colspan="5"><div style="text-align:center;padding:3rem;color:var(--muted)">No users yet. <button class="btn-sm btn-accent" onclick="showPage('integrations')">Connect workspace</button></div></td></tr>';
+      return;
+    }
+    const maxToday=Math.max(...users.map(u=>parseInt(u.today_minutes)||0),1);
+    const maxWeek=Math.max(...users.map(u=>parseInt(u.week_minutes)||0),1);
+    tbody.innerHTML=users.map(u=>{
+      const todayMins=parseInt(u.today_minutes)||0;
+      const weekMins=parseInt(u.week_minutes)||0;
+      const type=u.user_type||'member';
+      const typeBadge=type==='external'
+        ?'<span class="type-badge external">&#128279; External</span>'
+        :'<span class="type-badge member">&#128100; Member</span>';
+      const avatarContent=u.avatar_url
+        ?'<img src="'+u.avatar_url+'" alt="" onerror="this.style.display='none'">'
+        :initials(u.display_name);
+      return '<tr data-user-id="'+u.id+'" data-user-type="'+type+'" onclick="window.location.href='/user?id='+u.id+''">'+
+        '<td><div class="user-cell"><div class="avatar">'+avatarContent+'</div><div><div class="user-name">'+u.display_name+' '+typeBadge+'</div><div class="user-email">'+(u.email||'')+'</div></div></div></td>'+
+        '<td><span id="presence-'+u.id+'">'+statusBadge(u.id)+'</span></td>'+
+        '<td><div id="tz-'+u.id+'" title="'+(u.timezone||'UTC').replace(/_/g,' ')+'"><span style="font-size:.75rem;color:var(--muted)">—</span></div></td>'+
+        '<td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill" style="width:'+Math.round(todayMins/maxToday*100)+'%"></div></div><div class="hours-text">'+(todayMins?minsToHours(todayMins):'—')+'</div></div></td>'+
+        '<td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill purple" style="width:'+Math.round(weekMins/maxWeek*100)+'%"></div></div><div class="hours-text">'+(weekMins?minsToHours(weekMins):'—')+'</div></div></td>'+
+        '</tr>';
+    }).join('')+'<tr id="filterEmptyRow" style="display:none"><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No users match this filter</td></tr>';
+    applyFilters();
+    startTzClocks(users);
+    loadPresence(users);
+  }catch(e){console.error(e);}
+}
+async function loadHours(){
+  const days=document.getElementById('daysFilter')?.value||7;
+  try{
+    const res=await fetch(`${API}/api/dashboard/hours?days=${days}`,{headers:authHeaders});
+    const rows=await res.json();
+    const tbody=document.getElementById('teamTable');
+    if(!rows.length){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:2rem">No time data</td></tr>';return;}
+    tbody.innerHTML=rows.map(r=>'<tr><td><div class="user-cell"><div class="avatar">'+initials(r.display_name)+'</div><span>'+r.display_name+'</span></div></td><td>'+new Date(r.date+'T00:00:00Z').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'})+'</td><td><strong>'+minsToHours(r.total_minutes)+'</strong></td></tr>').join('');
+  }catch{}
+}
+async function loadLeave(){
+  try{
+    const res=await fetch(`${API}/api/dashboard/leave`,{headers:authHeaders});
+    const rows=await res.json();
+    const tbody=document.getElementById('leaveTable');
+    if(!rows.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No leave requests</td></tr>';return;}
+    tbody.innerHTML=rows.map(r=>'<tr><td><div class="user-cell"><div class="avatar">'+initials(r.display_name)+'</div><span>'+r.display_name+'</span></div></td><td style="text-transform:capitalize">'+r.leave_type+'</td><td>'+r.start_date+' → '+r.end_date+'</td><td><span class="leave-badge '+r.status+'">'+r.status+'</span></td><td>'+(r.status==='pending'?'<button class="approve-btn" onclick="updateLeave(''+r.id+'','approved')">Approve</button><button class="reject-btn" onclick="updateLeave(''+r.id+'','rejected')">Reject</button>':'—')+'</td></tr>').join('');
+  }catch{}
+}
+async function updateLeave(id,status){
+  await fetch(`${API}/api/dashboard/leave/${id}`,{method:'PATCH',headers:authHeaders,body:JSON.stringify({status})});
+  showToast('Leave '+status+'!');loadLeave();
+}
+async function loadIntegrations(){
+  try{
+    const res=await fetch(`${API}/api/dashboard/integrations`,{headers:authHeaders});
+    const integrations=await res.json();
+    const slack=integrations.find(i=>i.platform==='slack');
+    if(slack){
+      document.getElementById('slackStatus').innerHTML='<span class="connected-badge">✓ Connected — '+slack.team_name+'</span>';
+      document.getElementById('syncBtn').style.display='';
+    }
+  }catch{}
+}
+async function connectSlack(){
+  try{const res=await fetch(`${API}/api/slack/install`,{headers:authHeaders});const{url}=await res.json();window.location.href=url;}
+  catch{showToast('Failed to get Slack auth URL','error');}
+}
+async function syncSlack(){
+  const btn=document.getElementById('syncBtn');
+  btn.textContent='↻ Syncing…';btn.disabled=true;
+  try{
+    const res=await fetch(`${API}/api/slack/sync`,{method:'POST',headers:authHeaders});
+    if(res.ok){showToast('✓ Users re-synced!');loadOverview();}
+    else showToast('Sync failed','error');
+  }catch{showToast('Sync failed','error');}
+  btn.textContent='↻ Re-sync users';btn.disabled=false;
+}
+async function openBilling(){
+  try{
+    const org=await fetch(`${API}/api/auth/me`,{headers:authHeaders}).then(r=>r.json());
+    const endpoint=org.subscription_status==='active'?'/api/billing/portal':'/api/billing/checkout';
+    const res=await fetch(`${API}${endpoint}`,{method:'POST',headers:authHeaders});
+    const{url}=await res.json();window.location.href=url;
+  }catch{showToast('Billing unavailable','error');}
+}
+function exportCSV(){
+  const from=document.getElementById('exportFrom').value;
+  const to=document.getElementById('exportTo').value;
+  window.location.href=`${API}/api/dashboard/export?from=${from}&to=${to}`;
+}
+function refreshAll(){presenceCache={};loadStats();loadOverview();showToast('Refreshed!');}
+setInterval(()=>{
+  if(currentUsers.length&&document.getElementById('page-overview').classList.contains('active'))loadPresence(currentUsers);
+},60000);
+if(window.location.hash==='#slack_connected'){showToast('🎉 Slack connected!');history.replaceState(null,'','/dashboard');}
+if(window.location.hash==='#billing_success'){showToast('🎉 Subscription activated!');history.replaceState(null,'','/dashboard');}
+loadOrg();loadStats();loadOverview();
 </script>
 </body>
 </html>
