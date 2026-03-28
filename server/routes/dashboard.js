@@ -3,7 +3,6 @@ const db = require('../db');
 const auth = require('../middleware/auth');
 const { WebClient } = require('@slack/web-api');
 
-// Get all tracked users for org with today/week minutes
 router.get('/users', auth, async (req, res) => {
   try {
     const result = await db.query(
@@ -19,48 +18,47 @@ router.get('/users', auth, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// Live presence endpoint - polls Slack for current status of all users
+// Toggle user_type between member and external
+router.patch('/users/:id/type', auth, async (req, res) => {
+  const { user_type } = req.body;
+  if (!['member','external'].includes(user_type)) return res.status(400).json({ error: 'Invalid type' });
+  try {
+    await db.query('UPDATE tracked_users SET user_type=$1 WHERE id=$2 AND org_id=$3', [user_type, req.params.id, req.org.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// Live presence endpoint
 router.get('/presence', auth, async (req, res) => {
   try {
     const integrations = await db.query(
       `SELECT i.access_token, i.platform, tu.id as user_id, tu.platform_user_id
-       FROM integrations i
-       JOIN tracked_users tu ON tu.integration_id = i.id
+       FROM integrations i JOIN tracked_users tu ON tu.integration_id = i.id
        WHERE i.org_id = $1 AND tu.is_active = true`,
       [req.org.id]
     );
-
     const presenceMap = {};
-
-    // Group by integration to reuse WebClient
-    const byIntegration = {};
+    const byToken = {};
     for (const row of integrations.rows) {
-      const key = row.access_token;
-      if (!byIntegration[key]) byIntegration[key] = { token: key, platform: row.platform, users: [] };
-      byIntegration[key].users.push({ userId: row.user_id, platformUserId: row.platform_user_id });
+      if (!byToken[row.access_token]) byToken[row.access_token] = { token: row.access_token, platform: row.platform, users: [] };
+      byToken[row.access_token].users.push({ userId: row.user_id, platformUserId: row.platform_user_id });
     }
-
-    for (const { token, platform, users } of Object.values(byIntegration)) {
+    for (const { token, platform, users } of Object.values(byToken)) {
       if (platform === 'slack') {
         const client = new WebClient(token);
         for (const { userId, platformUserId } of users) {
           try {
-            const presence = await client.users.getPresence({ user: platformUserId });
-            presenceMap[userId] = presence.presence === 'active' ? 'active' : 'away';
-          } catch {
-            presenceMap[userId] = 'unknown';
-          }
-          // Respect rate limit
+            const p = await client.users.getPresence({ user: platformUserId });
+            presenceMap[userId] = p.presence === 'active' ? 'active' : 'away';
+          } catch { presenceMap[userId] = 'unknown'; }
           await new Promise(r => setTimeout(r, 300));
         }
       }
     }
-
     res.json(presenceMap);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// Get daily hours for all users (last N days)
 router.get('/hours', auth, async (req, res) => {
   const { days=7, userId } = req.query;
   try {
