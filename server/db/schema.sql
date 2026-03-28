@@ -1,26 +1,24 @@
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
 CREATE TABLE IF NOT EXISTS organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  subscription_status VARCHAR(50) DEFAULT 'trial',
+  trial_ends_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '14 days',
   stripe_customer_id VARCHAR(255),
   stripe_subscription_id VARCHAR(255),
-  subscription_status VARCHAR(50) DEFAULT 'trial',
-  trial_ends_at TIMESTAMP DEFAULT NOW() + INTERVAL '14 days',
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS integrations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-  platform VARCHAR(20) NOT NULL CHECK (platform IN ('slack', 'teams')),
+  platform VARCHAR(50) NOT NULL,
   access_token TEXT NOT NULL,
-  team_id VARCHAR(255),
+  team_id VARCHAR(255) NOT NULL,
   team_name VARCHAR(255),
   bot_user_id VARCHAR(255),
-  created_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(org_id, platform, team_id)
 );
 
@@ -32,43 +30,39 @@ CREATE TABLE IF NOT EXISTS tracked_users (
   display_name VARCHAR(255),
   email VARCHAR(255),
   avatar_url TEXT,
+  timezone VARCHAR(100) DEFAULT 'UTC',
   is_active BOOLEAN DEFAULT true,
-  user_type VARCHAR(20) DEFAULT 'member' CHECK (user_type IN ('member', 'external')),
-  created_at TIMESTAMP DEFAULT NOW(),
+  user_type VARCHAR(50) DEFAULT 'member',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(org_id, platform_user_id)
 );
 
 CREATE TABLE IF NOT EXISTS time_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES tracked_users(id) ON DELETE CASCADE,
   org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-  started_at TIMESTAMP NOT NULL,
-  ended_at TIMESTAMP,
-  duration_minutes INTEGER,
-  status_at_start VARCHAR(100),
+  user_id UUID REFERENCES tracked_users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
+  start_time TIMESTAMPTZ,
+  end_time TIMESTAMPTZ,
+  duration_minutes INTEGER,
+  status VARCHAR(50),
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS leave_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES tracked_users(id) ON DELETE CASCADE,
   org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-  leave_type VARCHAR(50) DEFAULT 'vacation',
+  user_id UUID REFERENCES tracked_users(id) ON DELETE CASCADE,
+  leave_type VARCHAR(100) DEFAULT 'vacation',
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
-  status VARCHAR(20) DEFAULT 'pending',
-  note TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  status VARCHAR(50) DEFAULT 'pending',
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add user_type column if not exists (migration)
+-- Add timezone column if it does not exist (safe migration)
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tracked_users' AND column_name='user_type') THEN
-    ALTER TABLE tracked_users ADD COLUMN user_type VARCHAR(20) DEFAULT 'member' CHECK (user_type IN ('member', 'external'));
-  END IF;
+  ALTER TABLE tracked_users ADD COLUMN IF NOT EXISTS timezone VARCHAR(100) DEFAULT 'UTC';
+EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
-
-CREATE INDEX IF NOT EXISTS idx_time_sessions_user_date ON time_sessions(user_id, date);
-CREATE INDEX IF NOT EXISTS idx_time_sessions_org_date ON time_sessions(org_id, date);
-CREATE INDEX IF NOT EXISTS idx_tracked_users_org ON tracked_users(org_id);
