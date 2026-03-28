@@ -18,7 +18,7 @@ app.use('/api/billing/webhook', require('./routes/billing'));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api/', rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
+app.use('/api/', rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/slack', require('./routes/slack').router);
@@ -27,6 +27,7 @@ app.use('/api/billing', require('./routes/billing'));
 
 app.use(express.static(path.join(__dirname, '../public')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, '../public/dashboard.html')));
+app.get('/user', (req, res) => res.sendFile(path.join(__dirname, '../public/user.html')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
 
 async function start() {
