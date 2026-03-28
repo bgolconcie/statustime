@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard — StatusTime</title>
+  <title>Dashboard â StatusTime</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    /* ── DARK THEME (default fallback) ── */
+    /* ââ DARK THEME (default fallback) ââ */
     :root {
       --bg:#f0f4f8;--surface:#ffffff;--surface2:#f8fafc;--border:#e2e8f0;
       --accent:#0284c7;--accent2:#7c3aed;--green:#059669;--red:#dc2626;
@@ -153,14 +153,14 @@
 <body>
 <div class="sidebar">
   <div class="sidebar-logo">Status<span>Time</span></div>
-  <a class="nav-item active" onclick="showPage('overview',this)" href="#"><span class="icon">📊</span> Overview</a>
-  <a class="nav-item" onclick="showPage('team',this)" href="#"><span class="icon">👥</span> Team Hours</a>
-  <a class="nav-item" onclick="showPage('leave',this)" href="#"><span class="icon">🏖️</span> Leave</a>
-  <a class="nav-item" onclick="showPage('integrations',this)" href="#"><span class="icon">🔗</span> Integrations</a>
-  <a class="nav-item" onclick="showPage('reports',this)" href="#"><span class="icon">📄</span> Reports</a>
+  <a class="nav-item active" onclick="showPage('overview',this)" href="#"><span class="icon">ð</span> Overview</a>
+  <a class="nav-item" onclick="showPage('team',this)" href="#"><span class="icon">ð¥</span> Team Hours</a>
+  <a class="nav-item" onclick="showPage('leave',this)" href="#"><span class="icon">ðï¸</span> Leave</a>
+  <a class="nav-item" onclick="showPage('integrations',this)" href="#"><span class="icon">ð</span> Integrations</a>
+  <a class="nav-item" onclick="showPage('reports',this)" href="#"><span class="icon">ð</span> Reports</a>
   <div class="sidebar-bottom">
     <div class="org-name" id="sidebarOrgName">Loading...</div>
-    <div class="plan-badge" id="sidebarPlan">—</div>
+    <div class="plan-badge" id="sidebarPlan">â</div>
     <!-- Theme toggle -->
     <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtn">
       <div class="toggle-track" id="themeTrack"><div class="toggle-thumb"></div></div>
@@ -180,32 +180,32 @@
       <p id="todayDate">Today</p>
     </div>
     <div class="stats-row">
-      <div class="stat-card"><div class="label">Today's total hours</div><div class="value green" id="stat-today">—</div><div class="sub">across all users</div></div>
-      <div class="stat-card"><div class="label">This week</div><div class="value blue" id="stat-week">—</div><div class="sub">last 7 days</div></div>
-      <div class="stat-card"><div class="label">Team size</div><div class="value purple" id="stat-users">—</div><div class="sub">tracked users</div></div>
+      <div class="stat-card"><div class="label">Today's total hours</div><div class="value green" id="stat-today">â</div><div class="sub">across all users</div></div>
+      <div class="stat-card"><div class="label">This week</div><div class="value blue" id="stat-week">â</div><div class="sub">last 7 days</div></div>
+      <div class="stat-card"><div class="label">Team size</div><div class="value purple" id="stat-users">â</div><div class="sub">tracked users</div></div>
     </div>
     <div class="card">
       <div class="card-header">
-        <h3>Team — Today at a glance</h3>
+        <h3>Team â Today at a glance</h3>
         <div class="card-actions">
           <!-- Status filter -->
           <div class="filter-group" id="statusFilter">
             <button class="filter-pill active" data-status="all" onclick="setFilter('status','all',this)">All</button>
-            <button class="filter-pill" data-status="active" onclick="setFilter('status','active',this)">🟢 Online</button>
-            <button class="filter-pill" data-status="away" onclick="setFilter('status','away',this)">⚫ Away</button>
+            <button class="filter-pill" data-status="active" onclick="setFilter('status','active',this)">ð¢ Online</button>
+            <button class="filter-pill" data-status="away" onclick="setFilter('status','away',this)">â« Away</button>
           </div>
           <!-- User type filter -->
           <div class="filter-group" id="typeFilter">
             <button class="filter-pill active" data-type="all" onclick="setFilter('type','all',this)">All</button>
-            <button class="filter-pill" data-type="member" onclick="setFilter('type','member',this)">👤 Members</button>
-            <button class="filter-pill" data-type="external" onclick="setFilter('type','external',this)">🔗 Externals</button>
+            <button class="filter-pill" data-type="member" onclick="setFilter('type','member',this)">ð¤ Members</button>
+            <button class="filter-pill" data-type="external" onclick="setFilter('type','external',this)">ð Externals</button>
           </div>
           <span class="presence-info" id="presenceInfo"></span>
-          <button class="btn-sm btn-ghost" onclick="refreshAll()">↻ Refresh</button>
+          <button class="btn-sm btn-ghost" onclick="refreshAll()">â» Refresh</button>
         </div>
       </div>
       <table>
-        <thead><tr><th>Member</th><th>Status</th><th>Today</th><th>This Week</th></tr></thead>
+        <thead><tr><th>Member</th><th>Status</th><th>Local Time</th><th>Today</th><th>This Week</th></tr></thead>
         <tbody id="overviewTable"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody>
       </table>
     </div>
@@ -241,13 +241,13 @@
     <div class="card">
       <div class="integrations-grid">
         <div class="integration-card">
-          <h4>🟣 Slack</h4>
+          <h4>ð£ Slack</h4>
           <p>Connect your Slack workspace. Members vs guest users are detected automatically.</p>
           <div id="slackStatus"><button class="btn-connect" onclick="connectSlack()">Connect Slack</button></div>
-          <button class="btn-sm btn-ghost" onclick="syncSlack()" id="syncBtn" style="display:none">↻ Re-sync users</button>
+          <button class="btn-sm btn-ghost" onclick="syncSlack()" id="syncBtn" style="display:none">â» Re-sync users</button>
         </div>
         <div class="integration-card">
-          <h4>🔵 Microsoft Teams</h4>
+          <h4>ðµ Microsoft Teams</h4>
           <p>Connect your Teams workspace to track presence for Microsoft 365 users.</p>
           <button class="btn-connect" onclick="showToast('Teams coming soon!','success')">Coming soon</button>
         </div>
@@ -263,7 +263,7 @@
       <div style="padding:1.5rem;display:flex;flex-direction:column;gap:1rem;max-width:400px">
         <div><label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:0.4rem">From date</label><input type="date" id="exportFrom" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.9rem;color:var(--text);font-size:0.875rem;outline:none;width:100%"></div>
         <div><label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:0.4rem">To date</label><input type="date" id="exportTo" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.9rem;color:var(--text);font-size:0.875rem;outline:none;width:100%"></div>
-        <button class="btn-sm btn-accent" style="font-size:0.875rem;padding:0.7rem 1.5rem;border-radius:8px" onclick="exportCSV()">⬇ Download CSV</button>
+        <button class="btn-sm btn-accent" style="font-size:0.875rem;padding:0.7rem 1.5rem;border-radius:8px" onclick="exportCSV()">â¬ Download CSV</button>
       </div>
     </div>
   </div>
@@ -277,7 +277,7 @@ const token = localStorage.getItem('st_token');
 if (!token) window.location.href = '/';
 const authHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
-// ── THEME ──────────────────────────────────────
+// ââ THEME ââââââââââââââââââââââââââââââââââââââ
 const savedTheme = localStorage.getItem('st_theme') || 'light';
 applyTheme(savedTheme);
 
@@ -294,14 +294,14 @@ function toggleTheme() {
   applyTheme(current === 'dark' ? 'light' : 'dark');
 }
 
-// ── INIT ──────────────────────────────────────
+// ââ INIT ââââââââââââââââââââââââââââââââââââââ
 document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 const today = new Date().toISOString().split('T')[0];
 const weekAgo = new Date(Date.now() - 6*86400000).toISOString().split('T')[0];
 document.getElementById('exportFrom').value = weekAgo;
 document.getElementById('exportTo').value = today;
 
-// ── FILTERS ───────────────────────────────────
+// ââ FILTERS âââââââââââââââââââââââââââââââââââ
 let activeFilters = { status: 'all', type: 'all' };
 
 function setFilter(dimension, value, btn) {
@@ -329,14 +329,14 @@ function applyFilters() {
   if (emptyRow) emptyRow.style.display = visible === 0 ? '' : 'none';
 }
 
-// ── PRESENCE ──────────────────────────────────
+// ââ PRESENCE ââââââââââââââââââââââââââââââââââ
 let presenceCache = {};
 let presenceLoading = false;
 let currentUsers = [];
 
 function statusBadge(userId) {
   const s = presenceCache[userId];
-  if (!s || s === 'loading') return '<span class="status-badge loading"><span class="status-dot loading"></span>—</span>';
+  if (!s || s === 'loading') return '<span class="status-badge loading"><span class="status-dot loading"></span>â</span>';
   if (s === 'active') return '<span class="status-badge active"><span class="status-dot active"></span>Online</span>';
   return '<span class="status-badge away"><span class="status-dot away"></span>Away</span>';
 }
@@ -345,7 +345,7 @@ async function loadPresence(users) {
   if (presenceLoading || !users.length) return;
   presenceLoading = true;
   const info = document.getElementById('presenceInfo');
-  if (info) info.textContent = 'Fetching live status…';
+  if (info) info.textContent = 'Fetching live statusâ¦';
   users.forEach(u => { presenceCache[u.id] = 'loading'; });
   renderPresenceBadges(users);
   try {
@@ -370,7 +370,7 @@ function renderPresenceBadges(users) {
   applyFilters();
 }
 
-// ── DATA LOADING ──────────────────────────────
+// ââ DATA LOADING ââââââââââââââââââââââââââââââ
 function showPage(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -397,11 +397,11 @@ async function loadOrg() {
     document.getElementById('sidebarOrgName').textContent = org.name;
     const planEl = document.getElementById('sidebarPlan');
     if (org.subscription_status === 'active') {
-      planEl.textContent = '✓ Pro plan'; planEl.className = 'plan-badge pro';
+      planEl.textContent = 'â Pro plan'; planEl.className = 'plan-badge pro';
       document.getElementById('upgradeBtn').textContent = 'Manage billing';
     } else {
       const days = Math.max(0, Math.ceil((new Date(org.trial_ends_at) - new Date()) / 86400000));
-      planEl.textContent = `Trial — ${days} days left`; planEl.className = 'plan-badge trial';
+      planEl.textContent = `Trial â ${days} days left`; planEl.className = 'plan-badge trial';
     }
   } catch {}
 }
@@ -423,7 +423,7 @@ async function loadOverview() {
     currentUsers = users;
     const tbody = document.getElementById('overviewTable');
     if (!users.length) {
-      tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="icon">👥</div><p>No users yet. Connect Slack to get started.</p><button class="btn-sm btn-accent" onclick="showPage('integrations')">Connect workspace</button></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="icon">ð¥</div><p>No users yet. Connect Slack to get started.</p><button class="btn-sm btn-accent" onclick="showPage('integrations')">Connect workspace</button></div></td></tr>`;
       return;
     }
     const maxToday = Math.max(...users.map(u => parseInt(u.today_minutes)||0), 1);
@@ -433,21 +433,22 @@ async function loadOverview() {
       const weekMins = parseInt(u.week_minutes) || 0;
       const type = u.user_type || 'member';
       const typeBadge = type === 'external'
-        ? '<span class="type-badge external">🔗 External</span>'
-        : '<span class="type-badge member">👤 Member</span>';
+        ? '<span class="type-badge external">ð External</span>'
+        : '<span class="type-badge member">ð¤ Member</span>';
       const avatarContent = u.avatar_url
         ? `<img src="${u.avatar_url}" alt="" onerror="this.style.display='none'">`
         : initials(u.display_name);
-      return `<tr data-user-id="${u.id}" data-user-type="${type}">
+      return `<tr data-user-id="${u.id}" data-user-type="${type}" onclick="window.location.href='/user?id=${u.id}'" style="cursor:pointer">
         <td><div class="user-cell">
           <div class="avatar">${avatarContent}</div>
           <div><div class="user-name">${u.display_name} ${typeBadge}</div><div class="user-email">${u.email||''}</div></div>
         </div></td>
         <td><span id="presence-${u.id}">${statusBadge(u.id)}</span></td>
-        <td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill" style="width:${Math.round(todayMins/maxToday*100)}%"></div></div><div class="hours-text">${todayMins ? minsToHours(todayMins) : '—'}</div></div></td>
-        <td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill purple" style="width:${Math.round(weekMins/maxWeek*100)}%"></div></div><div class="hours-text">${weekMins ? minsToHours(weekMins) : '—'}</div></div></td>
+        <td><span id="tz-${u.id}" style="font-size:0.8rem;color:var(--muted);font-variant-numeric:tabular-nums">—</span></td>
+        <td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill" style="width:${Math.round(todayMins/maxToday*100)}%"></div></div><div class="hours-text">${todayMins ? minsToHours(todayMins) : 'â'}</div></div></td>
+        <td><div class="hours-bar-wrap"><div class="hours-bar"><div class="hours-fill purple" style="width:${Math.round(weekMins/maxWeek*100)}%"></div></div><div class="hours-text">${weekMins ? minsToHours(weekMins) : 'â'}</div></div></td>
       </tr>`;
-    }).join('') + '<tr id="filterEmptyRow" style="display:none"><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">No users match this filter</td></tr>';
+    }).join('') + '<tr id="filterEmptyRow" style="display:none"><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No users match this filter</td></tr>';
     applyFilters();
     loadPresence(users);
   } catch(e) { console.error(e); }
@@ -477,9 +478,9 @@ async function loadLeave() {
     tbody.innerHTML = rows.map(r => `<tr>
       <td><div class="user-cell"><div class="avatar">${initials(r.display_name)}</div><span>${r.display_name}</span></div></td>
       <td style="text-transform:capitalize">${r.leave_type}</td>
-      <td>${r.start_date} → ${r.end_date}</td>
+      <td>${r.start_date} â ${r.end_date}</td>
       <td><span class="leave-badge ${r.status}">${r.status}</span></td>
-      <td>${r.status==='pending' ? `<button class="approve-btn" onclick="updateLeave('${r.id}','approved')">Approve</button><button class="reject-btn" onclick="updateLeave('${r.id}','rejected')">Reject</button>` : '—'}</td>
+      <td>${r.status==='pending' ? `<button class="approve-btn" onclick="updateLeave('${r.id}','approved')">Approve</button><button class="reject-btn" onclick="updateLeave('${r.id}','rejected')">Reject</button>` : 'â'}</td>
     </tr>`).join('');
   } catch {}
 }
@@ -495,7 +496,7 @@ async function loadIntegrations() {
     const integrations = await res.json();
     const slack = integrations.find(i => i.platform === 'slack');
     if (slack) {
-      document.getElementById('slackStatus').innerHTML = `<span class="connected-badge">✓ Connected — ${slack.team_name}</span>`;
+      document.getElementById('slackStatus').innerHTML = `<span class="connected-badge">â Connected â ${slack.team_name}</span>`;
       document.getElementById('syncBtn').style.display = '';
     }
   } catch {}
@@ -511,13 +512,13 @@ async function connectSlack() {
 
 async function syncSlack() {
   const btn = document.getElementById('syncBtn');
-  btn.textContent = '↻ Syncing…'; btn.disabled = true;
+  btn.textContent = 'â» Syncingâ¦'; btn.disabled = true;
   try {
     const res = await fetch(`${API}/api/slack/sync`, { method: 'POST', headers: authHeaders });
-    if (res.ok) { showToast('✓ Users re-synced! Member/External status updated.'); loadOverview(); }
+    if (res.ok) { showToast('â Users re-synced! Member/External status updated.'); loadOverview(); }
     else showToast('Sync failed', 'error');
   } catch { showToast('Sync failed', 'error'); }
-  btn.textContent = '↻ Re-sync users'; btn.disabled = false;
+  btn.textContent = 'â» Re-sync users'; btn.disabled = false;
 }
 
 async function openBilling() {
@@ -536,6 +537,24 @@ function exportCSV() {
   window.location.href = `${API}/api/dashboard/export?from=${from}&to=${to}`;
 }
 
+let tzClockInterval = null;
+function startTzClocks(users) {
+  if (tzClockInterval) clearInterval(tzClockInterval);
+  const updateClocks = () => {
+    users.forEach(u => {
+      const el = document.getElementById('tz-' + u.id);
+      if (!el) return;
+      const tz = u.timezone || 'UTC';
+      try {
+        el.textContent = new Intl.DateTimeFormat('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz}).format(new Date());
+        el.title = tz.replace(/_/g,' ');
+      } catch { el.textContent = '—'; }
+    });
+  };
+  updateClocks();
+  tzClockInterval = setInterval(updateClocks, 30000);
+}
+
 function refreshAll() {
   presenceCache = {};
   loadStats(); loadOverview();
@@ -549,8 +568,8 @@ setInterval(() => {
   }
 }, 60000);
 
-if (window.location.hash === '#slack_connected') { showToast('🎉 Slack connected!'); history.replaceState(null,'','/dashboard'); }
-if (window.location.hash === '#billing_success') { showToast('🎉 Subscription activated!'); history.replaceState(null,'','/dashboard'); }
+if (window.location.hash === '#slack_connected') { showToast('ð Slack connected!'); history.replaceState(null,'','/dashboard'); }
+if (window.location.hash === '#billing_success') { showToast('ð Subscription activated!'); history.replaceState(null,'','/dashboard'); }
 
 loadOrg(); loadStats(); loadOverview();
 </script>
