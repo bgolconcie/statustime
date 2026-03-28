@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS tracked_users (
   email VARCHAR(255),
   avatar_url TEXT,
   is_active BOOLEAN DEFAULT true,
+  user_type VARCHAR(20) DEFAULT 'member' CHECK (user_type IN ('member', 'external')),
   created_at TIMESTAMP DEFAULT NOW(),
   UNIQUE(org_id, platform_user_id)
 );
@@ -60,6 +61,13 @@ CREATE TABLE IF NOT EXISTS leave_requests (
   note TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Add user_type column if not exists (migration)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tracked_users' AND column_name='user_type') THEN
+    ALTER TABLE tracked_users ADD COLUMN user_type VARCHAR(20) DEFAULT 'member' CHECK (user_type IN ('member', 'external'));
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_time_sessions_user_date ON time_sessions(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_time_sessions_org_date ON time_sessions(org_id, date);
