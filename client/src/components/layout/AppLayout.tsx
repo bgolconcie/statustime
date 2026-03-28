@@ -78,7 +78,7 @@ export function AppLayout() {
               fontSize: '0.7rem',
               color: org.subscription_status === 'active' ? 'var(--green)' : 'var(--yellow)'
             }}>
-              {org.subscription_status === 'active' ? 'Pro plan' : `Trial — ${trialDays} days left`}
+              {org.subscription_status === 'active' ? 'Pro plan' : `Trial  ${trialDays} days left`}
             </div>
           </>}
 
