@@ -26,11 +26,11 @@ router.get('/callback', async (req, res) => {
     });
     const data = await response.json();
     if (!data.ok) throw new Error(data.error);
-    const { access_token, team, bot_user_id } = data;
+    const { access_token, team } = data;
     await db.query(
-      `INSERT INTO integrations (org_id,platform,access_token,team_id,team_name,bot_user_id)
-       VALUES ($1,'slack',$2,$3,$4,$5) ON CONFLICT (org_id,platform,team_id) DO UPDATE SET access_token=$2`,
-      [orgId, access_token, team.id, team.name, bot_user_id]
+      `INSERT INTO integrations (org_id,platform,access_token,team_id,team_name)
+       VALUES ($1,'slack',$2,$3,$4) ON CONFLICT (org_id,platform,team_id) DO UPDATE SET access_token=$2`,
+      [orgId, access_token, team.id, team.name]
     );
     const ir = await db.query('SELECT id FROM integrations WHERE org_id=$1 AND team_id=$2', [orgId, team.id]);
     await syncSlackUsers(orgId, ir.rows[0].id, access_token);
@@ -41,119 +41,63 @@ router.get('/callback', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────
-// Member type logic:
-//   Regular Member / Primary Workspace Owner  → user_type = 'member'
-//   Single-Channel Guest / Invited Guest      → user_type = 'external'
-//   Deactivated (member.deleted === true)      → skip entirely (is_active = false)
-//
-// Slack API fields available with users:read:
-//   member.is_restricted       = true  →  Multi-channel guest
-//   member.is_ultra_restricted = true  →  Single-channel guest
-//   member.is_owner / is_admin / is_primary_owner → workspace owners/admins
-//   member.deleted             = true  →  Deactivated account
-// ─────────────────────────────────────────────────────────
 async function syncSlackUsers(orgId, integrationId, token) {
   const client = new WebClient(token);
   let cursor;
   const synced = [];
-
   do {
     const result = await client.users.list({ limit: 200, cursor });
     for (const member of result.members) {
-      // Skip bots and Slackbot
       if (member.is_bot || member.id === 'USLACKBOT') continue;
-
-      // Deactivated → mark inactive, don't show in dashboard
       if (member.deleted) {
-        // Soft-update if they exist already
-        await db.query(
-          `UPDATE tracked_users SET is_active=false
-           WHERE org_id=$1 AND platform_user_id=$2`,
-          [orgId, member.id]
-        );
+        await db.query('UPDATE tracked_users SET is_active=false WHERE org_id=$1 AND platform_user_id=$2', [orgId, member.id]);
         continue;
       }
-
-      // Classify: guests have is_restricted OR is_ultra_restricted set
       const isGuest = member.is_restricted === true || member.is_ultra_restricted === true;
       const userType = isGuest ? 'external' : 'member';
-
+      const timezone = member.tz || 'UTC';
       await db.query(
-        `INSERT INTO tracked_users
-           (org_id, integration_id, platform_user_id, display_name, email, avatar_url, user_type, is_active)
-         VALUES ($1,$2,$3,$4,$5,$6,$7, true)
-         ON CONFLICT (org_id, platform_user_id) DO UPDATE
-           SET display_name  = $4,
-               avatar_url    = $6,
-               user_type     = $7,
-               is_active     = true`,
-        [orgId, integrationId, member.id,
-         member.real_name || member.name,
-         member.profile?.email,
-         member.profile?.image_72,
-         userType]
+        `INSERT INTO tracked_users (org_id,integration_id,platform_user_id,display_name,email,avatar_url,user_type,timezone,is_active)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true)
+         ON CONFLICT (org_id,platform_user_id) DO UPDATE
+           SET display_name=$4, avatar_url=$6, user_type=$7, timezone=$8, is_active=true`,
+        [orgId, integrationId, member.id, member.real_name||member.name, member.profile?.email, member.profile?.image_72, userType, timezone]
       );
-      synced.push({ id: member.id, name: member.real_name, userType,
-        is_restricted: member.is_restricted, is_ultra_restricted: member.is_ultra_restricted });
+      synced.push({ id: member.id, name: member.real_name, userType, timezone });
     }
     cursor = result.response_metadata?.next_cursor;
   } while (cursor);
-
-  console.log('[Slack sync] synced', synced.length, 'active users');
-  console.log('[Slack sync] breakdown:', JSON.stringify(
-    synced.reduce((acc, u) => { acc[u.userType] = (acc[u.userType]||0)+1; return acc; }, {})
-  ));
+  console.log('[Slack sync] synced', synced.length, 'users:', JSON.stringify(synced.reduce((a,u) => { a[u.userType]=(a[u.userType]||0)+1; return a; }, {})));
   return synced;
 }
 
-// Manual re-sync endpoint
 router.post('/sync', auth, async (req, res) => {
   try {
-    const integrations = await db.query(
-      'SELECT id, access_token FROM integrations WHERE org_id=$1 AND platform=$2',
-      [req.org.id, 'slack']
-    );
-    if (!integrations.rows.length) return res.status(404).json({ error: 'No Slack integration found' });
+    const integrations = await db.query('SELECT id,access_token FROM integrations WHERE org_id=$1 AND platform=$2', [req.org.id,'slack']);
+    if (!integrations.rows.length) return res.status(404).json({ error: 'No Slack integration' });
     let total = [];
     for (const { id, access_token } of integrations.rows) {
-      const result = await syncSlackUsers(req.org.id, id, access_token);
-      total = total.concat(result);
+      const r = await syncSlackUsers(req.org.id, id, access_token);
+      total = total.concat(r);
     }
-    const breakdown = total.reduce((acc, u) => { acc[u.userType] = (acc[u.userType]||0)+1; return acc; }, {});
+    const breakdown = total.reduce((a,u) => { a[u.userType]=(a[u.userType]||0)+1; return a; }, {});
     res.json({ success: true, synced: total.length, breakdown });
-  } catch (err) {
-    console.error('Sync error:', err);
-    res.status(500).json({ error: 'Sync failed: ' + err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Debug endpoint — shows raw Slack fields for all users (remove in production)
 router.get('/debug-members', auth, async (req, res) => {
   try {
-    const integrations = await db.query(
-      'SELECT access_token FROM integrations WHERE org_id=$1 AND platform=$2 LIMIT 1',
-      [req.org.id, 'slack']
-    );
+    const integrations = await db.query('SELECT access_token FROM integrations WHERE org_id=$1 AND platform=$2 LIMIT 1', [req.org.id,'slack']);
     if (!integrations.rows.length) return res.status(404).json({ error: 'No integration' });
     const client = new WebClient(integrations.rows[0].access_token);
     const result = await client.users.list({ limit: 200 });
-    const members = result.members
-      .filter(m => !m.is_bot && m.id !== 'USLACKBOT')
-      .map(m => ({
-        id: m.id, name: m.real_name || m.name, email: m.profile?.email,
-        deleted: m.deleted,
-        is_restricted: m.is_restricted,
-        is_ultra_restricted: m.is_ultra_restricted,
-        is_owner: m.is_owner,
-        is_primary_owner: m.is_primary_owner,
-        is_admin: m.is_admin,
-        classified_as: (m.deleted ? 'DEACTIVATED' : (m.is_restricted || m.is_ultra_restricted ? 'external' : 'member'))
-      }));
+    const members = result.members.filter(m => !m.is_bot && m.id !== 'USLACKBOT').map(m => ({
+      id: m.id, name: m.real_name||m.name, deleted: m.deleted,
+      is_restricted: m.is_restricted, is_ultra_restricted: m.is_ultra_restricted,
+      tz: m.tz, classified_as: m.deleted ? 'DEACTIVATED' : (m.is_restricted||m.is_ultra_restricted ? 'external' : 'member')
+    }));
     res.json(members);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = { router, syncSlackUsers };
