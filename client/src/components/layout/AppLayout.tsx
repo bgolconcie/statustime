@@ -21,16 +21,23 @@ export function AppLayout() {
   const trialDays = org ? Math.max(0, Math.ceil((new Date(org.trial_ends_at).getTime() - Date.now()) / 86400000)) : 0
 
   const navItems = [
-    { to: '/dashboard', label: 'Overview', icon: '📊', end: true },
-    { to: '/dashboard/team', label: 'Team Hours', icon: '👥' },
-    { to: '/dashboard/leave', label: 'Leave', icon: '🏖️' },
-    { to: '/dashboard/integrations', label: 'Integrations', icon: '🔗' },
-    { to: '/dashboard/reports', label: 'Reports', icon: '📄' },
+    { to: '/dashboard', label: 'Overview', icon: 'grid', end: true },
+    { to: '/dashboard/team', label: 'Team Hours', icon: 'users' },
+    { to: '/dashboard/leave', label: 'Leave', icon: 'calendar' },
+    { to: '/dashboard/integrations', label: 'Integrations', icon: 'link' },
+    { to: '/dashboard/reports', label: 'Reports', icon: 'doc' },
   ]
+
+  const navIcons: Record<string, string> = {
+    grid: 'M3 3h7v7H3zm0 11h7v7H3zm11-11h7v7h-7zm0 11h7v7h-7z',
+    users: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+    calendar: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z',
+    link: 'M17 7h-4v2h4c1.65 0 3 1.35 3 3s-1.35 3-3 3h-4v2h4c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-6 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-2zm-3-4h8v2H8z',
+    doc: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z',
+  }
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      {/* Sidebar */}
       <aside style={{
         width: 'var(--sidebar-width)', flexShrink: 0,
         background: 'var(--surface)', borderRight: '1px solid var(--border)',
@@ -56,7 +63,9 @@ export function AppLayout() {
                 borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
                 transition: 'all 0.15s', textDecoration: 'none',
               })}>
-              <span style={{ fontSize: '1rem', width: 18, textAlign: 'center' }}>{item.icon}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                <path d={navIcons[item.icon]} />
+              </svg>
               {item.label}
             </NavLink>
           ))}
@@ -69,11 +78,10 @@ export function AppLayout() {
               fontSize: '0.7rem',
               color: org.subscription_status === 'active' ? 'var(--green)' : 'var(--yellow)'
             }}>
-              {org.subscription_status === 'active' ? '✓ Pro plan' : `Trial — ${trialDays} days left`}
+              {org.subscription_status === 'active' ? 'Pro plan' : `Trial — ${trialDays} days left`}
             </div>
           </>}
 
-          {/* Theme toggle */}
           <button onClick={toggle} style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
             marginTop: '0.75rem', padding: '0.4rem 0.6rem', width: '100%',
@@ -95,8 +103,8 @@ export function AppLayout() {
           </button>
 
           <button onClick={() => api.me().then(o => o.subscription_status === 'active'
-              ? api.billingPortal().then(d => window.location.href = d.url)
-              : api.billingCheckout().then(d => window.location.href = d.url)
+              ? api.billingPortal().then(d => { window.location.href = d.url })
+              : api.billingCheckout().then(d => { window.location.href = d.url })
             ).catch(() => showToast('Billing unavailable','error'))}
             style={{
               display: 'block', marginTop: '0.75rem', background: 'var(--accent)',
@@ -113,7 +121,6 @@ export function AppLayout() {
         </div>
       </aside>
 
-      {/* Main content */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
         <Outlet />
       </main>
