@@ -90,18 +90,21 @@ export function Overview() {
         <CardHeader title="Team — Today at a glance" right={
           <div style={{ display:'flex', gap:'0.5rem', alignItems:'center', flexWrap:'wrap' }}>
             <FilterGroup value={statusFilter} onChange={setStatusFilter} options={[
-              {label:'All',value:'all'},{label:'🟢 Online',value:'active'},{label:'⚫ Away',value:'away'}
+              {label:'All',value:'all'},{label:'Online',value:'active'},{label:'Away',value:'away'}
             ]} />
             <FilterGroup value={typeFilter} onChange={setTypeFilter} options={[
-              {label:'All',value:'all'},{label:'👤 Members',value:'member'},{label:'🔗 Externals',value:'external'}
+              {label:'All',value:'all'},{label:'Members',value:'member'},{label:'Externals',value:'external'}
             ]} />
             {presenceLoading
               ? <span style={{fontSize:'0.72rem',color:'var(--muted)'}}>Fetching...</span>
               : onlineCount > 0 && <span style={{fontSize:'0.72rem',color:'var(--muted)'}}>{onlineCount} online now</span>
             }
-            <button onClick={() => { api.users().then(u=>{setUsers(u);fetchPresence(u)}).catch(()=>{}); api.stats().then(setStats).catch(()=>{}); showToast('Refreshed!') }}
-              style={{padding:'0.35rem 0.85rem',borderRadius:6,fontSize:'0.775rem',fontWeight:600,cursor:'pointer',border:'1px solid var(--border)',background:'transparent',color:'var(--muted)'}}>
-              ↻ Refresh
+            <button onClick={() => {
+              api.users().then(u=>{setUsers(u);fetchPresence(u)}).catch(()=>{})
+              api.stats().then(setStats).catch(()=>{})
+              showToast('Refreshed!')
+            }} style={{padding:'0.35rem 0.85rem',borderRadius:6,fontSize:'0.775rem',fontWeight:600,cursor:'pointer',border:'1px solid var(--border)',background:'transparent',color:'var(--muted)'}}>
+              Refresh
             </button>
           </div>
         } />
@@ -123,7 +126,7 @@ export function Overview() {
                     <div>
                       <div style={{ fontWeight:500, display:'flex', alignItems:'center', gap:'0.4rem', flexWrap:'wrap' }}>
                         {u.display_name}
-                        <Badge variant={u.user_type}>{u.user_type === 'external' ? '🔗 External' : '👤 Member'}</Badge>
+                        <Badge variant={u.user_type}>{u.user_type === 'external' ? 'External' : 'Member'}</Badge>
                       </div>
                       <div style={{ fontSize:'0.75rem', color:'var(--muted)' }}>{u.email}</div>
                     </div>
