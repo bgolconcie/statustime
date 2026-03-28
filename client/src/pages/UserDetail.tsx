@@ -91,7 +91,7 @@ export function UserDetail() {
   const [stats, setStats] = useState<UserStats | null>(null)
   const [todayMins, setTodayMins] = useState(0)
   const [weekMins, setWeekMins] = useState(0)
-  const [chartDays, setChartDays] = useState(30)
+  const [chartDays, setChartDays] = useState(5)
   const [logDays, setLogDays] = useState(14)
   const { theme } = useTheme()
   const { time, date } = useLocalTime(user?.timezone || '')
@@ -113,7 +113,7 @@ export function UserDetail() {
   useEffect(() => { if (id) api.userSessions(id, logDays).then(setSessions).catch(() => {}) }, [id, logDays])
 
   const chartData = hours.map(h => ({
-    date: new Date(h.date + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+    date: new Date(h.date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }),
     hours: Math.round(h.total_minutes / 6) / 10
   }))
 
@@ -171,6 +171,7 @@ export function UserDetail() {
         <Card>
           <CardHeader title="Daily Active Hours" right={
             <select value={chartDays} onChange={e => setChartDays(Number(e.target.value))} style={sel}>
+              <option value={5}>Last 5 days</option>
               <option value={14}>Last 14 days</option>
               <option value={30}>Last 30 days</option>
               <option value={60}>Last 60 days</option>
