@@ -12,10 +12,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: process.env.APP_URL || '*', credentials: true }));
-
-// Stripe webhook needs raw body - must come BEFORE express.json()
 app.use('/api/billing/webhook', require('./routes/billing'));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/', rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
@@ -26,21 +23,12 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/billing', require('./routes/billing'));
 
 app.use(express.static(path.join(__dirname, '../public')));
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, '../public/dashboard.html')));
-app.get('/user', (req, res) => res.sendFile(path.join(__dirname, '../public/user.html')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
 
 async function start() {
   try {
     await migrate();
-    app.listen(PORT, () => {
-      console.log('StatusTime running on port ' + PORT);
-      startPoller();
-    });
-  } catch (err) {
-    console.error('Failed to start:', err);
-    process.exit(1);
-  }
+    app.listen(PORT, () => { console.log('StatusTime on port ' + PORT); startPoller(); });
+  } catch (err) { console.error('Failed:', err); process.exit(1); }
 }
-
 start();
