@@ -3,7 +3,7 @@ import { api } from '../../api'
 import type { DayHours } from '../../types'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Avatar } from '../../components/ui/Avatar'
-import { minsToHours, formatDate, initials } from '../../utils'
+import { minsToHours, formatDate } from '../../utils'
 
 export function TeamHours() {
   const [rows, setRows] = useState<DayHours[]>([])
