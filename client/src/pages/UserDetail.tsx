@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api'
-import type { UserDetail as IUserDetail, DayHours, Session, UserStats } from '../types'
+import type { UserDetail as IUserDetail, DayHours, UserStats } from '../types'
 import { Avatar } from '../components/ui/Avatar'
 import { Badge } from '../components/ui/Badge'
 import { StatusDot, StatusDotLoading } from '../components/ui/StatusDot'
@@ -10,122 +10,160 @@ import { StatCard } from '../components/ui/StatCard'
 import { Card, CardHeader } from '../components/ui/Card'
 import { useLocalTime } from '../hooks/useLocalTime'
 import { useTheme } from '../hooks/useTheme'
-import { minsToHours, formatDate } from '../utils'
+import { minsToHours } from '../utils'
 
 interface HourSlot { dow: number; hour: number; pct: number; active: number; total: number }
+interface HourData { hour: number; active: number; away: number; total: number }
+interface DayLog { date: string; dow: string; hours: HourData[]; active_polls: number; total_polls: number; active_minutes: number; pct: number; first_active: number | null; last_active: number | null }
 
 function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const [tooltip, setTooltip] = useState<{ dow: number; hour: number; pct: number; active: number; total: number; x: number; y: number } | null>(null)
-
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => {
-    if (h === 0) return '12a'
-    if (h === 12) return '12p'
-    return h < 12 ? `${h}a` : `${h - 12}p`
-  })
-
+  const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? `${h}a` : `${h-12}p`)
   const getLevel = (pct: number) => pct === 0 ? 0 : Math.max(1, Math.min(12, Math.round(pct / 100 * 12)))
-
   const getCellBg = (level: number) => {
     if (level === 0) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
     const r = level / 12
     return isDark
-      ? `rgba(${Math.round(20 + r * 36)},${Math.round(40 + r * 149)},${Math.round(80 + r * 168)},${(0.2 + r * 0.8).toFixed(2)})`
-      : `rgb(${Math.round(219 - r * 182)},${Math.round(234 - r * 135)},${Math.round(254 - r * 19)})`
+      ? `rgba(${Math.round(20+r*36)},${Math.round(40+r*149)},${Math.round(80+r*168)},${(0.2+r*0.8).toFixed(2)})`
+      : `rgb(${Math.round(219-r*182)},${Math.round(234-r*135)},${Math.round(254-r*19)})`
   }
-
-  // Build 7x24 grid from flat array
-  const grid: HourSlot[][] = Array.from({ length: 7 }, (_, dow) =>
-    Array.from({ length: 24 }, (_, h) => {
-      const found = data.find(d => d.dow === dow && d.hour === h)
-      return found || { dow, hour: h, pct: 0, active: 0, total: 0 }
-    })
+  const grid = Array.from({ length: 7 }, (_, dow) =>
+    Array.from({ length: 24 }, (_, h) => data.find(d => d.dow === dow && d.hour === h) || { dow, hour: h, pct: 0, active: 0, total: 0 })
   )
-
   const hasData = data.some(s => s.total > 0)
-  const DAY_COL_W = 36
-
+  const W = 36
   return (
     <div style={{ position: 'relative', overflowX: 'auto' }}>
-      {/* Hour labels header */}
-      <div style={{ display: 'flex', marginLeft: DAY_COL_W, marginBottom: 4, gap: 2 }}>
-        {HOUR_LABELS.map((label, h) => (
-          <div key={h} style={{ width: 28, flexShrink: 0, textAlign: 'center', fontSize: '0.6rem', color: 'var(--muted)', lineHeight: 1 }}>
-            {h % 3 === 0 ? label : ''}
-          </div>
+      <div style={{ display: 'flex', marginLeft: W, marginBottom: 4, gap: 2 }}>
+        {HOUR_LABELS.map((lbl, h) => (
+          <div key={h} style={{ width: 28, flexShrink: 0, textAlign: 'center', fontSize: '0.6rem', color: 'var(--muted)' }}>{h % 3 === 0 ? lbl : ''}</div>
         ))}
       </div>
-
-      {/* Grid rows */}
       {grid.map((row, dow) => (
-        <div key={dow} style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 3 }}>
-          {/* Day label */}
-          <div style={{ width: DAY_COL_W, flexShrink: 0, fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)', textAlign: 'right', paddingRight: 8, lineHeight: 1 }}>
-            {DAY_NAMES[dow]}
-          </div>
-          {/* 24 hour cells */}
+        <div key={dow} style={{ display: 'flex', alignItems: 'center', marginBottom: 3 }}>
+          <div style={{ width: W, flexShrink: 0, fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)', textAlign: 'right', paddingRight: 8 }}>{DAY_NAMES[dow]}</div>
           <div style={{ display: 'flex', gap: 2 }}>
-            {row.map(slot => {
-              const level = getLevel(slot.pct)
-              return (
-                <div
-                  key={slot.hour}
-                  onMouseEnter={e => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                    const parent = (e.currentTarget as HTMLElement).closest('[data-heatmap]')!.getBoundingClientRect()
-                    setTooltip({ ...slot, x: rect.left - parent.left + rect.width / 2, y: rect.top - parent.top })
-                  }}
-                  onMouseLeave={() => setTooltip(null)}
-                  style={{
-                    width: 28,
-                    height: 22,
-                    borderRadius: 4,
-                    flexShrink: 0,
-                    background: getCellBg(level),
-                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
-                    cursor: 'default',
-                    transition: 'filter 0.1s',
-                  }}
-                  onMouseOver={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1.2)' }}
-                  onFocus={() => {}}
-                  onBlur={() => setTooltip(null)}
-                />
-              )
-            })}
+            {row.map(slot => (
+              <div key={slot.hour}
+                onMouseEnter={e => { const r=(e.currentTarget as HTMLElement).getBoundingClientRect();const p=(e.currentTarget as HTMLElement).closest('[data-heatmap]')!.getBoundingClientRect();setTooltip({...slot,x:r.left-p.left+r.width/2,y:r.top-p.top}) }}
+                onMouseLeave={() => setTooltip(null)}
+                onMouseOver={e => { (e.currentTarget as HTMLElement).style.filter='brightness(1.2)' }}
+                style={{ width:28, height:22, borderRadius:4, flexShrink:0, background:getCellBg(getLevel(slot.pct)), border:`1px solid ${isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}`, cursor:'default', transition:'filter 0.1s' }}
+              />
+            ))}
           </div>
         </div>
       ))}
-
-      {/* Tooltip */}
       {tooltip && (
-        <div style={{
-          position: 'absolute',
-          top: tooltip.y - 72,
-          left: Math.max(0, tooltip.x - 60),
-          background: isDark ? '#1e293b' : '#fff',
-          border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
-          borderRadius: 8, padding: '0.45rem 0.75rem',
-          fontSize: '0.75rem', pointerEvents: 'none', zIndex: 50,
-          whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', lineHeight: 1.7,
-        }}>
-          <div style={{ fontWeight: 700, color: 'var(--text)' }}>{DAY_NAMES[tooltip.dow]} {HOUR_LABELS[tooltip.hour]}&ndash;{HOUR_LABELS[(tooltip.hour + 1) % 24]}</div>
-          <div style={{ color: 'var(--accent)', fontWeight: 600 }}>{tooltip.pct.toFixed(1)}% active</div>
-          <div style={{ color: 'var(--muted)', fontSize: '0.7rem' }}>{tooltip.active} / {tooltip.total} polls</div>
+        <div style={{ position:'absolute', top:tooltip.y-72, left:Math.max(0,tooltip.x-60), background:isDark?'#1e293b':'#fff', border:`1px solid ${isDark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.12)'}`, borderRadius:8, padding:'0.45rem 0.75rem', fontSize:'0.75rem', pointerEvents:'none', zIndex:50, whiteSpace:'nowrap', boxShadow:'0 4px 12px rgba(0,0,0,0.15)', lineHeight:1.7 }}>
+          <div style={{ fontWeight:700 }}>{DAY_NAMES[tooltip.dow]} {HOUR_LABELS[tooltip.hour]}</div>
+          <div style={{ color:'var(--accent)', fontWeight:600 }}>{tooltip.pct.toFixed(1)}% active</div>
+          <div style={{ color:'var(--muted)', fontSize:'0.7rem' }}>{tooltip.active} / {tooltip.total} polls</div>
         </div>
       )}
-
-      {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: '0.7rem', color: 'var(--muted)', marginLeft: DAY_COL_W }}>
+      <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:10, fontSize:'0.7rem', color:'var(--muted)', marginLeft:W }}>
         <span>0%</span>
-        {[0,1,2,3,4,5,6,7,8,9,10,11,12].map(l => (
-          <div key={l} style={{ width: 13, height: 13, borderRadius: 3, background: getCellBg(l), border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}` }} />
-        ))}
+        {[0,1,2,3,4,5,6,7,8,9,10,11,12].map(l => <div key={l} style={{ width:13, height:13, borderRadius:3, background:getCellBg(l), border:`1px solid ${isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}` }} />)}
         <span>100%</span>
-        <span style={{ marginLeft: 'auto', opacity: 0.5, fontSize: '0.65rem' }}>
-          {hasData ? `5-min polls · last ${days} days` : 'Waiting for first poll data...'}
-        </span>
+        <span style={{ marginLeft:'auto', opacity:0.5, fontSize:'0.65rem' }}>{hasData?`5-min polls · last ${days} days`:'Waiting for first poll data...'}</span>
+      </div>
+    </div>
+  )
+}
+
+function DayTimeline({ day, isDark }: { day: DayLog; isDark: boolean }) {
+  const [tooltip, setTooltip] = useState<{ hour: number; active: number; away: number; total: number; x: number } | null>(null)
+
+  // Build 24-slot array
+  const slots = Array.from({ length: 24 }, (_, h) => {
+    const found = day.hours.find(d => d.hour === h)
+    return found || { hour: h, active: 0, away: 0, total: 0 }
+  })
+
+  const fmtHour = (h: number | null) => {
+    if (h === null) return '--'
+    if (h === 0) return '12am'
+    if (h === 12) return '12pm'
+    return h < 12 ? `${h}am` : `${h-12}pm`
+  }
+
+  const fmtMins = (m: number) => {
+    if (m < 60) return `${m}m`
+    const h = Math.floor(m / 60), rem = m % 60
+    return rem ? `${h}h ${rem}m` : `${h}h`
+  }
+
+  const dateObj = new Date(day.date + 'T12:00:00Z')
+  const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.75rem 1.25rem', borderBottom:`1px solid ${isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)'}`, flexWrap:'wrap' }}>
+      {/* Date label */}
+      <div style={{ minWidth: 90, flexShrink: 0 }}>
+        <div style={{ fontSize:'0.85rem', fontWeight:700, color:'var(--text)' }}>{dateLabel}</div>
+        <div style={{ fontSize:'0.72rem', color:'var(--muted)', marginTop:1 }}>{day.dow}</div>
+      </div>
+
+      {/* 24h timeline bar */}
+      <div style={{ flex:1, minWidth:200, position:'relative' }}
+        onMouseLeave={() => setTooltip(null)}>
+        <div style={{ display:'flex', height:20, borderRadius:4, overflow:'hidden', gap:1, background:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.04)' }}>
+          {slots.map(slot => {
+            const hasPoll = slot.total > 0
+            const pct = hasPoll ? slot.active / slot.total : 0
+            const bg = !hasPoll
+              ? (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.04)')
+              : pct > 0.5
+                ? `rgba(37,99,235,${0.3 + pct * 0.7})`
+                : `rgba(148,163,184,${0.2 + (1 - pct) * 0.3})`
+            return (
+              <div key={slot.hour}
+                onMouseEnter={e => { const r=(e.currentTarget as HTMLElement).getBoundingClientRect();const p=(e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();setTooltip({...slot,x:r.left-p.left+r.width/2}) }}
+                style={{ flex:1, background:bg, cursor:'default', transition:'filter 0.1s' }}
+                onMouseOver={e => { (e.currentTarget as HTMLElement).style.filter='brightness(1.3)' }}
+              />
+            )
+          })}
+        </div>
+        {/* Hour ticks */}
+        <div style={{ display:'flex', justifyContent:'space-between', marginTop:2 }}>
+          {[0,6,12,18,23].map(h => (
+            <div key={h} style={{ fontSize:'0.55rem', color:'var(--muted)' }}>{fmtHour(h)}</div>
+          ))}
+        </div>
+        {/* Tooltip */}
+        {tooltip && (
+          <div style={{ position:'absolute', bottom:32, left:Math.max(0, Math.min(tooltip.x - 50, 200)), background:isDark?'#1e293b':'#fff', border:`1px solid ${isDark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.1)'}`, borderRadius:6, padding:'0.35rem 0.6rem', fontSize:'0.72rem', pointerEvents:'none', zIndex:50, whiteSpace:'nowrap', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', lineHeight:1.6 }}>
+            <div style={{ fontWeight:600 }}>{fmtHour(tooltip.hour)}&ndash;{fmtHour(tooltip.hour+1>23?0:tooltip.hour+1)}</div>
+            {tooltip.total > 0
+              ? <><div style={{ color:'var(--accent)' }}>{tooltip.active} active / {tooltip.away} away</div><div style={{ color:'var(--muted)' }}>{Math.round(tooltip.active/tooltip.total*100)}% of {tooltip.total} polls</div></>
+              : <div style={{ color:'var(--muted)' }}>No data</div>
+            }
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:'flex', gap:'1.5rem', flexShrink:0, fontSize:'0.78rem' }}>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontWeight:700, color:'var(--accent)' }}>{fmtMins(day.active_minutes)}</div>
+          <div style={{ color:'var(--muted)', fontSize:'0.68rem' }}>active</div>
+        </div>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontWeight:700, color:'var(--text)' }}>{day.pct.toFixed(0)}%</div>
+          <div style={{ color:'var(--muted)', fontSize:'0.68rem' }}>of polls</div>
+        </div>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontWeight:600, color:'var(--text)', fontSize:'0.75rem' }}>{fmtHour(day.first_active)}</div>
+          <div style={{ color:'var(--muted)', fontSize:'0.68rem' }}>first seen</div>
+        </div>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontWeight:600, color:'var(--text)', fontSize:'0.75rem' }}>{fmtHour(day.last_active)}</div>
+          <div style={{ color:'var(--muted)', fontSize:'0.68rem' }}>last seen</div>
+        </div>
       </div>
     </div>
   )
@@ -137,7 +175,7 @@ export function UserDetail() {
   const [presence, setPresence] = useState<string | null>(null)
   const [hours, setHours] = useState<DayHours[]>([])
   const [hourly, setHourly] = useState<HourSlot[]>([])
-  const [sessions, setSessions] = useState<Session[]>([])
+  const [activityLog, setActivityLog] = useState<DayLog[]>([])
   const [stats, setStats] = useState<UserStats | null>(null)
   const [todayMins, setTodayMins] = useState(0)
   const [weekMins, setWeekMins] = useState(0)
@@ -146,6 +184,16 @@ export function UserDetail() {
   const [logDays, setLogDays] = useState(14)
   const { theme } = useTheme()
   const { time, date } = useLocalTime(user?.timezone || '')
+  const isDark = theme === 'dark'
+
+  const fetchLog = async (userId: string, days: number) => {
+    const token = localStorage.getItem('st_token')
+    const res = await fetch(`/api/dashboard/users/${userId}/activity-log?days=${days}`, {
+      headers: { Authorization: 'Bearer ' + token }
+    })
+    const d = await res.json()
+    if (Array.isArray(d)) setActivityLog(d)
+  }
 
   useEffect(() => {
     if (!id) return
@@ -160,90 +208,77 @@ export function UserDetail() {
     return () => clearInterval(tid)
   }, [id])
 
-  useEffect(() => {
-    if (id) api.userHours(id, chartDays).then(setHours).catch(() => {})
-  }, [id, chartDays])
+  useEffect(() => { if (id) api.userHours(id, chartDays).then(setHours).catch(() => {}) }, [id, chartDays])
 
   useEffect(() => {
     if (!id) return
-    fetch(`/api/dashboard/users/${id}/hourly?days=${heatmapDays}`, {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('st_token') }
-    }).then(r => r.json()).then(d => { if (Array.isArray(d)) setHourly(d) }).catch(() => {})
+    const token = localStorage.getItem('st_token')
+    fetch(`/api/dashboard/users/${id}/hourly?days=${heatmapDays}`, { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.json()).then(d => { if (Array.isArray(d)) setHourly(d) }).catch(() => {})
   }, [id, heatmapDays])
 
-  useEffect(() => {
-    if (id) api.userSessions(id, logDays).then(setSessions).catch(() => {})
-  }, [id, logDays])
+  useEffect(() => { if (id) fetchLog(id, logDays) }, [id, logDays])
 
   const chartData = (() => {
     const hoursMap: Record<string, number> = {}
     hours.forEach(h => { hoursMap[String(h.date).split('T')[0]] = h.total_minutes })
     const result = []
     for (let i = chartDays - 1; i >= 0; i--) {
-      const d = new Date()
-      d.setUTCHours(0, 0, 0, 0)
-      d.setUTCDate(d.getUTCDate() - i)
+      const d = new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()-i)
       const ds = d.toISOString().split('T')[0]
-      result.push({
-        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
-        hours: Math.round((hoursMap[ds] || 0) / 6) / 10
-      })
+      result.push({ date: d.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}), hours: Math.round((hoursMap[ds]||0)/6)/10 })
     }
     return result
   })()
 
-  const isDark = theme === 'dark'
   const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'
   const labelColor = isDark ? '#64748b' : '#94a3b8'
-  const sel: React.CSSProperties = {
-    background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6,
-    color: 'var(--text)', padding: '0.3rem 0.6rem', fontSize: '0.775rem',
-    outline: 'none', fontFamily: 'inherit'
-  }
+  const sel: React.CSSProperties = { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, color:'var(--text)', padding:'0.3rem 0.6rem', fontSize:'0.775rem', outline:'none', fontFamily:'inherit' }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 56, display: 'flex', alignItems: 'center', gap: '1rem', position: 'sticky', top: 0, zIndex: 100, boxShadow: 'var(--shadow)' }}>
-        <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--muted)', fontSize: '0.875rem', padding: '0.35rem 0.75rem', borderRadius: 6, border: '1px solid var(--border)' }}>
-          Back
-        </Link>
-        <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent)' }}>
-          Status<span style={{ color: 'var(--text)' }}>Time</span>
-        </div>
+    <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
+      <div style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)', padding:'0 2rem', height:56, display:'flex', alignItems:'center', gap:'1rem', position:'sticky', top:0, zIndex:100, boxShadow:'var(--shadow)' }}>
+        <Link to="/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'0.4rem', color:'var(--muted)', fontSize:'0.875rem', padding:'0.35rem 0.75rem', borderRadius:6, border:'1px solid var(--border)' }}>Back</Link>
+        <div style={{ fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:'1.1rem', color:'var(--accent)' }}>Status<span style={{ color:'var(--text)' }}>Time</span></div>
       </div>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '2rem', display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '1.5rem', boxShadow: 'var(--shadow)', flexWrap: 'wrap' }}>
-          <Avatar name={user?.display_name || '?'} url={user?.avatar_url} size={72} />
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontFamily: 'Syne,sans-serif', fontSize: '1.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              {user?.display_name || 'Loading...'}
-              {user && <Badge variant={user.user_type}>{user.user_type === 'external' ? 'External' : 'Member'}</Badge>}
+      <div style={{ maxWidth:1100, margin:'0 auto', padding:'2rem 1.5rem' }}>
+        {/* Profile card */}
+        <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:16, padding:'2rem', display:'flex', alignItems:'flex-start', gap:'1.5rem', marginBottom:'1.5rem', boxShadow:'var(--shadow)', flexWrap:'wrap' }}>
+          <Avatar name={user?.display_name||'?'} url={user?.avatar_url} size={72} />
+          <div style={{ flex:1, minWidth:200 }}>
+            <div style={{ fontFamily:'Syne,sans-serif', fontSize:'1.5rem', fontWeight:800, display:'flex', alignItems:'center', gap:'0.6rem', flexWrap:'wrap' }}>
+              {user?.display_name||'Loading...'}
+              {user && <Badge variant={user.user_type}>{user.user_type==='external'?'External':'Member'}</Badge>}
             </div>
-            <div style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.2rem' }}>{user?.email}</div>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ color:'var(--muted)', fontSize:'0.875rem', marginTop:'0.2rem' }}>{user?.email}</div>
+            <div style={{ display:'flex', gap:'1rem', marginTop:'0.75rem', flexWrap:'wrap' }}>
               {user && <>
-                <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Team: <strong style={{ color: 'var(--text)' }}>{user.team_name}</strong></span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>TZ: <strong style={{ color: 'var(--text)' }}>{user.timezone?.replace(/_/g, ' ')}</strong></span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Joined: <strong style={{ color: 'var(--text)' }}>{user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''}</strong></span>
+                <span style={{ fontSize:'0.8rem', color:'var(--muted)' }}>Team: <strong style={{ color:'var(--text)' }}>{user.team_name}</strong></span>
+                <span style={{ fontSize:'0.8rem', color:'var(--muted)' }}>TZ: <strong style={{ color:'var(--text)' }}>{user.timezone?.replace(/_/g,' ')}</strong></span>
+                <span style={{ fontSize:'0.8rem', color:'var(--muted)' }}>Joined: <strong style={{ color:'var(--text)' }}>{user.created_at?new Date(user.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'}):''}</strong></span>
               </>}
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem' }}>
-            {presence === null ? <StatusDotLoading /> : <StatusDot status={presence} />}
-            <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '0.75rem 1rem', textAlign: 'right' }}>
-              <div style={{ fontFamily: 'Syne,sans-serif', fontSize: '1.4rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{time || '--:--'}</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{user?.timezone?.split('/').pop()?.replace(/_/g, ' ')}</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{date}</div>
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'0.75rem' }}>
+            {presence===null?<StatusDotLoading/>:<StatusDot status={presence}/>}
+            <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:10, padding:'0.75rem 1rem', textAlign:'right' }}>
+              <div style={{ fontFamily:'Syne,sans-serif', fontSize:'1.4rem', fontWeight:800, fontVariantNumeric:'tabular-nums' }}>{time||'--:--'}</div>
+              <div style={{ fontSize:'0.72rem', color:'var(--muted)' }}>{user?.timezone?.split('/').pop()?.replace(/_/g,' ')}</div>
+              <div style={{ fontSize:'0.7rem', color:'var(--muted)' }}>{date}</div>
             </div>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-          <StatCard label="Today" value={todayMins ? minsToHours(todayMins) : '--'} sub="hours active" color="var(--green)" />
-          <StatCard label="This week" value={weekMins ? minsToHours(weekMins) : '--'} sub="last 7 days" color="var(--accent)" />
-          <StatCard label="This month" value={stats?.totalMinutes ? minsToHours(stats.totalMinutes) : '--'} sub="last 30 days" color="var(--accent2)" />
-          <StatCard label="Avg / active day" value={stats?.avgPerActiveDay ? minsToHours(stats.avgPerActiveDay) : '--'} sub="active days only" color="var(--yellow)" />
-          <StatCard label="Active days" value={stats?.activeDays ?? '--'} sub="in last 30 days" />
+
+        {/* Stat cards */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:'1rem', marginBottom:'1.5rem' }}>
+          <StatCard label="Today" value={todayMins?minsToHours(todayMins):'--'} sub="hours active" color="var(--green)" />
+          <StatCard label="This week" value={weekMins?minsToHours(weekMins):'--'} sub="last 7 days" color="var(--accent)" />
+          <StatCard label="This month" value={stats?.totalMinutes?minsToHours(stats.totalMinutes):'--'} sub="last 30 days" color="var(--accent2)" />
+          <StatCard label="Avg / active day" value={stats?.avgPerActiveDay?minsToHours(stats.avgPerActiveDay):'--'} sub="active days only" color="var(--yellow)" />
+          <StatCard label="Active days" value={stats?.activeDays??'--'} sub="in last 30 days" />
         </div>
+
+        {/* Daily bar chart */}
         <Card>
           <CardHeader title="Daily Active Hours" right={
             <select value={chartDays} onChange={e => setChartDays(Number(e.target.value))} style={sel}>
@@ -253,19 +288,20 @@ export function UserDetail() {
               <option value={60}>Last 60 days</option>
             </select>
           } />
-          <div style={{ padding: '1.5rem' }}>
+          <div style={{ padding:'1.5rem' }}>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
+              <BarChart data={chartData} margin={{ top:5, right:5, bottom:5, left:0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="date" tick={{ fill: labelColor, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: labelColor, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => v + 'h'} />
-                <Tooltip formatter={(v: number) => [v + 'h', 'Active hours']}
-                  contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.85rem' }} />
-                <Bar dataKey="hours" fill="var(--accent)" radius={[4, 4, 0, 0]} fillOpacity={0.85} />
+                <XAxis dataKey="date" tick={{ fill:labelColor, fontSize:11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill:labelColor, fontSize:11 }} axisLine={false} tickLine={false} tickFormatter={v => v+'h'} />
+                <Tooltip formatter={(v: number) => [v+'h','Active hours']} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:'0.85rem' }} />
+                <Bar dataKey="hours" fill="var(--accent)" radius={[4,4,0,0]} fillOpacity={0.85} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
+
+        {/* Heatmap */}
         <Card>
           <CardHeader title="Activity Heatmap by Hour" right={
             <select value={heatmapDays} onChange={e => setHeatmapDays(Number(e.target.value))} style={sel}>
@@ -275,10 +311,12 @@ export function UserDetail() {
               <option value={60}>Last 60 days</option>
             </select>
           } />
-          <div style={{ padding: '1.5rem' }} data-heatmap="1">
+          <div style={{ padding:'1.5rem' }} data-heatmap="1">
             <HourlyHeatmap data={hourly} days={heatmapDays} />
           </div>
         </Card>
+
+        {/* Activity Log — timeline */}
         <Card>
           <CardHeader title="Activity Log" right={
             <select value={logDays} onChange={e => setLogDays(Number(e.target.value))} style={sel}>
@@ -287,34 +325,25 @@ export function UserDetail() {
               <option value={30}>Last 30 days</option>
             </select>
           } />
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>{['Date', 'Start', 'End', 'Duration', 'Status'].map(h => (
-                <th key={h} style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)', padding: '0.75rem 1.25rem', textAlign: 'left', borderBottom: '1px solid var(--border)', fontWeight: 500 }}>{h}</th>
-              ))}</tr>
-            </thead>
-            <tbody>
-              {sessions.length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>No sessions for this period</td></tr>
-              )}
-              {sessions.map((s, i) => (
-                <tr key={i}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface2)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
-                  <td style={{ padding: '0.7rem 1.25rem', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', fontWeight: 600 }}>{formatDate(s.date)}</td>
-                  <td style={{ padding: '0.7rem 1.25rem', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--muted)' }}>{s.start_time ? new Date(s.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--'}</td>
-                  <td style={{ padding: '0.7rem 1.25rem', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--muted)' }}>{s.end_time ? new Date(s.end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--'}</td>
-                  <td style={{ padding: '0.7rem 1.25rem', borderBottom: '1px solid var(--border)', fontSize: '0.85rem' }}>{s.duration_minutes ? minsToHours(s.duration_minutes) : '--'}</td>
-                  <td style={{ padding: '0.7rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 500 }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: s.status === 'active' ? 'var(--green)' : 'var(--muted)' }} />
-                      {s.status || '--'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {activityLog.length === 0 ? (
+            <div style={{ textAlign:'center', color:'var(--muted)', padding:'2.5rem', fontSize:'0.875rem' }}>
+              No activity data yet — polls started today, check back soon.
+            </div>
+          ) : (
+            <div>
+              {/* Column headers */}
+              <div style={{ display:'flex', gap:'1rem', padding:'0.5rem 1.25rem', borderBottom:`1px solid ${isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)'}` }}>
+                <div style={{ minWidth:90, fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', fontWeight:500 }}>Date</div>
+                <div style={{ flex:1, fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', fontWeight:500 }}>Timeline (24h)</div>
+                <div style={{ width:300, display:'flex', gap:'1.5rem', flexShrink:0, justifyContent:'flex-end' }}>
+                  {['Active','% Polls','First','Last'].map(h => (
+                    <div key={h} style={{ textAlign:'center', fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', fontWeight:500, minWidth:50 }}>{h}</div>
+                  ))}
+                </div>
+              </div>
+              {activityLog.map((day, i) => <DayTimeline key={i} day={day} isDark={isDark} />)}
+            </div>
+          )}
         </Card>
       </div>
     </div>
