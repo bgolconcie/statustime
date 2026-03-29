@@ -77,6 +77,9 @@ CREATE TABLE IF NOT EXISTS presence_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_presence_snapshots_user_polled ON presence_snapshots(user_id, polled_at);
 
+-- Plan tier per org
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS plan VARCHAR(20) DEFAULT 'trial';
+
 -- Cost/price per user (safe migration)
 DO $$ BEGIN
   ALTER TABLE tracked_users ADD COLUMN IF NOT EXISTS cost_type VARCHAR(10) DEFAULT 'hourly';

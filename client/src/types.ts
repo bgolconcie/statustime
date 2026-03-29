@@ -1,8 +1,9 @@
 export interface Org {
   id: string
   name: string
-  subscription_status: 'trial' | 'active'
+  subscription_status: 'trial' | 'active' | 'past_due' | 'cancelled'
   trial_ends_at: string
+  plan: 'trial' | 'standard' | 'pro'
 }
 
 export interface User {

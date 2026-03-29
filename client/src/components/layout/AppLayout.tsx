@@ -8,6 +8,7 @@ import { Toast, useToast } from '../ui/Toast'
 export function AppLayout() {
   const [org, setOrg] = useState<Org | null>(null)
   const [users, setUsers] = useState<User[]>([])
+  const [showPlans, setShowPlans] = useState(false)
   const { theme, toggle } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
@@ -100,7 +101,9 @@ export function AppLayout() {
               fontSize: '0.7rem',
               color: org.subscription_status === 'active' ? 'var(--green)' : 'var(--yellow)'
             }}>
-              {org.subscription_status === 'active' ? 'Pro plan' : `Trial  ${trialDays} days left`}
+              {org.subscription_status === 'active'
+                ? (org.plan === 'standard' ? 'Standard plan' : 'Pro plan')
+                : `Trial — ${trialDays} days left`}
             </div>
           </>}
 
@@ -124,17 +127,30 @@ export function AppLayout() {
             {theme === 'dark' ? 'Light mode' : 'Dark mode'}
           </button>
 
-          <button onClick={() => api.me().then(o => o.subscription_status === 'active'
-              ? api.billingPortal().then(d => { window.location.href = d.url })
-              : api.billingCheckout().then(d => { window.location.href = d.url })
-            ).catch(() => showToast('Billing unavailable','error'))}
-            style={{
-              display: 'block', marginTop: '0.75rem', background: 'var(--accent)',
-              color: 'var(--bg)', padding: '0.5rem', borderRadius: 6, fontSize: '0.8rem',
-              fontWeight: 700, cursor: 'pointer', border: 'none', width: '100%',
-            }}>
-            {org?.subscription_status === 'active' ? 'Manage billing' : 'Upgrade to Pro'}
-          </button>
+          {org?.subscription_status === 'active' ? (
+            <button onClick={() => api.billingPortal().then(d => { window.location.href = d.url }).catch(() => showToast('Billing unavailable','error'))}
+              style={{ display:'block', marginTop:'0.75rem', background:'var(--accent)', color:'var(--bg)', padding:'0.5rem', borderRadius:6, fontSize:'0.8rem', fontWeight:700, cursor:'pointer', border:'none', width:'100%' }}>
+              Manage billing
+            </button>
+          ) : showPlans ? (
+            <div style={{ marginTop:'0.75rem', display:'flex', flexDirection:'column', gap:'0.4rem' }}>
+              <div style={{ fontSize:'0.7rem', color:'var(--muted)', marginBottom:'0.1rem' }}>Choose a plan:</div>
+              <button onClick={() => api.billingCheckout('standard').then(d => { window.location.href = d.url }).catch(() => showToast('Billing unavailable','error'))}
+                style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, padding:'0.45rem 0.5rem', fontSize:'0.775rem', fontWeight:600, cursor:'pointer', color:'var(--text)', width:'100%', textAlign:'left' }}>
+                Standard — <span style={{ color:'var(--accent)' }}>$6</span>/user/mo
+              </button>
+              <button onClick={() => api.billingCheckout('pro').then(d => { window.location.href = d.url }).catch(() => showToast('Billing unavailable','error'))}
+                style={{ background:'var(--accent)', border:'none', borderRadius:6, padding:'0.45rem 0.5rem', fontSize:'0.775rem', fontWeight:700, cursor:'pointer', color:'var(--bg)', width:'100%', textAlign:'left' }}>
+                Pro — $9/user/mo ★
+              </button>
+              <button onClick={() => setShowPlans(false)} style={{ background:'transparent', border:'none', fontSize:'0.7rem', color:'var(--muted)', cursor:'pointer', padding:'0.1rem' }}>Cancel</button>
+            </div>
+          ) : (
+            <button onClick={() => setShowPlans(true)}
+              style={{ display:'block', marginTop:'0.75rem', background:'var(--accent)', color:'var(--bg)', padding:'0.5rem', borderRadius:6, fontSize:'0.8rem', fontWeight:700, cursor:'pointer', border:'none', width:'100%' }}>
+              Upgrade to Pro
+            </button>
+          )}
           <button onClick={logout} style={{
             display: 'block', marginTop: '0.5rem', background: 'transparent',
             color: 'var(--muted)', padding: '0.4rem', borderRadius: 6, fontSize: '0.75rem',

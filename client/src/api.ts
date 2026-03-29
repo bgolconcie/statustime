@@ -40,6 +40,6 @@ export const api = {
     req(`/api/dashboard/users/${id}/billing`, { method: 'PATCH', body: JSON.stringify(data) }),
   invoice: (from: string, to: string) => req<Invoice>(`/api/dashboard/reports/invoice?from=${from}&to=${to}`),
   timesheet: (from: string, to: string) => req<Timesheet>(`/api/dashboard/reports/timesheet?from=${from}&to=${to}`),
-  billingCheckout: () => req<{ url: string }>('/api/billing/checkout', { method: 'POST' }),
+  billingCheckout: (plan: 'standard' | 'pro') => req<{ url: string }>('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ plan }) }),
   billingPortal: () => req<{ url: string }>('/api/billing/portal', { method: 'POST' }),
 }
