@@ -171,9 +171,11 @@ export function UserDetail() {
   const { time, date } = useLocalTime(user?.timezone || '')
   const isDark = theme === 'dark'
 
-  const fetchLog = async (userId: string, days: number) => {
+  const tz = user?.timezone || 'UTC'
+
+  const fetchLog = async (userId: string, days: number, timezone: string) => {
     const token = localStorage.getItem('st_token')
-    const res = await fetch(`/api/dashboard/users/${userId}/activity-log?days=${days}`, {
+    const res = await fetch(`/api/dashboard/users/${userId}/activity-log?days=${days}&tz=${encodeURIComponent(timezone)}`, {
       headers: { Authorization: 'Bearer ' + token }
     })
     const d = await res.json()
@@ -193,25 +195,26 @@ export function UserDetail() {
     return () => clearInterval(tid)
   }, [id])
 
-  useEffect(() => { if (id) api.userHours(id, chartDays).then(setHours).catch(() => {}) }, [id, chartDays])
+  useEffect(() => { if (id) api.userHours(id, chartDays, tz).then(setHours).catch(() => {}) }, [id, chartDays, tz])
 
   useEffect(() => {
     if (!id) return
     const token = localStorage.getItem('st_token')
-    fetch(`/api/dashboard/users/${id}/hourly?days=${heatmapDays}`, { headers: { Authorization: 'Bearer ' + token } })
+    fetch(`/api/dashboard/users/${id}/hourly?days=${heatmapDays}&tz=${encodeURIComponent(tz)}`, { headers: { Authorization: 'Bearer ' + token } })
       .then(r => r.json()).then(d => { if (Array.isArray(d)) setHourly(d) }).catch(() => {})
-  }, [id, heatmapDays])
+  }, [id, heatmapDays, tz])
 
-  useEffect(() => { if (id) fetchLog(id, logDays) }, [id, logDays])
+  useEffect(() => { if (id) fetchLog(id, logDays, tz) }, [id, logDays, tz])
 
   const chartData = (() => {
     const hoursMap: Record<string, number> = {}
     hours.forEach(h => { hoursMap[String(h.date).split('T')[0]] = h.total_minutes })
     const result = []
     for (let i = chartDays - 1; i >= 0; i--) {
-      const d = new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate()-i)
-      const ds = d.toISOString().split('T')[0]
-      result.push({ date: d.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}), hours: Math.round((hoursMap[ds]||0)/6)/10 })
+      const d = new Date(Date.now() - i * 86400000)
+      const ds = d.toLocaleDateString('en-CA', { timeZone: tz })
+      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: tz })
+      result.push({ date: label, hours: Math.round((hoursMap[ds] || 0) / 6) / 10 })
     }
     return result
   })()
@@ -311,7 +314,7 @@ export function UserDetail() {
       {/* Activity Log */}
       <Card>
         <CardHeader title="Activity Log" right={
-          <select value={logDays} onChange={e => { const v=Number(e.target.value); setLogDays(v); if(id) fetchLog(id,v) }} style={sel}>
+          <select value={logDays} onChange={e => { const v=Number(e.target.value); setLogDays(v); if(id) fetchLog(id,v,tz) }} style={sel}>
             <option value={7}>Last 7 days</option>
             <option value={14}>Last 14 days</option>
             <option value={30}>Last 30 days</option>

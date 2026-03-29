@@ -29,7 +29,7 @@ export const api = {
   leave: () => req<LeaveRequest[]>('/api/dashboard/leave'),
   updateLeave: (id: string, status: string) => req('/api/dashboard/leave/' + id, { method: 'PATCH', body: JSON.stringify({ status }) }),
   user: (id: string) => req<UserDetail>('/api/dashboard/users/' + id),
-  userHours: (id: string, days: number) => req<DayHours[]>(`/api/dashboard/users/${id}/hours?days=${days}`),
+  userHours: (id: string, days: number, tz?: string) => req<DayHours[]>(`/api/dashboard/users/${id}/hours?days=${days}${tz ? '&tz=' + encodeURIComponent(tz) : ''}`),
   userHeatmap: (id: string, days: number) => req<HeatmapCell[]>(`/api/dashboard/users/${id}/heatmap?days=${days}`),
   userSessions: (id: string, days: number) => req<Session[]>(`/api/dashboard/users/${id}/sessions?days=${days}`),
   userStats: (id: string, days: number) => req<UserStats>(`/api/dashboard/users/${id}/stats?days=${days}`),

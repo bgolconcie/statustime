@@ -34,14 +34,19 @@ router.get('/users/:userId', auth, async (req, res) => {
 });
 
 router.get('/users/:userId/hours', auth, async (req, res) => {
-  const { days = 30 } = req.query;
+  const { days = 30, tz = 'UTC' } = req.query;
+  const safeTz = tz.replace(/[^A-Za-z0-9/_+-]/g, '') || 'UTC';
   try {
     const result = await db.query(
-      `SELECT date, SUM(duration_minutes) as total_minutes
-       FROM time_sessions
-       WHERE user_id=$1 AND org_id=$2 AND date >= CURRENT_DATE - ($3::int - 1) AND duration_minutes IS NOT NULL
-       GROUP BY date ORDER BY date ASC`,
-      [req.params.userId, req.org.id, parseInt(days)]
+      `SELECT
+         (polled_at AT TIME ZONE $4)::date AS date,
+         COUNT(*) FILTER (WHERE is_active = true) * 5 AS total_minutes
+       FROM presence_snapshots
+       WHERE user_id = $1 AND org_id = $2
+         AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
+       GROUP BY date
+       ORDER BY date ASC`,
+      [req.params.userId, req.org.id, parseInt(days), safeTz]
     );
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
