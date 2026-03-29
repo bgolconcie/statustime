@@ -119,17 +119,30 @@
     .feature p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
 
     /* PRICING */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 1.5rem; margin-top: 3rem; max-width: 780px; margin-left: auto; margin-right: auto; }
     .pricing-card {
-      max-width: 420px; margin: 3rem auto 0;
-      background: linear-gradient(135deg, var(--surface) 0%, rgba(14,165,233,0.04) 100%);
-      border: 1px solid rgba(14,165,233,0.25); border-radius: 20px; padding: 2.5rem; text-align: center;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 2.25rem;
+      display: flex; flex-direction: column; transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .price { font-family: 'Syne', sans-serif; font-size: 4rem; font-weight: 800; color: var(--accent); }
-    .price sub { font-size: 1.25rem; vertical-align: middle; }
-    .price-period { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-    .price-features { list-style: none; margin: 1.5rem 0 2rem; text-align: left; display: flex; flex-direction: column; gap: 0.75rem; }
-    .price-features li { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; }
-    .price-features li::before { content: 'v'; display: inline-flex; width: 18px; height: 18px; background: rgba(16,185,129,0.15); color: var(--green); border-radius: 50%; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; }
+    .pricing-card:hover { border-color: rgba(14,165,233,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    .pricing-card.featured { border-color: rgba(14,165,233,0.4); background: linear-gradient(135deg, var(--surface) 0%, rgba(14,165,233,0.05) 100%); }
+    .plan-name { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
+    .pricing-card.featured .plan-name { color: var(--accent); }
+    .plan-desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.5; min-height: 2.5rem; }
+    .price-row { display: flex; align-items: flex-end; gap: 0.2rem; margin-bottom: 0.35rem; }
+    .price-symbol { font-size: 1.1rem; font-weight: 600; color: var(--muted); line-height: 1; margin-bottom: 0.6rem; }
+    .price-currency { font-size: 0.65rem; color: var(--muted); margin-bottom: 0.5rem; line-height: 1.2; }
+    .price-num { font-family: 'Syne', sans-serif; font-size: 4.5rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .price-per { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.1rem; align-self: flex-end; padding-bottom: 0.5rem; }
+    .price-period { color: var(--muted); font-size: 0.78rem; margin-bottom: 1.5rem; }
+    .btn-plan { display: block; text-align: center; padding: 0.75rem; border-radius: 100px; font-weight: 700; font-size: 0.875rem; cursor: pointer; text-decoration: none; letter-spacing: 0.04em; margin-bottom: 1.75rem; border: 2px solid var(--accent); color: var(--accent); background: transparent; transition: all 0.2s; }
+    .btn-plan:hover { background: var(--accent); color: #fff; }
+    .plan-tier { font-size: 0.9rem; color: var(--muted); margin-bottom: 1rem; }
+    .plan-tier strong { color: var(--text); font-weight: 700; }
+    .plan-tier .plus { color: var(--accent); }
+    .price-features { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; flex: 1; }
+    .price-features li { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.875rem; color: var(--muted); line-height: 1.4; }
+    .price-features li::before { content: ''; display: inline-block; width: 16px; height: 16px; min-width: 16px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2310b981'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E") center/contain no-repeat; margin-top: 2px; }
 
     /* CTA */
     .cta-section {
@@ -237,7 +250,7 @@
   <div class="stats" style="margin-top:4rem">
     <div class="stat-item"><div class="stat-val">100%</div><div class="stat-label">Automatic tracking</div></div>
     <div class="stat-item"><div class="stat-val">0</div><div class="stat-label">Manual timers needed</div></div>
-    <div class="stat-item"><div class="stat-val">$9</div><div class="stat-label">Per user / month</div></div>
+    <div class="stat-item"><div class="stat-val">$6</div><div class="stat-label">Starting per user / month</div></div>
     <div class="stat-item"><div class="stat-val">5 min</div><div class="stat-label">Setup time</div></div>
   </div>
 </section>
@@ -318,26 +331,60 @@
 <section id="pricing" style="background:rgba(255,255,255,0.015)">
   <div class="container" style="text-align:center">
     <div class="section-label">Pricing</div>
-    <h2>One plan, no surprises</h2>
-    <p class="section-sub" style="margin:0 auto">Pay only for active users. Add or remove team members anytime. Cancel whenever you want.</p>
-    <div class="pricing-card">
-      <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.5rem">Per user</div>
-      <div class="price"><sub>$</sub>9</div>
-      <div class="price-period">/ user / month, billed monthly</div>
-      <ul class="price-features">
-        <li>Unlimited Slack &amp; Teams workspaces</li>
-        <li>Real-time presence dashboard</li>
-        <li>Activity heatmaps &amp; session logs</li>
-        <li>Leave &amp; PTO management</li>
-        <li>CSV export for any date range</li>
-        <li>Timezone-aware local clocks</li>
-        <li>14-day free trial, no credit card</li>
-      </ul>
-      <a href="/dashboard" class="btn btn-primary" style="width:100%;justify-content:center;padding:0.875rem;font-size:1rem">
-        Start free trial &rarr;
-      </a>
-      <p style="font-size:0.75rem;color:var(--muted);margin-top:1rem">14 days free. No credit card required.</p>
+    <h2>Simple, transparent pricing</h2>
+    <p class="section-sub" style="margin:0 auto">Pay only for active users. Start free, upgrade when you're ready. Cancel anytime.</p>
+    <div class="pricing-grid">
+
+      <!-- STANDARD -->
+      <div class="pricing-card">
+        <div class="plan-name">Standard</div>
+        <div class="plan-desc">For teams that need effortless tracking &amp; visibility basics</div>
+        <div class="price-row">
+          <div>
+            <div class="price-symbol">$</div>
+            <div class="price-currency">USD</div>
+          </div>
+          <div class="price-num">6</div>
+          <div class="price-per">per user<br>per month</div>
+        </div>
+        <a href="/dashboard" class="btn-plan">TRY FOR FREE</a>
+        <div class="plan-tier">All the <strong>Essentials</strong></div>
+        <ul class="price-features">
+          <li>Time tracking &amp; editing</li>
+          <li>Custom leave types &amp; approvals</li>
+          <li>Hybrid statusing &amp; planning</li>
+          <li>Real-time reports</li>
+          <li>Calendar integration</li>
+          <li>Robust reminders, notifications, and announcements</li>
+        </ul>
+      </div>
+
+      <!-- PRO -->
+      <div class="pricing-card featured">
+        <div class="plan-name">Pro</div>
+        <div class="plan-desc">For organizations that value automation and admin controls</div>
+        <div class="price-row">
+          <div>
+            <div class="price-symbol">$</div>
+            <div class="price-currency">USD</div>
+          </div>
+          <div class="price-num">9</div>
+          <div class="price-per">per user<br>per month</div>
+        </div>
+        <a href="/dashboard" class="btn-plan">TRY FOR FREE</a>
+        <div class="plan-tier">Everything in <strong>Standard</strong> <span class="plus">+</span></div>
+        <ul class="price-features">
+          <li>Custom workweeks and overtime</li>
+          <li>Leave accruals and balances</li>
+          <li>Live status board</li>
+          <li>Timesheet approvals</li>
+          <li>Project, Task, &amp; Client Tracking</li>
+          <li>Shift rostering &amp; employee scheduling</li>
+        </ul>
+      </div>
+
     </div>
+    <p style="margin-top:1.5rem;font-size:0.8rem;color:var(--muted)">14-day free trial &mdash; no credit card required.</p>
   </div>
 </section>
 
