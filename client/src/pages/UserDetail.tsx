@@ -12,18 +12,51 @@ import { useLocalTime } from '../hooks/useLocalTime'
 import { useTheme } from '../hooks/useTheme'
 import { minsToHours, formatDate } from '../utils'
 
-interface HourSlot { hour: number; pct: number }
+interface HourSlot { hour: number; pct: number; active: number; total: number }
 
+// 12 discrete levels matching 5-min polling (0,1,...,12 active polls out of 12)
+// Each level gets a distinct color step
 function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
+  // 13 color stops: index 0 = 0 active polls, index 12 = 12/12
+  const lightColors = [
+    '#f1f5f9', // 0%   - empty
+    '#dbeafe', // ~8%
+    '#bfdbfe', // ~17%
+    '#93c5fd', // ~25%
+    '#60a5fa', // ~33%
+    '#3b82f6', // ~42%
+    '#2563eb', // ~50%
+    '#1d4ed8', // ~58%
+    '#1e40af', // ~67%
+    '#1e3a8a', // ~75%
+    '#172554', // ~83%
+    '#0f172a', // ~92%
+    '#020617', // 100%
+  ]
+  const darkColors = [
+    'rgba(255,255,255,0.05)', // 0%
+    'rgba(56,189,248,0.15)',
+    'rgba(56,189,248,0.25)',
+    'rgba(56,189,248,0.35)',
+    'rgba(56,189,248,0.48)',
+    'rgba(14,165,233,0.58)',
+    'rgba(14,165,233,0.68)',
+    'rgba(2,132,199,0.75)',
+    'rgba(2,132,199,0.83)',
+    'rgba(3,105,161,0.88)',
+    'rgba(7,89,133,0.92)',
+    'rgba(12,74,110,0.96)',
+    'rgba(8,47,73,1)',
+  ]
+  const colors = isDark ? darkColors : lightColors
+
   const getColor = (pct: number) => {
-    if (pct === 0) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
-    const r = pct / 100
-    return isDark
-      ? `rgba(${Math.round(30 + r * 26)},${Math.round(30 + r * 159)},${Math.round(60 + r * 188)},${(0.25 + r * 0.75).toFixed(2)})`
-      : `rgb(${Math.round(219 + r * (37 - 219))},${Math.round(234 + r * (99 - 234))},${Math.round(254 + r * (235 - 254))})`
+    // Map pct (0-100) to 0-12 discrete level
+    const level = Math.round((pct / 100) * 12)
+    return colors[Math.min(level, 12)]
   }
 
   const amPm = (h: number) => {
@@ -32,54 +65,112 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
     return h < 12 ? h + 'a' : (h - 12) + 'p'
   }
 
-  const filledData = data.length === 24 ? data : Array.from({ length: 24 }, (_, i) => ({ hour: i, pct: 0 }))
-  const maxPct = Math.max(...filledData.map(d => d.pct), 1)
+  const filled = data.length === 24
+    ? data
+    : Array.from({ length: 24 }, (_, i) => ({ hour: i, pct: 0, active: 0, total: 0 }))
+
+  const maxPct = Math.max(...filled.map(d => d.pct), 1)
+  const BAR_MAX = 80 // max bar height in px
+  const BAR_MIN = 3  // min visible height for non-zero
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', marginBottom: 8 }}>
-        {filledData.map(slot => (
-          <div key={slot.hour} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <div
-              title={`${amPm(slot.hour)}: ${slot.pct}% active`}
-              style={{
-                width: '100%',
-                height: 48,
-                borderRadius: 4,
-                background: getColor(slot.pct),
-                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-                position: 'relative',
-                cursor: 'default',
-                transition: 'opacity 0.15s',
-              }}
-            >
-              {slot.pct > 0 && (
-                <div style={{
-                  position: 'absolute', bottom: 2, left: 0, right: 0,
-                  textAlign: 'center', fontSize: '0.55rem', color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
-                  fontWeight: 600, lineHeight: 1
-                }}>
-                  {slot.pct < 1 ? '<1' : Math.round(slot.pct)}%
-                </div>
-              )}
-            </div>
-            <div style={{ fontSize: '0.6rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1 }}>
-              {slot.hour % 3 === 0 ? amPm(slot.hour) : ''}
-            </div>
-          </div>
+      {/* Chart area */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        gap: 3,
+        height: BAR_MAX + 24,
+        paddingBottom: 24, // space for labels
+        position: 'relative',
+      }}>
+        {/* Horizontal grid lines */}
+        {[0, 25, 50, 75, 100].map(pct => (
+          <div key={pct} style={{
+            position: 'absolute',
+            left: 0, right: 0,
+            bottom: 24 + (pct / 100) * BAR_MAX,
+            borderTop: `1px ${pct === 0 ? 'solid' : 'dashed'} ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+            pointerEvents: 'none',
+          }} />
         ))}
+        {/* Y-axis label */}
+        <div style={{
+          position: 'absolute', left: -28, top: 0, bottom: 24,
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          fontSize: '0.58rem', color: 'var(--muted)', textAlign: 'right', width: 24,
+        }}>
+          <span>100%</span>
+          <span>50%</span>
+          <span>0%</span>
+        </div>
+        {/* Bars */}
+        {filled.map(slot => {
+          const barH = slot.pct === 0 ? 0 : Math.max(BAR_MIN, (slot.pct / 100) * BAR_MAX)
+          const showLabel = slot.total > 0 && slot.pct >= 8
+          return (
+            <div key={slot.hour} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', position: 'relative' }}>
+              {/* Tooltip trigger */}
+              <div
+                title={`${amPm(slot.hour)}: ${slot.pct}% (${slot.active}/${slot.total} polls active)`}
+                style={{
+                  width: '100%',
+                  height: barH || 2,
+                  borderRadius: `${Math.min(4, barH)}px ${Math.min(4, barH)}px 2px 2px`,
+                  background: slot.pct === 0
+                    ? (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)')
+                    : getColor(slot.pct),
+                  cursor: 'default',
+                  transition: 'height 0.3s ease, background 0.2s',
+                  position: 'relative',
+                  minHeight: 2,
+                }}
+              >
+                {/* % label inside bar if tall enough */}
+                {showLabel && barH >= 18 && (
+                  <div style={{
+                    position: 'absolute', top: 3, left: 0, right: 0,
+                    textAlign: 'center',
+                    fontSize: '0.5rem',
+                    fontWeight: 700,
+                    color: slot.pct > 50 ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.5)',
+                    lineHeight: 1,
+                  }}>
+                    {`${Math.round(slot.pct)}%`}
+                  </div>
+                )}
+              </div>
+              {/* Hour label below */}
+              <div style={{
+                position: 'absolute', bottom: -20,
+                fontSize: '0.6rem', color: 'var(--muted)', textAlign: 'center',
+                whiteSpace: 'nowrap',
+              }}>
+                {slot.hour % 3 === 0 ? amPm(slot.hour) : ''}
+              </div>
+            </div>
+          )
+        })}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--muted)' }}>
+
+      {/* Legend */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        marginTop: 8, fontSize: '0.7rem', color: 'var(--muted)'
+      }}>
         <span>0%</span>
-        {[0.1, 0.3, 0.55, 0.8, 1].map(r => (
-          <div key={r} style={{
-            width: 12, height: 12, borderRadius: 2,
-            background: getColor(r * maxPct),
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`
+        {colors.filter((_, i) => i > 0).map((c, i) => (
+          <div key={i} style={{
+            width: 14, height: 14, borderRadius: 3,
+            background: c,
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+            flexShrink: 0,
           }} />
         ))}
         <span>100%</span>
-        <span style={{ marginLeft: 'auto', opacity: 0.6 }}>Based on last {days} days of polling data</span>
+        <span style={{ marginLeft: 'auto', opacity: 0.55, fontSize: '0.65rem' }}>
+          5-min polls, last {days} days
+        </span>
       </div>
     </div>
   )
@@ -122,7 +213,7 @@ export function UserDetail() {
     if (!id) return
     fetch(`/api/dashboard/users/${id}/hourly?days=${heatmapDays}`, {
       headers: { Authorization: 'Bearer ' + localStorage.getItem('st_token') }
-    }).then(r => r.json()).then(setHourly).catch(() => {})
+    }).then(r => r.json()).then(d => { if (Array.isArray(d)) setHourly(d) }).catch(() => {})
   }, [id, heatmapDays])
 
   useEffect(() => {
@@ -224,7 +315,7 @@ export function UserDetail() {
           </div>
         </Card>
         <Card>
-          <CardHeader title="Activity Heatmap by Hour" right={
+          <CardHeader title="Activity by Hour of Day" right={
             <select value={heatmapDays} onChange={e => setHeatmapDays(Number(e.target.value))} style={sel}>
               <option value={7}>Last 7 days</option>
               <option value={14}>Last 14 days</option>
@@ -232,9 +323,11 @@ export function UserDetail() {
               <option value={60}>Last 60 days</option>
             </select>
           } />
-          <div style={{ padding: '1.5rem' }}>
+          <div style={{ padding: '1.5rem 1.5rem 1rem', paddingLeft: '2.5rem' }}>
             {hourly.length === 0
-              ? <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>No activity data yet</div>
+              ? <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem', fontSize: '0.875rem' }}>
+                  Collecting data... heatmap fills after the first polling cycle
+                </div>
               : <HourlyHeatmap data={hourly} days={heatmapDays} />
             }
           </div>
