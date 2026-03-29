@@ -296,37 +296,39 @@ router.get('/users/:userId/heatmap', auth, async (req, res) => {
 });
 
 
-// Hourly heatmap - % active per hour slot across all sessions in range
+// Hourly heatmap from presence_snapshots
+// 5-min polling = 12 slots/hour. Returns {hour:0-23, pct:0-100, active:N, total:N}[]
 router.get('/users/:userId/hourly', auth, async (req, res) => {
   const { days = 30 } = req.query;
   const daysInt = parseInt(days);
   try {
     const result = await db.query(
-      `SELECT start_time, end_time FROM time_sessions
-       WHERE user_id=$1 AND org_id=$2
-         AND date >= CURRENT_DATE - ($3::int - 1)
-         AND start_time IS NOT NULL AND end_time IS NOT NULL
-         AND duration_minutes > 0`,
+      `SELECT
+         EXTRACT(HOUR FROM polled_at AT TIME ZONE 'UTC')::int AS hour,
+         COUNT(*) AS total,
+         COUNT(*) FILTER (WHERE is_active = true) AS active
+       FROM presence_snapshots
+       WHERE user_id = $1
+         AND org_id = $2
+         AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
+       GROUP BY hour
+       ORDER BY hour`,
       [req.params.userId, req.org.id, daysInt]
     );
-    const activeMinutes = new Array(24).fill(0);
+    // Build full 24-slot array, zero-fill missing hours
+    const map = {};
     for (const row of result.rows) {
-      const start = new Date(row.start_time);
-      const end = new Date(row.end_time);
-      let cur = new Date(start);
-      while (cur < end) {
-        const h = cur.getUTCHours();
-        const nextHour = new Date(Date.UTC(cur.getUTCFullYear(),cur.getUTCMonth(),cur.getUTCDate(),h+1,0,0,0));
-        const sliceEnd = nextHour < end ? nextHour : end;
-        activeMinutes[h] += (sliceEnd - cur) / 60000;
-        cur = nextHour;
-      }
+      map[row.hour] = { total: parseInt(row.total), active: parseInt(row.active) };
     }
-    const maxPossible = daysInt * 60;
-    const heatmap = activeMinutes.map((mins, hour) => ({
-      hour,
-      pct: Math.min(100, Math.round((mins / maxPossible) * 1000) / 10)
-    }));
+    const heatmap = Array.from({ length: 24 }, (_, h) => {
+      const slot = map[h] || { total: 0, active: 0 };
+      return {
+        hour: h,
+        active: slot.active,
+        total: slot.total,
+        pct: slot.total > 0 ? Math.round((slot.active / slot.total) * 1000) / 10 : 0
+      };
+    });
     res.json(heatmap);
   } catch (err) {
     console.error(err);
