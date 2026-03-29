@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
 import type { Org, User } from '../../types'
@@ -10,6 +10,8 @@ export function AppLayout() {
   const [users, setUsers] = useState<User[]>([])
   const { theme, toggle } = useTheme()
   const navigate = useNavigate()
+  const location = useLocation()
+  const onUserPage = location.pathname.startsWith('/dashboard/user/')
   const { toast, showToast } = useToast()
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export function AppLayout() {
     calendar: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z',
     link: 'M17 7h-4v2h4c1.65 0 3 1.35 3 3s-1.35 3-3 3h-4v2h4c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-6 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-2zm-3-4h8v2H8z',
     doc: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z',
+    person: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
   }
 
   return (
@@ -73,23 +76,20 @@ export function AppLayout() {
           ))}
 
           {users.length > 0 && (
-            <div style={{ marginTop: '1.25rem' }}>
-              <div style={{ padding: '0 1.25rem 0.4rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)' }}>
-                Users
-              </div>
-              {users.map(u => (
-                <NavLink key={u.id} to={`/dashboard/user/${u.id}`}
-                  style={({ isActive }) => ({
-                    display: 'block', padding: '0.45rem 1.25rem', fontSize: '0.82rem',
-                    color: isActive ? 'var(--accent)' : 'var(--muted)',
-                    background: isActive ? 'rgba(2,132,199,0.06)' : 'transparent',
-                    borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
-                    transition: 'all 0.15s', textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  })}>
-                  {u.display_name}
-                </NavLink>
-              ))}
-            </div>
+            <NavLink to={`/dashboard/user/${users[0].id}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                padding: '0.65rem 1.25rem', fontSize: '0.875rem',
+                color: onUserPage ? 'var(--accent)' : 'var(--muted)',
+                background: onUserPage ? 'rgba(2,132,199,0.06)' : 'transparent',
+                borderLeft: onUserPage ? '3px solid var(--accent)' : '3px solid transparent',
+                transition: 'all 0.15s', textDecoration: 'none',
+              }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                <path d={navIcons['person']} />
+              </svg>
+              User Details
+            </NavLink>
           )}
         </nav>
 
