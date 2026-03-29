@@ -284,7 +284,20 @@
   <div class="max-w-6xl mx-auto text-center">
     <div class="text-xs font-bold uppercase tracking-widest text-brand mb-3">Pricing</div>
     <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">Simple, transparent pricing</h2>
-    <p class="text-slate-500 text-lg max-w-md mx-auto leading-relaxed mb-12">Pay only for active users. Start free, upgrade when you're ready. Cancel anytime.</p>
+    <p class="text-slate-500 text-lg max-w-md mx-auto leading-relaxed mb-8">Pay only for active users. Start free, upgrade when you're ready. Cancel anytime.</p>
+
+    <!-- BILLING TOGGLE -->
+    <div class="inline-flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 mb-10 shadow-sm">
+      <button id="btn-monthly" onclick="setBilling('monthly')"
+        class="px-5 py-2 rounded-full text-sm font-semibold transition-all bg-brand text-white shadow-sm">
+        Monthly
+      </button>
+      <button id="btn-yearly" onclick="setBilling('yearly')"
+        class="px-5 py-2 rounded-full text-sm font-semibold transition-all text-slate-500 hover:text-slate-700">
+        Yearly
+        <span class="ml-1.5 bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">Save 17%</span>
+      </button>
+    </div>
 
     <div class="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
 
@@ -294,10 +307,10 @@
         <p class="text-sm text-slate-500 mb-6 leading-relaxed min-h-10">For teams that need effortless tracking &amp; visibility basics</p>
         <div class="flex items-end gap-1 mb-1">
           <span class="text-lg font-semibold text-slate-400 mb-2">$</span>
-          <span class="text-6xl font-extrabold text-slate-900 leading-none">6</span>
-          <span class="text-sm text-slate-400 mb-2 ml-1">per user<br>per month</span>
+          <span id="price-standard" class="text-6xl font-extrabold text-slate-900 leading-none">6</span>
+          <span class="text-sm text-slate-400 mb-2 ml-1">per user<br><span id="period-standard">per month</span></span>
         </div>
-        <div class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
+        <div id="billing-note-standard" class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
         <a href="/dashboard" class="block text-center border-2 border-brand text-brand font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand hover:text-white transition-all mb-7">
           TRY FOR FREE
         </a>
@@ -319,10 +332,10 @@
         <p class="text-sm text-slate-500 mb-6 leading-relaxed min-h-10">For organizations that value automation and admin controls</p>
         <div class="flex items-end gap-1 mb-1">
           <span class="text-lg font-semibold text-slate-400 mb-2">$</span>
-          <span class="text-6xl font-extrabold text-brand leading-none">9</span>
-          <span class="text-sm text-slate-400 mb-2 ml-1">per user<br>per month</span>
+          <span id="price-pro" class="text-6xl font-extrabold text-brand leading-none">9</span>
+          <span class="text-sm text-slate-400 mb-2 ml-1">per user<br><span id="period-pro">per month</span></span>
         </div>
-        <div class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
+        <div id="billing-note-pro" class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
         <a href="/dashboard" class="block text-center bg-brand text-white font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand-dark transition-all mb-7 shadow-md">
           TRY FOR FREE
         </a>
@@ -341,6 +354,24 @@
     <p class="mt-8 text-sm text-slate-400">14-day free trial · No credit card required · Cancel anytime</p>
   </div>
 </section>
+
+<script>
+  function setBilling(mode) {
+    const yearly = mode === 'yearly';
+    // Toggle button styles
+    document.getElementById('btn-monthly').className = 'px-5 py-2 rounded-full text-sm font-semibold transition-all ' + (yearly ? 'text-slate-500 hover:text-slate-700' : 'bg-brand text-white shadow-sm');
+    document.getElementById('btn-yearly').className   = 'px-5 py-2 rounded-full text-sm font-semibold transition-all ' + (yearly ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700');
+    // Prices
+    document.getElementById('price-standard').textContent = yearly ? '60' : '6';
+    document.getElementById('price-pro').textContent      = yearly ? '90' : '9';
+    // Period labels
+    document.getElementById('period-standard').textContent = yearly ? 'per year' : 'per month';
+    document.getElementById('period-pro').textContent      = yearly ? 'per year' : 'per month';
+    // Billing notes
+    document.getElementById('billing-note-standard').textContent = yearly ? 'USD · billed yearly — save $12/user' : 'USD · billed monthly';
+    document.getElementById('billing-note-pro').textContent      = yearly ? 'USD · billed yearly — save $18/user' : 'USD · billed monthly';
+  }
+</script>
 
 <!-- CTA -->
 <section class="py-24 px-4 sm:px-6 bg-white text-center">

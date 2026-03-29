@@ -4,11 +4,13 @@ const db = require('../db');
 const auth = require('../middleware/auth');
 
 // Price IDs resolved at startup via setupStripeProducts()
-const priceIds = { standard: null, pro: null };
+const priceIds = { standard: null, pro: null, standard_yearly: null, pro_yearly: null };
 
 const PLANS = {
-  standard: { name: 'Status Standard', amount: 600 },
-  pro:      { name: 'Status Pro',      amount: 900 },
+  standard:        { name: 'Status Standard', amount: 600,  interval: 'month' },
+  pro:             { name: 'Status Pro',       amount: 900,  interval: 'month' },
+  standard_yearly: { name: 'Status Standard', amount: 6000, interval: 'year'  },
+  pro_yearly:      { name: 'Status Pro',       amount: 9000, interval: 'year'  },
 };
 
 async function setupStripeProducts() {
@@ -18,22 +20,26 @@ async function setupStripeProducts() {
   }
   try {
     const { data: products } = await stripe.products.list({ limit: 100, active: true });
+    // Build product map by name (each product shared by monthly + yearly prices)
+    const productMap = {};
+    for (const p of products) productMap[p.name] = p;
+
     for (const [key, plan] of Object.entries(PLANS)) {
-      let product = products.find(p => p.name === plan.name);
-      if (!product) {
-        product = await stripe.products.create({ name: plan.name });
+      if (!productMap[plan.name]) {
+        productMap[plan.name] = await stripe.products.create({ name: plan.name });
         console.log(`Stripe: created product "${plan.name}"`);
       }
+      const product = productMap[plan.name];
       const { data: prices } = await stripe.prices.list({ product: product.id, active: true, limit: 20 });
-      let price = prices.find(p => p.unit_amount === plan.amount && p.currency === 'usd' && p.recurring?.interval === 'month');
+      let price = prices.find(p => p.unit_amount === plan.amount && p.currency === 'usd' && p.recurring?.interval === plan.interval);
       if (!price) {
         price = await stripe.prices.create({
           product: product.id,
           unit_amount: plan.amount,
           currency: 'usd',
-          recurring: { interval: 'month' },
+          recurring: { interval: plan.interval },
         });
-        console.log(`Stripe: created price for "${plan.name}" → ${price.id}`);
+        console.log(`Stripe: created ${plan.interval}ly price for "${plan.name}" → ${price.id}`);
       }
       priceIds[key] = price.id;
     }
@@ -43,10 +49,12 @@ async function setupStripeProducts() {
   }
 }
 
-// Checkout — accepts body: { plan: 'standard' | 'pro' }
+// Checkout — accepts body: { plan: 'standard' | 'pro', billing: 'monthly' | 'yearly' }
 router.post('/checkout', auth, async (req, res) => {
-  const plan = req.body?.plan === 'standard' ? 'standard' : 'pro';
-  const priceId = priceIds[plan];
+  const plan    = req.body?.plan === 'standard' ? 'standard' : 'pro';
+  const billing = req.body?.billing === 'yearly' ? 'yearly' : 'monthly';
+  const key     = billing === 'yearly' ? `${plan}_yearly` : plan;
+  const priceId = priceIds[key];
   if (!priceId) return res.status(503).json({ error: 'Billing not configured yet — try again in a moment' });
   try {
     const { rows: [org] } = await db.query('SELECT * FROM organizations WHERE id = $1', [req.org.id]);
@@ -64,7 +72,7 @@ router.post('/checkout', auth, async (req, res) => {
       line_items: [{ price: priceId, quantity }],
       success_url:  `${process.env.APP_URL}/dashboard#billing_success`,
       cancel_url:   `${process.env.APP_URL}/dashboard`,
-      metadata: { org_id: org.id, plan },
+      metadata: { org_id: org.id, plan, billing },
     });
     res.json({ url: session.url });
   } catch (err) {

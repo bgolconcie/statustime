@@ -9,6 +9,7 @@ export function AppLayout() {
   const [org, setOrg] = useState<Org | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [showPlans, setShowPlans] = useState(false)
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly')
   const { theme, toggle } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
@@ -134,14 +135,20 @@ export function AppLayout() {
             </button>
           ) : showPlans ? (
             <div style={{ marginTop:'0.75rem', display:'flex', flexDirection:'column', gap:'0.4rem' }}>
-              <div style={{ fontSize:'0.7rem', color:'var(--muted)', marginBottom:'0.1rem' }}>Choose a plan:</div>
-              <button onClick={() => api.billingCheckout('standard').then(d => { window.location.href = d.url }).catch(() => showToast('Billing unavailable','error'))}
+              <div style={{ display:'flex', gap:'0.25rem', marginBottom:'0.35rem', background:'var(--surface2)', borderRadius:6, padding:'0.2rem' }}>
+                {(['monthly','yearly'] as const).map(b => (
+                  <button key={b} onClick={() => setBilling(b)} style={{ flex:1, fontSize:'0.68rem', fontWeight:600, padding:'0.25rem', borderRadius:4, border:'none', cursor:'pointer', background: billing===b ? 'var(--accent)' : 'transparent', color: billing===b ? 'var(--bg)' : 'var(--muted)', transition:'all 0.15s' }}>
+                    {b === 'monthly' ? 'Monthly' : 'Yearly −17%'}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => api.billingCheckout('standard', billing).then(d => { window.location.href = d.url }).catch(() => showToast('Billing unavailable','error'))}
                 style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, padding:'0.45rem 0.5rem', fontSize:'0.775rem', fontWeight:600, cursor:'pointer', color:'var(--text)', width:'100%', textAlign:'left' }}>
-                Standard — <span style={{ color:'var(--accent)' }}>$6</span>/user/mo
+                Standard — <span style={{ color:'var(--accent)' }}>{billing==='yearly' ? '$60/yr' : '$6/mo'}</span>
               </button>
-              <button onClick={() => api.billingCheckout('pro').then(d => { window.location.href = d.url }).catch(() => showToast('Billing unavailable','error'))}
+              <button onClick={() => api.billingCheckout('pro', billing).then(d => { window.location.href = d.url }).catch(() => showToast('Billing unavailable','error'))}
                 style={{ background:'var(--accent)', border:'none', borderRadius:6, padding:'0.45rem 0.5rem', fontSize:'0.775rem', fontWeight:700, cursor:'pointer', color:'var(--bg)', width:'100%', textAlign:'left' }}>
-                Pro — $9/user/mo ★
+                Pro — {billing==='yearly' ? '$90/yr' : '$9/mo'} ★
               </button>
               <button onClick={() => setShowPlans(false)} style={{ background:'transparent', border:'none', fontSize:'0.7rem', color:'var(--muted)', cursor:'pointer', padding:'0.1rem' }}>Cancel</button>
             </div>
