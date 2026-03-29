@@ -22,6 +22,29 @@ export interface UserDetail extends User {
   platform_user_id: string
   org_id: string
   created_at: string
+  cost_type: 'hourly' | 'monthly'
+  cost_amount: number | null
+  price_type: 'hourly' | 'monthly'
+  price_amount: number | null
+  currency: string
+}
+
+export interface InvoiceLine {
+  display_name: string
+  price_type: string
+  price_amount: number
+  hourly_rate: number
+  active_hours: number
+  amount: number
+  currency: string
+}
+
+export interface Invoice {
+  from: string
+  to: string
+  lines: InvoiceLine[]
+  total: number
+  currency: string
 }
 
 export interface DayHours {

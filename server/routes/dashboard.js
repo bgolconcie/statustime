@@ -418,6 +418,65 @@ router.get('/users/:userId/activity-log', auth, async (req, res) => {
 });
 
 
+// Pro forma invoice: active hours × hourly rate per user for a date range
+router.get('/reports/invoice', auth, async (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+  try {
+    const users = await db.query(
+      `SELECT id, display_name, price_type, price_amount, currency
+       FROM tracked_users WHERE org_id=$1 AND is_active=true AND price_amount > 0`,
+      [req.org.id]
+    );
+    if (!users.rows.length) return res.json({ from, to, lines: [], total: 0 });
+
+    const hours = await db.query(
+      `SELECT user_id,
+         ROUND(COUNT(*) FILTER (WHERE is_active=true) * 5.0 / 60, 2) AS active_hours
+       FROM presence_snapshots
+       WHERE org_id=$1
+         AND polled_at >= $2::date
+         AND polled_at < $3::date + INTERVAL '1 day'
+       GROUP BY user_id`,
+      [req.org.id, from, to]
+    );
+    const hoursMap = {};
+    for (const r of hours.rows) hoursMap[r.user_id] = parseFloat(r.active_hours);
+
+    // Working days in current month for monthly→hourly conversion
+    const now = new Date();
+    let workingDays = 0;
+    const d = new Date(now.getFullYear(), now.getMonth(), 1);
+    while (d.getMonth() === now.getMonth()) {
+      if (d.getDay() !== 0 && d.getDay() !== 6) workingDays++;
+      d.setDate(d.getDate() + 1);
+    }
+
+    const lines = [];
+    let total = 0;
+    for (const u of users.rows) {
+      const activeHours = hoursMap[u.id] || 0;
+      if (activeHours === 0) continue;
+      const monthlyRate = parseFloat(u.price_amount);
+      const hourlyRate = u.price_type === 'monthly'
+        ? monthlyRate / (workingDays * 8)
+        : monthlyRate;
+      const amount = Math.round(activeHours * hourlyRate * 100) / 100;
+      total += amount;
+      lines.push({
+        display_name: u.display_name,
+        price_type: u.price_type,
+        price_amount: monthlyRate,
+        hourly_rate: Math.round(hourlyRate * 100) / 100,
+        active_hours: activeHours,
+        amount,
+        currency: u.currency || 'USD',
+      });
+    }
+    res.json({ from, to, lines: lines.sort((a, b) => b.amount - a.amount), total: Math.round(total * 100) / 100, currency: lines[0]?.currency || 'USD' });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 // Update cost/price for a user
 router.patch('/users/:userId/billing', auth, async (req, res) => {
   const { cost_type, cost_amount, price_type, price_amount, currency } = req.body;

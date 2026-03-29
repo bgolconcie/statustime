@@ -1,4 +1,4 @@
-import type { Org, User, UserDetail, DayHours, Session, UserStats, Integration, LeaveRequest, Stats } from './types'
+import type { Org, User, UserDetail, DayHours, Session, UserStats, Integration, LeaveRequest, Stats, Invoice } from './types'
 
 export interface HeatmapCell {
   date: string
@@ -36,6 +36,9 @@ export const api = {
   userPresence: (id: string) => req<{ status: string }>('/api/dashboard/users/' + id + '/presence'),
   slackInstall: () => req<{ url: string }>('/api/slack/install'),
   slackSync: () => req<{ success: boolean; synced: number; breakdown: Record<string, number> }>('/api/slack/sync', { method: 'POST' }),
+  updateUserBilling: (id: string, data: { cost_type?: string; cost_amount?: number | null; price_type: string; price_amount: number | null; currency: string }) =>
+    req(`/api/dashboard/users/${id}/billing`, { method: 'PATCH', body: JSON.stringify(data) }),
+  invoice: (from: string, to: string) => req<Invoice>(`/api/dashboard/reports/invoice?from=${from}&to=${to}`),
   billingCheckout: () => req<{ url: string }>('/api/billing/checkout', { method: 'POST' }),
   billingPortal: () => req<{ url: string }>('/api/billing/portal', { method: 'POST' }),
 }

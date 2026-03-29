@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/Badge'
 import { StatusDot, StatusDotLoading } from '../components/ui/StatusDot'
 import { StatCard } from '../components/ui/StatCard'
 import { Card, CardHeader } from '../components/ui/Card'
+import { BillingPanel } from '../components/ui/BillingPanel'
 import { minsToHours } from '../utils'
 
 interface HourSlot { dow: number; hour: number; pct: number; active: number; total: number }
@@ -206,6 +207,9 @@ export function UserDetail() {
         <StatCard label="Avg / active day" value={stats?.avgPerActiveDay?minsToHours(stats.avgPerActiveDay):'--'} sub="active days only" />
         <StatCard label="Active days" value={stats?.activeDays??'--'} sub="in last 30 days" />
       </div>
+
+      {/* Billing */}
+      {user && <BillingPanel userId={user.id} costType={user.cost_type} costAmount={user.cost_amount} priceType={user.price_type} priceAmount={user.price_amount} currency={user.currency} />}
 
       {/* Daily bar chart */}
       <Card>
