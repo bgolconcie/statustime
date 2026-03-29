@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api'
 import type { UserDetail as IUserDetail, DayHours, UserStats } from '../types'
 import { Avatar } from '../components/ui/Avatar'
@@ -275,7 +275,13 @@ export function UserDetail() {
               <XAxis dataKey="date" tick={{ fill:labelColor, fontSize:11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill:labelColor, fontSize:11 }} axisLine={false} tickLine={false} tickFormatter={v => v+'h'} />
               <Tooltip formatter={(v: number) => [v+'h','Active hours']} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:'0.85rem', fontFamily:'Inter,sans-serif' }} />
-              <Bar dataKey="hours" fill="var(--accent)" radius={[4,4,0,0]} fillOpacity={0.85} />
+              <Bar dataKey="hours" radius={[4,4,0,0]} fillOpacity={0.85}>
+                {chartData.map((entry, i) => {
+                  const h = entry.hours
+                  const color = h >= 8 ? '#22c55e' : h >= 6 ? 'var(--accent)' : h >= 4 ? '#f97316' : '#ef4444'
+                  return <Cell key={i} fill={color} />
+                })}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
