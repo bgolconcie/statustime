@@ -25,6 +25,20 @@
     .gradient-hero { background: radial-gradient(ellipse 80% 50% at 50% -5%, rgba(2,132,199,0.08) 0%, transparent 65%); }
     @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
     .pulse-dot { animation: pulse-dot 2s infinite; }
+    @keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+    .marquee-track { display:flex; width:max-content; animation:marquee 32s linear infinite; }
+    .marquee-track:hover { animation-play-state:paused; }
+    .logo-wrap {
+      display:flex; align-items:center; justify-content:center;
+      width:120px; height:48px; flex-shrink:0; margin:0 20px;
+    }
+    .logo-wrap img {
+      max-height:28px; max-width:90px; width:auto;
+      filter:grayscale(1) opacity(0.45);
+      transition:filter .25s ease;
+      object-fit:contain;
+    }
+    .logo-wrap img:hover { filter:grayscale(0) opacity(1); }
     .check-item::before {
       content: '';
       display: inline-block;
@@ -161,6 +175,60 @@
         <div class="text-3xl font-extrabold text-slate-900">5 min</div>
         <div class="text-sm text-slate-400 mt-1">Setup time</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO CAROUSEL -->
+<section class="py-14 bg-white border-b border-slate-100 overflow-hidden">
+  <p class="text-center text-xs font-bold uppercase tracking-widest text-slate-400 mb-8">Trusted by the best remote teams</p>
+  <div class="relative">
+    <!-- fade edges -->
+    <div class="pointer-events-none absolute inset-y-0 left-0 w-24 z-10" style="background:linear-gradient(to right,white,transparent)"></div>
+    <div class="pointer-events-none absolute inset-y-0 right-0 w-24 z-10" style="background:linear-gradient(to left,white,transparent)"></div>
+    <div class="marquee-track">
+      <!-- first set -->
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/stripe.com" alt="Stripe" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/shopify.com" alt="Shopify" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/notion.so" alt="Notion" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/figma.com" alt="Figma" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/linear.app" alt="Linear" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/vercel.com" alt="Vercel" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/github.com" alt="GitHub" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/atlassian.com" alt="Atlassian" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/hubspot.com" alt="HubSpot" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/intercom.com" alt="Intercom" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/zapier.com" alt="Zapier" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/airtable.com" alt="Airtable" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/asana.com" alt="Asana" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/monday.com" alt="Monday.com" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/zendesk.com" alt="Zendesk" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/salesforce.com" alt="Salesforce" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/dropbox.com" alt="Dropbox" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/mailchimp.com" alt="Mailchimp" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/twilio.com" alt="Twilio" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/clickup.com" alt="ClickUp" /></div>
+      <!-- duplicate for seamless loop -->
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/stripe.com" alt="Stripe" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/shopify.com" alt="Shopify" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/notion.so" alt="Notion" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/figma.com" alt="Figma" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/linear.app" alt="Linear" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/vercel.com" alt="Vercel" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/github.com" alt="GitHub" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/atlassian.com" alt="Atlassian" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/hubspot.com" alt="HubSpot" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/intercom.com" alt="Intercom" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/zapier.com" alt="Zapier" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/airtable.com" alt="Airtable" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/asana.com" alt="Asana" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/monday.com" alt="Monday.com" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/zendesk.com" alt="Zendesk" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/salesforce.com" alt="Salesforce" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/dropbox.com" alt="Dropbox" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/mailchimp.com" alt="Mailchimp" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/twilio.com" alt="Twilio" /></div>
+      <div class="logo-wrap"><img src="https://logo.clearbit.com/clickup.com" alt="ClickUp" /></div>
     </div>
   </div>
 </section>
