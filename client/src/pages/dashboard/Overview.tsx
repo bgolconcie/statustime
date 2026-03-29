@@ -116,7 +116,7 @@ export function Overview() {
           </thead>
           <tbody>
             {filtered.map(u => (
-              <tr key={u.id} onClick={() => navigate(`/user/${u.id}`)}
+              <tr key={u.id} onClick={() => navigate(`/dashboard/user/${u.id}`)}
                 style={{ cursor:'pointer', transition:'background 0.1s' }}
                 onMouseEnter={e => (e.currentTarget.style.background='var(--surface2)')}
                 onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
