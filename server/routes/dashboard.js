@@ -295,4 +295,43 @@ router.get('/users/:userId/heatmap', auth, async (req, res) => {
   }
 });
 
+
+// Hourly heatmap - % active per hour slot across all sessions in range
+router.get('/users/:userId/hourly', auth, async (req, res) => {
+  const { days = 30 } = req.query;
+  const daysInt = parseInt(days);
+  try {
+    const result = await db.query(
+      `SELECT start_time, end_time FROM time_sessions
+       WHERE user_id=$1 AND org_id=$2
+         AND date >= CURRENT_DATE - ($3::int - 1)
+         AND start_time IS NOT NULL AND end_time IS NOT NULL
+         AND duration_minutes > 0`,
+      [req.params.userId, req.org.id, daysInt]
+    );
+    const activeMinutes = new Array(24).fill(0);
+    for (const row of result.rows) {
+      const start = new Date(row.start_time);
+      const end = new Date(row.end_time);
+      let cur = new Date(start);
+      while (cur < end) {
+        const h = cur.getUTCHours();
+        const nextHour = new Date(Date.UTC(cur.getUTCFullYear(),cur.getUTCMonth(),cur.getUTCDate(),h+1,0,0,0));
+        const sliceEnd = nextHour < end ? nextHour : end;
+        activeMinutes[h] += (sliceEnd - cur) / 60000;
+        cur = nextHour;
+      }
+    }
+    const maxPossible = daysInt * 60;
+    const heatmap = activeMinutes.map((mins, hour) => ({
+      hour,
+      pct: Math.min(100, Math.round((mins / maxPossible) * 1000) / 10)
+    }));
+    res.json(heatmap);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;
