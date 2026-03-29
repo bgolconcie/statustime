@@ -9,7 +9,6 @@ import { StatusDot, StatusDotLoading } from '../components/ui/StatusDot'
 import { StatCard } from '../components/ui/StatCard'
 import { Card, CardHeader } from '../components/ui/Card'
 import { useLocalTime } from '../hooks/useLocalTime'
-import { useTheme } from '../hooks/useTheme'
 import { minsToHours } from '../utils'
 
 interface HourSlot { dow: number; hour: number; pct: number; active: number; total: number }
@@ -17,27 +16,25 @@ interface HourData { hour: number; active: number; away: number; total: number }
 interface DayLog { date: string; dow: string; hours: HourData[]; active_polls: number; total_polls: number; active_minutes: number; pct: number; first_active: number | null; last_active: number | null }
 
 function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
   const [tooltip, setTooltip] = useState<{ dow: number; hour: number; pct: number; active: number; total: number; x: number; y: number } | null>(null)
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? `${h}a` : `${h-12}p`)
   const getCellBg = (pct: number, hasPolls: boolean) => {
-    if (!hasPolls) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
-    if (pct < 25)  return isDark ? 'rgba(148,163,184,0.45)' : 'rgb(203,213,225)'
-    if (pct < 40)  return isDark ? 'rgba(239,68,68,0.75)'   : 'rgb(239,68,68)'
-    if (pct < 70)  return isDark ? 'rgba(249,115,22,0.8)'   : 'rgb(249,115,22)'
-    return isDark ? 'rgba(34,197,94,0.85)' : 'rgb(34,197,94)'
+    if (!hasPolls) return 'rgba(0,0,0,0.05)'
+    if (pct < 25)  return 'rgb(203,213,225)'
+    if (pct < 40)  return 'rgb(239,68,68)'
+    if (pct < 70)  return 'rgb(249,115,22)'
+    return 'rgb(34,197,94)'
   }
   const grid = Array.from({ length: 7 }, (_, dow) =>
     Array.from({ length: 24 }, (_, h) => data.find(d => d.dow === dow && d.hour === h) || { dow, hour: h, pct: 0, active: 0, total: 0 })
   )
   const W = 36
   const LEGEND = [
-    { label: '< 25%',   bg: isDark ? 'rgba(148,163,184,0.45)' : 'rgb(203,213,225)' },
-    { label: '25–40%',  bg: isDark ? 'rgba(239,68,68,0.75)'   : 'rgb(239,68,68)'   },
-    { label: '40–70%',  bg: isDark ? 'rgba(249,115,22,0.8)'   : 'rgb(249,115,22)'  },
-    { label: '70–100%', bg: isDark ? 'rgba(34,197,94,0.85)'   : 'rgb(34,197,94)'   },
+    { label: '< 25%',   bg: 'rgb(203,213,225)' },
+    { label: '25–40%',  bg: 'rgb(239,68,68)'   },
+    { label: '40–70%',  bg: 'rgb(249,115,22)'  },
+    { label: '70–100%', bg: 'rgb(34,197,94)'   },
   ]
   return (
     <div style={{ position: 'relative', overflowX: 'auto' }}>
@@ -50,7 +47,7 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
                 onMouseEnter={e => { const r=(e.currentTarget as HTMLElement).getBoundingClientRect();const p=(e.currentTarget as HTMLElement).closest('[data-heatmap]')!.getBoundingClientRect();setTooltip({...slot,x:r.left-p.left+r.width/2,y:r.top-p.top}) }}
                 onMouseLeave={() => setTooltip(null)}
                 onMouseOver={e => { (e.currentTarget as HTMLElement).style.filter='brightness(1.2)' }}
-                style={{ width:28, height:22, borderRadius:4, flexShrink:0, background:getCellBg(slot.pct, slot.total > 0), border:`1px solid ${isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}`, cursor:'default', transition:'filter 0.1s' }}
+                style={{ width:28, height:22, borderRadius:4, flexShrink:0, background:getCellBg(slot.pct, slot.total > 0), border:'1px solid rgba(0,0,0,0.07)', cursor:'default', transition:'filter 0.1s' }}
               />
             ))}
           </div>
@@ -62,7 +59,7 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
         ))}
       </div>
       {tooltip && (
-        <div style={{ position:'absolute', top:tooltip.y-72, left:Math.max(0,tooltip.x-60), background:isDark?'#1e293b':'#fff', border:`1px solid ${isDark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.12)'}`, borderRadius:8, padding:'0.45rem 0.75rem', fontSize:'0.75rem', pointerEvents:'none', zIndex:50, whiteSpace:'nowrap', boxShadow:'0 4px 12px rgba(0,0,0,0.15)', lineHeight:1.7 }}>
+        <div style={{ position:'absolute', top:tooltip.y-72, left:Math.max(0,tooltip.x-60), background:'#fff', border:'1px solid rgba(0,0,0,0.12)', borderRadius:8, padding:'0.45rem 0.75rem', fontSize:'0.75rem', pointerEvents:'none', zIndex:50, whiteSpace:'nowrap', boxShadow:'0 4px 12px rgba(0,0,0,0.15)', lineHeight:1.7 }}>
           <div style={{ fontWeight:700 }}>{DAY_NAMES[tooltip.dow]} {HOUR_LABELS[tooltip.hour]}</div>
           <div style={{ color:'var(--accent)', fontWeight:600 }}>{tooltip.pct.toFixed(1)}% active</div>
           <div style={{ color:'var(--muted)', fontSize:'0.7rem' }}>{tooltip.active} / {tooltip.total} polls</div>
@@ -71,7 +68,7 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
       <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginTop:10, fontSize:'0.7rem', color:'var(--muted)', marginLeft:W }}>
         {LEGEND.map(({ label, bg }) => (
           <div key={label} style={{ display:'flex', alignItems:'center', gap:4 }}>
-            <div style={{ width:13, height:13, borderRadius:3, background:bg, border:`1px solid ${isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}`, flexShrink:0 }} />
+            <div style={{ width:13, height:13, borderRadius:3, background:bg, border:'1px solid rgba(0,0,0,0.07)', flexShrink:0 }} />
             <span>{label}</span>
           </div>
         ))}
@@ -80,7 +77,7 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
   )
 }
 
-function DayTimeline({ day, isDark }: { day: DayLog; isDark: boolean }) {
+function DayTimeline({ day }: { day: DayLog }) {
   const [tooltip, setTooltip] = useState<{ hour: number; active: number; away: number; total: number; x: number } | null>(null)
   const slots = Array.from({ length: 24 }, (_, h) => day.hours.find(d => d.hour === h) || { hour: h, active: 0, away: 0, total: 0 })
   const fmtHour = (h: number | null) => {
@@ -97,17 +94,17 @@ function DayTimeline({ day, isDark }: { day: DayLog; isDark: boolean }) {
   const dateObj = new Date(day.date + 'T12:00:00Z')
   const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.75rem 1.25rem', borderBottom:`1px solid ${isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)'}`, flexWrap:'wrap' }}>
+    <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.75rem 1.25rem', borderBottom:'1px solid rgba(0,0,0,0.06)', flexWrap:'wrap' }}>
       <div style={{ minWidth:90, flexShrink:0 }}>
         <div style={{ fontSize:'0.85rem', fontWeight:700, color:'var(--text)' }}>{dateLabel}</div>
         <div style={{ fontSize:'0.72rem', color:'var(--muted)', marginTop:1 }}>{day.dow}</div>
       </div>
       <div style={{ flex:1, minWidth:200, position:'relative' }} onMouseLeave={() => setTooltip(null)}>
-        <div style={{ display:'flex', height:20, borderRadius:4, overflow:'hidden', gap:1, background:isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.04)' }}>
+        <div style={{ display:'flex', height:20, borderRadius:4, overflow:'hidden', gap:1, background:'rgba(0,0,0,0.04)' }}>
           {slots.map(slot => {
             const hasPoll = slot.total > 0
             const pct = hasPoll ? slot.active / slot.total : 0
-            const bg = !hasPoll ? (isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.04)')
+            const bg = !hasPoll ? 'rgba(0,0,0,0.04)'
               : pct > 0.5 ? `rgba(37,99,235,${0.3+pct*0.7})` : `rgba(148,163,184,${0.2+(1-pct)*0.3})`
             return (
               <div key={slot.hour}
@@ -122,7 +119,7 @@ function DayTimeline({ day, isDark }: { day: DayLog; isDark: boolean }) {
           {[0,6,12,18,23].map(h => <div key={h} style={{ fontSize:'0.55rem', color:'var(--muted)' }}>{fmtHour(h)}</div>)}
         </div>
         {tooltip && (
-          <div style={{ position:'absolute', bottom:32, left:Math.max(0,Math.min(tooltip.x-50,200)), background:isDark?'#1e293b':'#fff', border:`1px solid ${isDark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.1)'}`, borderRadius:6, padding:'0.35rem 0.6rem', fontSize:'0.72rem', pointerEvents:'none', zIndex:50, whiteSpace:'nowrap', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', lineHeight:1.6 }}>
+          <div style={{ position:'absolute', bottom:32, left:Math.max(0,Math.min(tooltip.x-50,200)), background:'#fff', border:'1px solid rgba(0,0,0,0.1)', borderRadius:6, padding:'0.35rem 0.6rem', fontSize:'0.72rem', pointerEvents:'none', zIndex:50, whiteSpace:'nowrap', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', lineHeight:1.6 }}>
             <div style={{ fontWeight:600 }}>{fmtHour(tooltip.hour)}&ndash;{fmtHour(tooltip.hour+1>23?0:tooltip.hour+1)}</div>
             {tooltip.total > 0 ? <>
               <div style={{ color:'var(--accent)' }}>{tooltip.active} active / {tooltip.away} away</div>
@@ -167,9 +164,7 @@ export function UserDetail() {
   const [chartDays, setChartDays] = useState(5)
   const [heatmapDays, setHeatmapDays] = useState(7)
   const [logDays, setLogDays] = useState(7)
-  const { theme } = useTheme()
   const { time, date } = useLocalTime(user?.timezone || '')
-  const isDark = theme === 'dark'
 
   const tz = user?.timezone || 'UTC'
 
@@ -219,8 +214,8 @@ export function UserDetail() {
     return result
   })()
 
-  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'
-  const labelColor = isDark ? '#64748b' : '#94a3b8'
+  const gridColor = 'rgba(0,0,0,0.06)'
+  const labelColor = '#94a3b8'
   const sel: React.CSSProperties = { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, color:'var(--text)', padding:'0.3rem 0.6rem', fontSize:'0.775rem', outline:'none', fontFamily:'Inter,sans-serif' }
 
   return (
@@ -326,7 +321,7 @@ export function UserDetail() {
           </div>
         ) : (
           <div>
-            <div style={{ display:'flex', gap:'1rem', padding:'0.5rem 1.25rem', borderBottom:`1px solid ${isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)'}` }}>
+            <div style={{ display:'flex', gap:'1rem', padding:'0.5rem 1.25rem', borderBottom:'1px solid rgba(0,0,0,0.06)' }}>
               <div style={{ minWidth:90, fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', fontWeight:500 }}>Date</div>
               <div style={{ flex:1, fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', fontWeight:500 }}>Timeline (24h)</div>
               <div style={{ display:'flex', gap:'1.5rem', flexShrink:0 }}>
@@ -335,7 +330,7 @@ export function UserDetail() {
                 ))}
               </div>
             </div>
-            {activityLog.map((day, i) => <DayTimeline key={i} day={day} isDark={isDark} />)}
+            {activityLog.map((day, i) => <DayTimeline key={i} day={day} />)}
           </div>
         )}
       </Card>
