@@ -110,7 +110,7 @@ export function Overview() {
         } />
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
-            <tr>{['Member','Status','Local Time','Today','This Week'].map(h => (
+            <tr>{['Member','Status','Today','This Week'].map(h => (
               <th key={h} style={{fontSize:'0.7rem',textTransform:'uppercase',letterSpacing:'0.05em',color:'var(--muted)',padding:'0.75rem 1.25rem',textAlign:'left',borderBottom:'1px solid var(--border)',fontWeight:500}}>{h}</th>
             ))}</tr>
           </thead>
@@ -124,20 +124,16 @@ export function Overview() {
                   <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
                     <Avatar name={u.display_name} url={u.avatar_url} />
                     <div>
-                      <div style={{ fontWeight:500, display:'flex', alignItems:'center', gap:'0.4rem', flexWrap:'wrap' }}>
-                        {u.display_name}
+                      <div style={{ fontWeight:500 }}>{u.display_name}</div>
+                      <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', marginTop:'0.2rem', flexWrap:'wrap' }}>
                         <Badge variant={u.user_type}>{u.user_type === 'external' ? 'External' : 'Member'}</Badge>
+                        <span style={{ fontSize:'0.7rem', color:'var(--muted)' }}>{times[u.id] || '--:--'} {shortTz(u.timezone)}</span>
                       </div>
-                      <div style={{ fontSize:'0.75rem', color:'var(--muted)' }}>{u.email}</div>
                     </div>
                   </div>
                 </td>
                 <td style={{ padding:'0.85rem 1.25rem', borderBottom:'1px solid var(--border)' }}>
                   {presence[u.id] ? <StatusDot status={presence[u.id]} /> : <StatusDotLoading />}
-                </td>
-                <td style={{ padding:'0.85rem 1.25rem', borderBottom:'1px solid var(--border)' }}>
-                  <div style={{ fontSize:'0.82rem', fontVariantNumeric:'tabular-nums', fontWeight:500 }}>{times[u.id] || '--:--'}</div>
-                  <div style={{ fontSize:'0.65rem', color:'var(--muted)' }}>{shortTz(u.timezone)}</div>
                 </td>
                 <td style={{ padding:'0.85rem 1.25rem', borderBottom:'1px solid var(--border)' }}>
                   <HoursBar minutes={u.today_minutes} max={maxToday} />
@@ -148,10 +144,10 @@ export function Overview() {
               </tr>
             ))}
             {filtered.length === 0 && users.length > 0 && (
-              <tr><td colSpan={5} style={{ textAlign:'center', color:'var(--muted)', padding:'2rem' }}>No users match this filter</td></tr>
+              <tr><td colSpan={4} style={{ textAlign:'center', color:'var(--muted)', padding:'2rem' }}>No users match this filter</td></tr>
             )}
             {users.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign:'center', color:'var(--muted)', padding:'3rem' }}>Loading...</td></tr>
+              <tr><td colSpan={4} style={{ textAlign:'center', color:'var(--muted)', padding:'3rem' }}>Loading...</td></tr>
             )}
           </tbody>
         </table>
