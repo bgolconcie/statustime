@@ -287,7 +287,7 @@ export function UserDetail() {
               <Bar dataKey="hours" radius={[4,4,0,0]} fillOpacity={0.85}>
                 {chartData.map((entry, i) => {
                   const h = entry.hours
-                  const color = h >= 8 ? '#22c55e' : h >= 6 ? 'var(--accent)' : h >= 4 ? '#f97316' : '#ef4444'
+                  const color = h >= 7 ? '#22c55e' : h >= 4 ? '#f97316' : '#ef4444'
                   return <Cell key={i} fill={color} />
                 })}
               </Bar>
