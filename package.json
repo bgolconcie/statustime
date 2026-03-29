@@ -2,7 +2,7 @@
   "name": "statustime",
   "version": "1.0.0",
   "scripts": {
-    "build": "cd client && npm install && npm run build",
+    "build": "cd client && npm install && npm run build && mv ../public/index.html ../public/app.html",
     "start": "node server/index.js",
     "dev": "node server/index.js"
   },
