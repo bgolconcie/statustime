@@ -23,15 +23,20 @@ app.use('/api/slack', require('./routes/slack').router);
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/billing', require('./routes/billing'));
 
-// Static assets (Vite-built JS/CSS chunks)
-app.use(express.static(PUBLIC, { index: false }));
+// Serve static assets (Vite build: JS/CSS chunks)
+app.use(express.static(PUBLIC));
 
-// Marketing landing page at root only
+// Marketing landing page at exactly /
 app.get('/', (req, res) => {
   res.sendFile(path.join(PUBLIC, 'marketing.html'));
 });
 
-// React SPA for all app routes (index.html = Vite output)
+// React SPA for all app routes - served from Vite's index.html
+app.get(['/dashboard', '/dashboard/*', '/user/:id', '/login'], (req, res) => {
+  res.sendFile(path.join(PUBLIC, 'index.html'));
+});
+
+// Fallback for any other non-API route -> React SPA
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
   res.sendFile(path.join(PUBLIC, 'index.html'));
@@ -41,11 +46,11 @@ async function start() {
   try {
     await migrate();
     app.listen(PORT, () => {
-      console.log('StatusTime on port ' + PORT);
+      console.log('StatusTime running on port ' + PORT);
       startPoller();
     });
   } catch (err) {
-    console.error('Failed:', err);
+    console.error('Failed to start:', err);
     process.exit(1);
   }
 }
