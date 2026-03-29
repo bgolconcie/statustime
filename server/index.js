@@ -49,7 +49,7 @@ async function start() {
     app.listen(PORT, () => {
       console.log('StatusTime running on port ' + PORT);
       startPoller();
-      setupStripeProducts();
+      setupStripeProducts().catch(err => console.error('Stripe startup error:', err.message));
     });
   } catch (err) {
     console.error('Failed to start:', err);
