@@ -12,165 +12,126 @@ import { useLocalTime } from '../hooks/useLocalTime'
 import { useTheme } from '../hooks/useTheme'
 import { minsToHours, formatDate } from '../utils'
 
-// Day x Hour heatmap: shows activity intensity by day-of-week and hour-of-day
-function Heatmap({ hours, days, userName }: { hours: DayHours[]; days: number; userName: string }) {
-  // Build a map: dayOfWeek (0=Sun..6=Sat) -> hourOfDay (0..23) -> minutes
-  const grid: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0))
-
-  hours.forEach(h => {
-    const ds = String(h.date).split('T')[0]
-    // We only have daily totals, not hourly breakdown
-    // Distribute the day total into a single representative hour bucket
-    // using start_time if available, otherwise spread evenly across work hours
-    // Since we only have DayHours (date + total_minutes), we approximate:
-    // assign total to the most common work hour block based on day pattern
-    const d = new Date(ds + 'T12:00:00Z')
-    const dow = d.getUTCDay() // 0=Sun..6=Sat
-    const mins = Number(h.total_minutes) || 0
-    if (mins > 0) {
-      // Spread across 8 work hours (9am-5pm) proportionally
-      const workHours = [9,10,11,12,13,14,15,16]
-      const perHour = mins / workHours.length
-      workHours.forEach(hr => { grid[dow][hr] += perHour })
+// Compute per-hour activity % from raw sessions
+// sessions: [{start_time, end_time}], returns map: "YYYY-MM-DD|HH" -> pct 0-1
+function buildHourlyMap(sessions: Array<{start_time: string; end_time: string}>): Record<string, number> {
+  const map: Record<string, number> = {}
+  for (const s of sessions) {
+    if (!s.start_time || !s.end_time) continue
+    const start = new Date(s.start_time).getTime()
+    const end = new Date(s.end_time).getTime()
+    if (end <= start) continue
+    // Walk through each clock hour this session touches
+    let cursor = start
+    while (cursor < end) {
+      const d = new Date(cursor)
+      const hourStart = new Date(d)
+      hourStart.setMinutes(0, 0, 0)
+      const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000)
+      const overlapStart = Math.max(cursor, hourStart.getTime())
+      const overlapEnd = Math.min(end, hourEnd.getTime())
+      const overlapMins = (overlapEnd - overlapStart) / 60000
+      const dateStr = hourStart.toISOString().split('T')[0]
+      const hr = hourStart.getUTCHours()
+      const key = dateStr + '|' + hr
+      map[key] = Math.min(1, (map[key] || 0) + overlapMins / 60)
+      cursor = hourEnd.getTime()
     }
-  })
+  }
+  return map
+}
 
-  const maxVal = Math.max(...grid.flat(), 1)
+function HourlyHeatmap({ sessions, days }: { sessions: Array<{start_time: string; end_time: string}>; days: number }) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const hourlyMap = buildHourlyMap(sessions)
 
-  const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  const hourLabels = ['12AM','1AM','2AM','3AM','4AM','5AM','6AM','7AM','8AM','9AM','10AM','11AM',
-                      '12PM','1PM','2PM','3PM','4PM','5PM','6PM','7PM','8PM','9PM','10PM','11PM']
+  // Build day list (oldest first)
+  const dayList: string[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date()
+    d.setUTCHours(0, 0, 0, 0)
+    d.setUTCDate(d.getUTCDate() - i)
+    dayList.push(d.toISOString().split('T')[0])
+  }
 
-  // Date range label
-  const endDate = new Date()
-  const startDate = new Date()
-  startDate.setDate(startDate.getDate() - days + 1)
-  const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const hours = Array.from({ length: 24 }, (_, i) => i)
 
-  // Classic heatmap color: white -> light yellow -> orange -> dark red (like Plotly Viridis but warm)
-  const getColor = (val: number): string => {
-    if (val === 0) return 'var(--surface2)'
-    const r = Math.min(val / maxVal, 1)
-    // Interpolate: #f7fbff (near white) -> #2171b5 (deep blue) style but warm:
-    // 0 -> #eef5fb, 0.25 -> #c6dbef, 0.5 -> #6baed6, 0.75 -> #2171b5, 1 -> #08306b
-    // Actually use classic yellow-orange-red (like the reference image viridis):
-    // low: #440154 (deep purple), mid: #21908c (teal), high: #fde725 (yellow)
-    if (r < 0.25) {
-      const t = r / 0.25
-      const ri = Math.round(68 + t * (59 - 68))
-      const gi = Math.round(1 + t * (82 - 1))
-      const bi = Math.round(84 + t * (139 - 84))
-      return `rgb(${ri},${gi},${bi})`
-    } else if (r < 0.5) {
-      const t = (r - 0.25) / 0.25
-      const ri = Math.round(59 + t * (33 - 59))
-      const gi = Math.round(82 + t * (145 - 82))
-      const bi = Math.round(139 + t * (140 - 139))
-      return `rgb(${ri},${gi},${bi})`
-    } else if (r < 0.75) {
-      const t = (r - 0.5) / 0.25
-      const ri = Math.round(33 + t * (94 - 33))
-      const gi = Math.round(145 + t * (201 - 145))
-      const bi = Math.round(140 + t * (98 - 140))
-      return `rgb(${ri},${gi},${bi})`
+  const getColor = (pct: number) => {
+    if (pct <= 0) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
+    // Blue accent ramp
+    if (isDark) {
+      const a = 0.2 + pct * 0.8
+      const g = Math.round(100 + pct * 100)
+      const b = Math.round(180 + pct * 75)
+      return `rgba(30,${g},${b},${a.toFixed(2)})`
     } else {
-      const t = (r - 0.75) / 0.25
-      const ri = Math.round(94 + t * (253 - 94))
-      const gi = Math.round(201 + t * (231 - 201))
-      const bi = Math.round(98 + t * (37 - 98))
-      return `rgb(${ri},${gi},${bi})`
+      const r = Math.round(220 - pct * 180)
+      const g = Math.round(235 - pct * 100)
+      const b = Math.round(255 - pct * 50)
+      return `rgb(${r},${g},${b})`
     }
   }
 
-  const cellW = 32
-  const cellH = 28
-  const labelW = 90
-  const labelH = 28
+  const fmtDay = (ds: string) => {
+    const d = new Date(ds + 'T12:00:00Z')
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  }
+
+  const fmtHour = (h: number) => {
+    if (h === 0) return '12a'
+    if (h === 12) return '12p'
+    return h < 12 ? h + 'a' : (h - 12) + 'p'
+  }
+
+  const cellSize = 18
+  const labelW = 52
+  const gap = 2
 
   return (
-    <div style={{ width: '100%' }}>
-      {/* Title */}
-      <div style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: 600 }}>
-        <span>{userName} Online Time </span>
-        <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{fmtDate(startDate)}</span>
-        <span style={{ margin: '0 0.4rem', color: 'var(--muted)' }}>{'->'}</span>
-        <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{fmtDate(endDate)}</span>
-        <span style={{ color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400, marginLeft: '0.5rem', fontSize: '0.8rem' }}>
-          (by Hour of the Day and Day of the Week)
-        </span>
+    <div style={{ overflowX: 'auto' }}>
+      {/* Hour labels across top */}
+      <div style={{ display: 'flex', marginLeft: labelW, marginBottom: 4, gap }}>
+        {hours.map(h => (
+          <div key={h} style={{ width: cellSize, fontSize: '0.55rem', color: 'var(--muted)', textAlign: 'center', flexShrink: 0 }}>
+            {h % 3 === 0 ? fmtHour(h) : ''}
+          </div>
+        ))}
       </div>
-
-      <div style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
-        <div style={{ display: 'inline-flex', flexDirection: 'column', minWidth: labelW + 24 * cellW + 60 }}>
-
-          {/* Hour axis header */}
-          <div style={{ display: 'flex', marginLeft: labelW }}>
-            {hourLabels.map((h, i) => (
-              <div key={i} style={{ width: cellW, textAlign: 'center', fontSize: '0.6rem',
-                color: 'var(--muted)', paddingBottom: 4, whiteSpace: 'nowrap',
-                transform: 'rotate(-45deg)', transformOrigin: 'center bottom', height: 36,
-                display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                {h}
-              </div>
-            ))}
-            <div style={{ width: 60 }} />
+      {/* Rows = days */}
+      {dayList.map(ds => (
+        <div key={ds} style={{ display: 'flex', alignItems: 'center', gap, marginBottom: gap }}>
+          <div style={{ width: labelW, fontSize: '0.6rem', color: 'var(--muted)', textAlign: 'right', paddingRight: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
+            {fmtDay(ds)}
           </div>
-
-          {/* Rows: one per day */}
-          {dayLabels.map((day, di) => (
-            <div key={di} style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
-              {/* Day label */}
-              <div style={{ width: labelW, textAlign: 'right', paddingRight: 10,
-                fontSize: '0.75rem', color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                {day} -
-              </div>
-              {/* Hour cells */}
-              {grid[di].map((val, hi) => {
-                const tooltip = val > 0
-                  ? `${day} ${hourLabels[hi]}: ~${Math.round(val)}m active`
-                  : `${day} ${hourLabels[hi]}: no activity`
-                return (
-                  <div key={hi} title={tooltip} style={{
-                    width: cellW - 2, height: cellH, marginRight: 2,
-                    borderRadius: 3, flexShrink: 0,
-                    background: getColor(val),
-                    border: '1px solid var(--border)',
-                    cursor: val > 0 ? 'default' : undefined,
-                    transition: 'opacity 0.1s',
-                  }} />
-                )
-              })}
-              {/* Row max label */}
-              <div style={{ width: 50, paddingLeft: 8, fontSize: '0.7rem', color: 'var(--muted)', flexShrink: 0 }}>
-                {Math.round(grid[di].reduce((a, b) => a + b, 0))}m
-              </div>
-            </div>
-          ))}
-
-          {/* X-axis label */}
-          <div style={{ marginLeft: labelW, textAlign: 'center', fontSize: '0.75rem',
-            color: 'var(--muted)', marginTop: 8, fontStyle: 'italic' }}>
-            Hour of Day (in system timezone)
-          </div>
-
-          {/* Legend */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-            gap: '0.4rem', marginTop: '1rem', fontSize: '0.72rem', color: 'var(--muted)' }}>
-            <span>0</span>
-            {[0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((r, i) => (
-              <div key={i} style={{ width: 18, height: 14, borderRadius: 2,
-                background: getColor(r * maxVal), border: '1px solid var(--border)' }} />
-            ))}
-            <span>100</span>
-          </div>
-
+          {hours.map(h => {
+            const pct = hourlyMap[ds + '|' + h] || 0
+            const pctLabel = pct > 0 ? Math.round(pct * 100) + '%' : '0%'
+            return (
+              <div
+                key={h}
+                title={`${ds} ${String(h).padStart(2,'0')}:00 - ${pctLabel} active`}
+                style={{
+                  width: cellSize,
+                  height: cellSize,
+                  borderRadius: 3,
+                  flexShrink: 0,
+                  background: getColor(pct),
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
+                  cursor: pct > 0 ? 'default' : 'default'
+                }}
+              />
+            )
+          })}
         </div>
-      </div>
-
-      {/* Y-axis label */}
-      <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--muted)',
-        marginTop: 4, fontStyle: 'italic' }}>
-        Day of Week
+      ))}
+      {/* Legend */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.75rem', marginLeft: labelW, fontSize: '0.7rem', color: 'var(--muted)' }}>
+        <span>0%</span>
+        {[0, 0.25, 0.5, 0.75, 1].map(v => (
+          <div key={v} style={{ width: 12, height: 12, borderRadius: 2, background: getColor(v), border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }} />
+        ))}
+        <span>100%</span>
       </div>
     </div>
   )
@@ -181,6 +142,7 @@ export function UserDetail() {
   const [user, setUser] = useState<IUserDetail | null>(null)
   const [presence, setPresence] = useState<string | null>(null)
   const [hours, setHours] = useState<DayHours[]>([])
+  const [hourlySessions, setHourlySessions] = useState<Array<{start_time: string; end_time: string}>>([])
   const [sessions, setSessions] = useState<Session[]>([])
   const [stats, setStats] = useState<UserStats | null>(null)
   const [todayMins, setTodayMins] = useState(0)
@@ -205,6 +167,16 @@ export function UserDetail() {
 
   useEffect(() => {
     if (id) api.userHours(id, chartDays).then(setHours).catch(() => {})
+  }, [id, chartDays])
+
+  // Fetch hourly sessions whenever chartDays changes
+  useEffect(() => {
+    if (!id) return
+    fetch(`/api/dashboard/users/${id}/sessions-hourly?days=${chartDays}`, {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('st_token') }
+    }).then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setHourlySessions(data)
+    }).catch(() => {})
   }, [id, chartDays])
 
   useEffect(() => {
@@ -306,11 +278,13 @@ export function UserDetail() {
           </div>
         </Card>
         <Card>
-          <CardHeader title="Activity Heatmap" />
+          <CardHeader title="Activity Heatmap" right={
+            <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>% active per hour</div>
+          } />
           <div style={{ padding: '1.5rem' }}>
-            {hours.length === 0
-              ? <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>No activity data yet</div>
-              : <Heatmap hours={hours} days={chartDays} userName={user?.display_name || ''} />
+            {hourlySessions.length === 0
+              ? <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>No session data yet</div>
+              : <HourlyHeatmap sessions={hourlySessions} days={chartDays} />
             }
           </div>
         </Card>
