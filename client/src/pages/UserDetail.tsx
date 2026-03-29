@@ -58,8 +58,10 @@ function Heatmap({ hours, days }: { hours: DayHours[]; days: number }) {
           {weeks.map((week, wi) => (
             <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {week.map((cell, di) => (
-                <div key={di} title={cell.inRange ? `${cell.dateStr}: ${cell.mins ? minsToHours(cell.mins) : '0m'}` : ''}
-                  style={{ width: 18, height: 18, borderRadius: 3, background: getColor(cell.mins, cell.inRange) || (cell.inRange ? 'var(--surface2)' : 'transparent'), border: cell.inRange ? '1px solid var(--border)' : 'none' }} />
+                <div key={di}
+                  title={cell.inRange ? `${cell.dateStr}: ${cell.mins ? minsToHours(cell.mins) : '0m'}` : ''}
+                  style={{ width: 18, height: 18, borderRadius: 3, background: getColor(cell.mins, cell.inRange) || (cell.inRange ? 'var(--surface2)' : 'transparent'), border: cell.inRange ? '1px solid var(--border)' : 'none' }}
+                />
               ))}
             </div>
           ))}
@@ -74,6 +76,24 @@ function Heatmap({ hours, days }: { hours: DayHours[]; days: number }) {
       </div>
     </div>
   )
+}
+
+function buildChartData(hours: DayHours[], days: number) {
+  const map: Record<string, number> = {}
+  hours.forEach(h => {
+    const ds = String(h.date).split('T')[0]
+    map[ds] = h.total_minutes
+  })
+  const result = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date()
+    d.setUTCHours(12, 0, 0, 0)
+    d.setUTCDate(d.getUTCDate() - i)
+    const ds = d.toISOString().split('T')[0]
+    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+    result.push({ date: label, hours: Math.round((map[ds] || 0) / 6) / 10 })
+  }
+  return result
 }
 
 export function UserDetail() {
@@ -111,29 +131,16 @@ export function UserDetail() {
     if (id) api.userSessions(id, logDays).then(setSessions).catch(() => {})
   }, [id, logDays])
 
-  // Build a map from the API response (handles both "YYYY-MM-DD" and "YYYY-MM-DDT..." formats)
-  const hoursMap: Record<string, number> = {}
-  hours.forEach(h => {
-    const key = String(h.date).split('T')[0]
-    hoursMap[key] = h.total_minutes
-  })
-
-  // Generate exactly chartDays entries ending today, filling 0 for missing days
-  const chartData = Array.from({ length: chartDays }, (_, i) => {
-    const d = new Date()
-    d.setUTCDate(d.getUTCDate() - (chartDays - 1 - i))
-    const key = d.toISOString().split('T')[0]
-    const mins = hoursMap[key] || 0
-    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
-    return { date: label, hours: Math.round(mins / 6) / 10 }
-  })
+  const chartData = buildChartData(hours, chartDays)
 
   const isDark = theme === 'dark'
   const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'
   const labelColor = isDark ? '#64748b' : '#94a3b8'
+
   const sel: React.CSSProperties = {
     background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6,
-    color: 'var(--text)', padding: '0.3rem 0.6rem', fontSize: '0.775rem', outline: 'none', fontFamily: 'inherit'
+    color: 'var(--text)', padding: '0.3rem 0.6rem', fontSize: '0.775rem',
+    outline: 'none', fontFamily: 'inherit'
   }
 
   return (
@@ -146,6 +153,7 @@ export function UserDetail() {
           Status<span style={{ color: 'var(--text)' }}>Time</span>
         </div>
       </div>
+
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '2rem', display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '1.5rem', boxShadow: 'var(--shadow)', flexWrap: 'wrap' }}>
           <Avatar name={user?.display_name || '?'} url={user?.avatar_url} size={72} />
@@ -172,6 +180,7 @@ export function UserDetail() {
             </div>
           </div>
         </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
           <StatCard label="Today" value={todayMins ? minsToHours(todayMins) : '--'} sub="hours active" color="var(--green)" />
           <StatCard label="This week" value={weekMins ? minsToHours(weekMins) : '--'} sub="last 7 days" color="var(--accent)" />
@@ -179,6 +188,7 @@ export function UserDetail() {
           <StatCard label="Avg / active day" value={stats?.avgPerActiveDay ? minsToHours(stats.avgPerActiveDay) : '--'} sub="active days only" color="var(--yellow)" />
           <StatCard label="Active days" value={stats?.activeDays ?? '--'} sub="in last 30 days" />
         </div>
+
         <Card>
           <CardHeader title="Daily Active Hours" right={
             <select value={chartDays} onChange={e => setChartDays(Number(e.target.value))} style={sel}>
@@ -194,12 +204,16 @@ export function UserDetail() {
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis dataKey="date" tick={{ fill: labelColor, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: labelColor, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => v + 'h'} />
-                <Tooltip formatter={(v: number) => [v + 'h', 'Active hours']} contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.85rem' }} />
+                <Tooltip
+                  formatter={(v: number) => [v + 'h', 'Active hours']}
+                  contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.85rem' }}
+                />
                 <Bar dataKey="hours" fill="var(--accent)" radius={[4, 4, 0, 0]} fillOpacity={0.85} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
+
         <Card>
           <CardHeader title="Activity Heatmap" />
           <div style={{ padding: '1.5rem' }}>
@@ -209,6 +223,7 @@ export function UserDetail() {
             }
           </div>
         </Card>
+
         <Card>
           <CardHeader title="Activity Log" right={
             <select value={logDays} onChange={e => setLogDays(Number(e.target.value))} style={sel}>
