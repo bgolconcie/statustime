@@ -296,14 +296,15 @@ router.get('/users/:userId/heatmap', auth, async (req, res) => {
 });
 
 
-// Hourly heatmap from presence_snapshots
-// 5-min polling = 12 slots/hour. Returns {hour:0-23, pct:0-100, active:N, total:N}[]
+// Hourly heatmap — 7 rows (day of week) x 24 cols (hour)
+// Returns [{dow:0-6, hour:0-23, active:N, total:N, pct:0-100}]
 router.get('/users/:userId/hourly', auth, async (req, res) => {
   const { days = 30 } = req.query;
   const daysInt = parseInt(days);
   try {
     const result = await db.query(
       `SELECT
+         EXTRACT(DOW FROM polled_at AT TIME ZONE 'UTC')::int AS dow,
          EXTRACT(HOUR FROM polled_at AT TIME ZONE 'UTC')::int AS hour,
          COUNT(*) AS total,
          COUNT(*) FILTER (WHERE is_active = true) AS active
@@ -311,25 +312,29 @@ router.get('/users/:userId/hourly', auth, async (req, res) => {
        WHERE user_id = $1
          AND org_id = $2
          AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
-       GROUP BY hour
-       ORDER BY hour`,
+       GROUP BY dow, hour
+       ORDER BY dow, hour`,
       [req.params.userId, req.org.id, daysInt]
     );
-    // Build full 24-slot array, zero-fill missing hours
+    // Build full 7x24 grid, zero-fill missing slots
     const map = {};
     for (const row of result.rows) {
-      map[row.hour] = { total: parseInt(row.total), active: parseInt(row.active) };
+      map[`${row.dow}_${row.hour}`] = { total: parseInt(row.total), active: parseInt(row.active) };
     }
-    const heatmap = Array.from({ length: 24 }, (_, h) => {
-      const slot = map[h] || { total: 0, active: 0 };
-      return {
-        hour: h,
-        active: slot.active,
-        total: slot.total,
-        pct: slot.total > 0 ? Math.round((slot.active / slot.total) * 1000) / 10 : 0
-      };
-    });
-    res.json(heatmap);
+    const grid = [];
+    for (let dow = 0; dow < 7; dow++) {
+      for (let h = 0; h < 24; h++) {
+        const slot = map[`${dow}_${h}`] || { total: 0, active: 0 };
+        grid.push({
+          dow,
+          hour: h,
+          active: slot.active,
+          total: slot.total,
+          pct: slot.total > 0 ? Math.round((slot.active / slot.total) * 1000) / 10 : 0
+        });
+      }
+    }
+    res.json(grid);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
