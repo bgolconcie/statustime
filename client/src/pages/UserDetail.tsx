@@ -207,7 +207,7 @@ export function UserDetail() {
     <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
       <div style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)', padding:'0 2rem', height:56, display:'flex', alignItems:'center', gap:'1rem', position:'sticky', top:0, zIndex:100, boxShadow:'var(--shadow)' }}>
         <Link to="/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'0.4rem', color:'var(--muted)', fontSize:'0.875rem', padding:'0.35rem 0.75rem', borderRadius:6, border:'1px solid var(--border)', fontFamily:'Inter,sans-serif' }}>Back</Link>
-        <div style={{ fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:'1.1rem', color:'var(--accent)' }}>Status<span style={{ color:'var(--text)' }}>Time</span></div>
+        <div style={{ fontFamily:'Inter,sans-serif', fontWeight:800, fontSize:'1.1rem', color:'var(--accent)' }}>Status<span style={{ color:'var(--text)' }}>Time</span></div>
       </div>
       <div style={{ maxWidth:1100, margin:'0 auto', padding:'2rem 1.5rem' }}>
 
@@ -215,7 +215,7 @@ export function UserDetail() {
         <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:16, padding:'2rem', display:'flex', alignItems:'flex-start', gap:'1.5rem', marginBottom:'1.5rem', boxShadow:'var(--shadow)', flexWrap:'wrap' }}>
           <Avatar name={user?.display_name||'?'} url={user?.avatar_url} size={72} />
           <div style={{ flex:1, minWidth:200 }}>
-            <div style={{ fontFamily:'Syne,sans-serif', fontSize:'1.5rem', fontWeight:800, display:'flex', alignItems:'center', gap:'0.6rem', flexWrap:'wrap' }}>
+            <div style={{ fontFamily:'Inter,sans-serif', fontSize:'1.5rem', fontWeight:800, display:'flex', alignItems:'center', gap:'0.6rem', flexWrap:'wrap' }}>
               {user?.display_name||'Loading...'}
               {user && <Badge variant={user.user_type}>{user.user_type==='external'?'External':'Member'}</Badge>}
             </div>
@@ -231,7 +231,7 @@ export function UserDetail() {
           <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'0.75rem' }}>
             {presence===null?<StatusDotLoading/>:<StatusDot status={presence}/>}
             <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:10, padding:'0.75rem 1rem', textAlign:'right' }}>
-              <div style={{ fontFamily:'Syne,sans-serif', fontSize:'1.4rem', fontWeight:800, fontVariantNumeric:'tabular-nums' }}>{time||'--:--'}</div>
+              <div style={{ fontFamily:'Inter,sans-serif', fontSize:'1.4rem', fontWeight:800, fontVariantNumeric:'tabular-nums' }}>{time||'--:--'}</div>
               <div style={{ fontSize:'0.72rem', color:'var(--muted)', fontFamily:'Inter,sans-serif' }}>{user?.timezone?.split('/').pop()?.replace(/_/g,' ')}</div>
               <div style={{ fontSize:'0.7rem', color:'var(--muted)', fontFamily:'Inter,sans-serif' }}>{date}</div>
             </div>
