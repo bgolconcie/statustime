@@ -22,42 +22,25 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
   const [tooltip, setTooltip] = useState<{ dow: number; hour: number; pct: number; active: number; total: number; x: number; y: number } | null>(null)
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? `${h}a` : `${h-12}p`)
-  const getLevel = (pct: number) => pct === 0 ? 0 : Math.max(1, Math.min(12, Math.round(pct / 100 * 12)))
-  const getCellBg = (level: number) => {
-    if (level === 0) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
-    const r = level / 12
-    let R, G, B
-    if (r < 0.33) {
-      const t = r / 0.33
-      R = Math.round(239 + (249 - 239) * t)
-      G = Math.round(68  + (115 -  68) * t)
-      B = Math.round(68  + ( 22 -  68) * t)
-    } else if (r < 0.67) {
-      const t = (r - 0.33) / 0.34
-      R = Math.round(249 + (234 - 249) * t)
-      G = Math.round(115 + (179 - 115) * t)
-      B = Math.round(22  + (  8 -  22) * t)
-    } else {
-      const t = (r - 0.67) / 0.33
-      R = Math.round(234 + ( 34 - 234) * t)
-      G = Math.round(179 + (197 - 179) * t)
-      B = Math.round(8   + ( 94 -   8) * t)
-    }
-    const alpha = isDark ? (0.3 + r * 0.7).toFixed(2) : '1'
-    return `rgba(${R},${G},${B},${alpha})`
+  const getCellBg = (pct: number, hasPolls: boolean) => {
+    if (!hasPolls) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
+    if (pct < 25)  return isDark ? 'rgba(148,163,184,0.45)' : 'rgb(203,213,225)'
+    if (pct < 40)  return isDark ? 'rgba(239,68,68,0.75)'   : 'rgb(239,68,68)'
+    if (pct < 70)  return isDark ? 'rgba(249,115,22,0.8)'   : 'rgb(249,115,22)'
+    return isDark ? 'rgba(34,197,94,0.85)' : 'rgb(34,197,94)'
   }
   const grid = Array.from({ length: 7 }, (_, dow) =>
     Array.from({ length: 24 }, (_, h) => data.find(d => d.dow === dow && d.hour === h) || { dow, hour: h, pct: 0, active: 0, total: 0 })
   )
-  const hasData = data.some(s => s.total > 0)
   const W = 36
+  const LEGEND = [
+    { label: '< 25%',   bg: isDark ? 'rgba(148,163,184,0.45)' : 'rgb(203,213,225)' },
+    { label: '25–40%',  bg: isDark ? 'rgba(239,68,68,0.75)'   : 'rgb(239,68,68)'   },
+    { label: '40–70%',  bg: isDark ? 'rgba(249,115,22,0.8)'   : 'rgb(249,115,22)'  },
+    { label: '70–100%', bg: isDark ? 'rgba(34,197,94,0.85)'   : 'rgb(34,197,94)'   },
+  ]
   return (
     <div style={{ position: 'relative', overflowX: 'auto' }}>
-      <div style={{ display: 'flex', marginLeft: W, marginBottom: 4, gap: 2 }}>
-        {HOUR_LABELS.map((lbl, h) => (
-          <div key={h} style={{ width: 28, flexShrink: 0, textAlign: 'center', fontSize: '0.6rem', color: 'var(--muted)' }}>{h % 3 === 0 ? lbl : ''}</div>
-        ))}
-      </div>
       {grid.map((row, dow) => (
         <div key={dow} style={{ display: 'flex', alignItems: 'center', marginBottom: 3 }}>
           <div style={{ width: W, flexShrink: 0, fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)', textAlign: 'right', paddingRight: 8 }}>{DAY_NAMES[dow]}</div>
@@ -67,12 +50,17 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
                 onMouseEnter={e => { const r=(e.currentTarget as HTMLElement).getBoundingClientRect();const p=(e.currentTarget as HTMLElement).closest('[data-heatmap]')!.getBoundingClientRect();setTooltip({...slot,x:r.left-p.left+r.width/2,y:r.top-p.top}) }}
                 onMouseLeave={() => setTooltip(null)}
                 onMouseOver={e => { (e.currentTarget as HTMLElement).style.filter='brightness(1.2)' }}
-                style={{ width:28, height:22, borderRadius:4, flexShrink:0, background:getCellBg(getLevel(slot.pct)), border:`1px solid ${isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}`, cursor:'default', transition:'filter 0.1s' }}
+                style={{ width:28, height:22, borderRadius:4, flexShrink:0, background:getCellBg(slot.pct, slot.total > 0), border:`1px solid ${isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}`, cursor:'default', transition:'filter 0.1s' }}
               />
             ))}
           </div>
         </div>
       ))}
+      <div style={{ display: 'flex', marginLeft: W, marginTop: 4, gap: 2 }}>
+        {HOUR_LABELS.map((lbl, h) => (
+          <div key={h} style={{ width: 28, flexShrink: 0, textAlign: 'center', fontSize: '0.6rem', color: 'var(--muted)' }}>{lbl}</div>
+        ))}
+      </div>
       {tooltip && (
         <div style={{ position:'absolute', top:tooltip.y-72, left:Math.max(0,tooltip.x-60), background:isDark?'#1e293b':'#fff', border:`1px solid ${isDark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.12)'}`, borderRadius:8, padding:'0.45rem 0.75rem', fontSize:'0.75rem', pointerEvents:'none', zIndex:50, whiteSpace:'nowrap', boxShadow:'0 4px 12px rgba(0,0,0,0.15)', lineHeight:1.7 }}>
           <div style={{ fontWeight:700 }}>{DAY_NAMES[tooltip.dow]} {HOUR_LABELS[tooltip.hour]}</div>
@@ -80,11 +68,13 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
           <div style={{ color:'var(--muted)', fontSize:'0.7rem' }}>{tooltip.active} / {tooltip.total} polls</div>
         </div>
       )}
-      <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:10, fontSize:'0.7rem', color:'var(--muted)', marginLeft:W }}>
-        <span>0%</span>
-        {[0,1,2,3,4,5,6,7,8,9,10,11,12].map(l => <div key={l} style={{ width:13, height:13, borderRadius:3, background:getCellBg(l), border:`1px solid ${isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}` }} />)}
-        <span>100%</span>
-        <span style={{ marginLeft:'auto', opacity:0.5, fontSize:'0.65rem' }}>{hasData?`5-min polls · last ${days} days`:'Waiting for first poll data...'}</span>
+      <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginTop:10, fontSize:'0.7rem', color:'var(--muted)', marginLeft:W }}>
+        {LEGEND.map(({ label, bg }) => (
+          <div key={label} style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <div style={{ width:13, height:13, borderRadius:3, background:bg, border:`1px solid ${isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)'}`, flexShrink:0 }} />
+            <span>{label}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -175,7 +165,7 @@ export function UserDetail() {
   const [todayMins, setTodayMins] = useState(0)
   const [weekMins, setWeekMins] = useState(0)
   const [chartDays, setChartDays] = useState(5)
-  const [heatmapDays, setHeatmapDays] = useState(30)
+  const [heatmapDays, setHeatmapDays] = useState(7)
   const [logDays, setLogDays] = useState(7)
   const { theme } = useTheme()
   const { time, date } = useLocalTime(user?.timezone || '')
@@ -309,8 +299,8 @@ export function UserDetail() {
           <select value={heatmapDays} onChange={e => setHeatmapDays(Number(e.target.value))} style={sel}>
             <option value={7}>Last 7 days</option>
             <option value={14}>Last 14 days</option>
-            <option value={30}>Last 30 days</option>
-            <option value={60}>Last 60 days</option>
+            <option value={21}>Last 21 days</option>
+            <option value={28}>Last 28 days</option>
           </select>
         } />
         <div style={{ padding:'1.5rem' }} data-heatmap="1">
