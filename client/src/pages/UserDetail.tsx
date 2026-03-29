@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api'
@@ -12,139 +12,74 @@ import { useLocalTime } from '../hooks/useLocalTime'
 import { useTheme } from '../hooks/useTheme'
 import { minsToHours, formatDate } from '../utils'
 
-interface HeatCell { date: string; hour: number; active_minutes: number }
+interface HourSlot { hour: number; pct: number }
 
-function HourHeatmap({ userId, days }: { userId: string; days: number }) {
+function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
   const { theme } = useTheme()
-  const [cells, setCells] = useState<HeatCell[]>([])
-  const [loading, setLoading] = useState(true)
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null)
+  const isDark = theme === 'dark'
 
-  useEffect(() => {
-    setLoading(true)
-    fetch(`/api/dashboard/users/${userId}/heatmap?days=${days}`, {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('st_token') }
-    })
-      .then(r => r.json())
-      .then(data => { setCells(Array.isArray(data) ? data : []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [userId, days])
-
-  // Build a map: date -> hour -> active_minutes
-  const map: Record<string, Record<number, number>> = {}
-  cells.forEach(c => {
-    if (!map[c.date]) map[c.date] = {}
-    map[c.date][c.hour] = c.active_minutes
-  })
-
-  // Build ordered list of last N days
-  const dayList: string[] = []
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date()
-    d.setUTCHours(0, 0, 0, 0)
-    d.setUTCDate(d.getUTCDate() - i)
-    dayList.push(d.toISOString().split('T')[0])
+  const getColor = (pct: number) => {
+    if (pct === 0) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
+    const r = pct / 100
+    return isDark
+      ? `rgba(${Math.round(30 + r * 26)},${Math.round(30 + r * 159)},${Math.round(60 + r * 188)},${(0.25 + r * 0.75).toFixed(2)})`
+      : `rgb(${Math.round(219 + r * (37 - 219))},${Math.round(234 + r * (99 - 234))},${Math.round(254 + r * (235 - 254))})`
   }
 
-  const hours = Array.from({ length: 24 }, (_, i) => i)
-
-  const getColor = (pct: number): string => {
-    if (pct <= 0) return theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
-    const dark = theme === 'dark'
-    if (dark) {
-      const r = Math.round(30 + pct * 26)
-      const g = Math.round(30 + pct * 159)
-      const b = Math.round(60 + pct * 188)
-      const a = (0.25 + pct * 0.75).toFixed(2)
-      return `rgba(${r},${g},${b},${a})`
-    } else {
-      const r = Math.round(186 + pct * (2 - 186))
-      const g = Math.round(230 + pct * (132 - 230))
-      const b = Math.round(253 + pct * (199 - 253))
-      return `rgb(${r},${g},${b})`
-    }
-  }
-
-  const fmtHour = (h: number) => {
+  const amPm = (h: number) => {
     if (h === 0) return '12a'
-    if (h < 12) return h + 'a'
     if (h === 12) return '12p'
-    return (h - 12) + 'p'
+    return h < 12 ? h + 'a' : (h - 12) + 'p'
   }
 
-  const fmtDate = (ds: string) => {
-    const d = new Date(ds + 'T12:00:00Z')
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
-  }
-
-  if (loading) return <div style={{ color: 'var(--muted)', fontSize: '0.85rem', padding: '1rem' }}>Loading heatmap...</div>
-  if (cells.length === 0) return <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>No activity data yet</div>
-
-  const CELL_W = 18
-  const CELL_H = 14
-  const CELL_GAP = 2
-  const LABEL_W = 52
+  const filledData = data.length === 24 ? data : Array.from({ length: 24 }, (_, i) => ({ hour: i, pct: 0 }))
+  const maxPct = Math.max(...filledData.map(d => d.pct), 1)
 
   return (
-    <div style={{ position: 'relative', overflowX: 'auto' }}
-      onMouseLeave={() => setTooltip(null)}>
-      {tooltip && (
-        <div style={{
-          position: 'fixed', left: tooltip.x + 12, top: tooltip.y - 32,
-          background: 'var(--surface)', border: '1px solid var(--border)',
-          borderRadius: 6, padding: '4px 10px', fontSize: '0.75rem',
-          color: 'var(--text)', pointerEvents: 'none', zIndex: 999,
-          boxShadow: 'var(--shadow)', whiteSpace: 'nowrap'
-        }}>{tooltip.label}</div>
-      )}
-
-      {/* Hour axis labels */}
-      <div style={{ display: 'flex', marginLeft: LABEL_W, marginBottom: 4, gap: CELL_GAP }}>
-        {hours.map(h => (
-          <div key={h} style={{ width: CELL_W, fontSize: '0.55rem', color: 'var(--muted)', textAlign: 'center', flexShrink: 0 }}>
-            {h % 3 === 0 ? fmtHour(h) : ''}
+    <div>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', marginBottom: 8 }}>
+        {filledData.map(slot => (
+          <div key={slot.hour} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div
+              title={`${amPm(slot.hour)}: ${slot.pct}% active`}
+              style={{
+                width: '100%',
+                height: 48,
+                borderRadius: 4,
+                background: getColor(slot.pct),
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                position: 'relative',
+                cursor: 'default',
+                transition: 'opacity 0.15s',
+              }}
+            >
+              {slot.pct > 0 && (
+                <div style={{
+                  position: 'absolute', bottom: 2, left: 0, right: 0,
+                  textAlign: 'center', fontSize: '0.55rem', color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
+                  fontWeight: 600, lineHeight: 1
+                }}>
+                  {slot.pct < 1 ? '<1' : Math.round(slot.pct)}%
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--muted)', textAlign: 'center', lineHeight: 1 }}>
+              {slot.hour % 3 === 0 ? amPm(slot.hour) : ''}
+            </div>
           </div>
         ))}
       </div>
-
-      {/* Rows = days */}
-      {dayList.map(ds => (
-        <div key={ds} style={{ display: 'flex', alignItems: 'center', marginBottom: CELL_GAP }}>
-          {/* Date label */}
-          <div style={{ width: LABEL_W, fontSize: '0.62rem', color: 'var(--muted)', flexShrink: 0, paddingRight: 6, textAlign: 'right' }}>
-            {fmtDate(ds)}
-          </div>
-          {/* Hour cells */}
-          {hours.map(h => {
-            const mins = map[ds]?.[h] ?? 0
-            const pct = Math.min(mins / 60, 1)
-            return (
-              <div key={h}
-                onMouseMove={e => setTooltip({
-                  x: e.clientX, y: e.clientY,
-                  label: `${fmtDate(ds)} ${fmtHour(h)}-${fmtHour(h + 1 < 24 ? h + 1 : 0)}: ${mins}min active (${Math.round(pct * 100)}%)`
-                })}
-                style={{
-                  width: CELL_W, height: CELL_H, borderRadius: 2, flexShrink: 0,
-                  marginRight: CELL_GAP,
-                  background: getColor(pct),
-                  border: '1px solid var(--border)',
-                  cursor: mins > 0 ? 'default' : 'default'
-                }}
-              />
-            )
-          })}
-        </div>
-      ))}
-
-      {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.75rem', marginLeft: LABEL_W, fontSize: '0.7rem', color: 'var(--muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--muted)' }}>
         <span>0%</span>
-        {[0, 0.25, 0.5, 0.75, 1].map(p => (
-          <div key={p} style={{ width: 12, height: 12, borderRadius: 2, background: getColor(p), border: '1px solid var(--border)' }} />
+        {[0.1, 0.3, 0.55, 0.8, 1].map(r => (
+          <div key={r} style={{
+            width: 12, height: 12, borderRadius: 2,
+            background: getColor(r * maxPct),
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`
+          }} />
         ))}
         <span>100%</span>
-        <span style={{ marginLeft: '0.5rem', opacity: 0.6 }}>hourly activity</span>
+        <span style={{ marginLeft: 'auto', opacity: 0.6 }}>Based on last {days} days of polling data</span>
       </div>
     </div>
   )
@@ -155,11 +90,13 @@ export function UserDetail() {
   const [user, setUser] = useState<IUserDetail | null>(null)
   const [presence, setPresence] = useState<string | null>(null)
   const [hours, setHours] = useState<DayHours[]>([])
+  const [hourly, setHourly] = useState<HourSlot[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
   const [stats, setStats] = useState<UserStats | null>(null)
   const [todayMins, setTodayMins] = useState(0)
   const [weekMins, setWeekMins] = useState(0)
   const [chartDays, setChartDays] = useState(5)
+  const [heatmapDays, setHeatmapDays] = useState(30)
   const [logDays, setLogDays] = useState(14)
   const { theme } = useTheme()
   const { time, date } = useLocalTime(user?.timezone || '')
@@ -180,6 +117,13 @@ export function UserDetail() {
   useEffect(() => {
     if (id) api.userHours(id, chartDays).then(setHours).catch(() => {})
   }, [id, chartDays])
+
+  useEffect(() => {
+    if (!id) return
+    fetch(`/api/dashboard/users/${id}/hourly?days=${heatmapDays}`, {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('st_token') }
+    }).then(r => r.json()).then(setHourly).catch(() => {})
+  }, [id, heatmapDays])
 
   useEffect(() => {
     if (id) api.userSessions(id, logDays).then(setSessions).catch(() => {})
@@ -250,7 +194,6 @@ export function UserDetail() {
             </div>
           </div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
           <StatCard label="Today" value={todayMins ? minsToHours(todayMins) : '--'} sub="hours active" color="var(--green)" />
           <StatCard label="This week" value={weekMins ? minsToHours(weekMins) : '--'} sub="last 7 days" color="var(--accent)" />
@@ -258,7 +201,6 @@ export function UserDetail() {
           <StatCard label="Avg / active day" value={stats?.avgPerActiveDay ? minsToHours(stats.avgPerActiveDay) : '--'} sub="active days only" color="var(--yellow)" />
           <StatCard label="Active days" value={stats?.activeDays ?? '--'} sub="in last 30 days" />
         </div>
-
         <Card>
           <CardHeader title="Daily Active Hours" right={
             <select value={chartDays} onChange={e => setChartDays(Number(e.target.value))} style={sel}>
@@ -281,20 +223,22 @@ export function UserDetail() {
             </ResponsiveContainer>
           </div>
         </Card>
-
         <Card>
-          <CardHeader title="Activity Heatmap" right={
-            <select value={chartDays} onChange={e => setChartDays(Number(e.target.value))} style={sel}>
-              <option value={5}>Last 5 days</option>
+          <CardHeader title="Activity Heatmap by Hour" right={
+            <select value={heatmapDays} onChange={e => setHeatmapDays(Number(e.target.value))} style={sel}>
+              <option value={7}>Last 7 days</option>
               <option value={14}>Last 14 days</option>
               <option value={30}>Last 30 days</option>
+              <option value={60}>Last 60 days</option>
             </select>
           } />
           <div style={{ padding: '1.5rem' }}>
-            {id && <HourHeatmap userId={id} days={chartDays} />}
+            {hourly.length === 0
+              ? <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>No activity data yet</div>
+              : <HourlyHeatmap data={hourly} days={heatmapDays} />
+            }
           </div>
         </Card>
-
         <Card>
           <CardHeader title="Activity Log" right={
             <select value={logDays} onChange={e => setLogDays(Number(e.target.value))} style={sel}>
