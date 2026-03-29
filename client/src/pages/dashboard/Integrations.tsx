@@ -33,7 +33,7 @@ export function Integrations() {
   return (
     <>
       <div style={{ marginBottom:'1.5rem' }}>
-        <h1 style={{ fontFamily:'Syne,sans-serif', fontSize:'1.6rem', fontWeight:800, letterSpacing:'-0.5px' }}>Integrations</h1>
+        <h1 style={{ fontFamily:'Inter,sans-serif', fontSize:'1.6rem', fontWeight:800, letterSpacing:'-0.5px' }}>Integrations</h1>
         <p style={{ color:'var(--muted)', fontSize:'0.875rem', marginTop:'0.25rem' }}>Connect your Slack or Teams workspace</p>
       </div>
       <Card>
