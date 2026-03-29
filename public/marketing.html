@@ -26,19 +26,19 @@
     @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
     .pulse-dot { animation: pulse-dot 2s infinite; }
     @keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-    .marquee-track { display:flex; width:max-content; animation:marquee 32s linear infinite; }
+    .marquee-track { display:flex; width:max-content; animation:marquee 55s linear infinite; }
     .marquee-track:hover { animation-play-state:paused; }
     .logo-wrap {
       display:flex; align-items:center; justify-content:center;
       width:120px; height:48px; flex-shrink:0; margin:0 20px;
     }
     .logo-wrap img {
-      max-height:28px; max-width:90px; width:auto;
-      filter:grayscale(1) opacity(0.45);
+      height:24px; width:auto; max-width:80px;
+      filter:invert(0.65) brightness(0.7);
       transition:filter .25s ease;
       object-fit:contain;
     }
-    .logo-wrap img:hover { filter:grayscale(0) opacity(1); }
+    .logo-wrap img:hover { filter:invert(0) brightness(1); }
     .check-item::before {
       content: '';
       display: inline-block;
@@ -63,8 +63,8 @@
       <a href="#pricing" class="hover:text-slate-900 transition-colors">Pricing</a>
     </div>
     <div class="flex items-center gap-3">
-      <a href="/dashboard" class="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Log in</a>
-      <a href="/dashboard" class="inline-flex items-center gap-1.5 bg-brand text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-dark transition-colors shadow-sm">
+      <a href="/login" class="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Log in</a>
+      <a href="/login" class="inline-flex items-center gap-1.5 bg-brand text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-dark transition-colors shadow-sm">
         Get started free
       </a>
     </div>
@@ -86,7 +86,7 @@
       Know exactly how much time each member is working — without any timer, manual input, or complex setup. StatusTime reads Slack &amp; Teams presence and does the rest.
     </p>
     <div class="flex flex-wrap gap-3 justify-center mb-16">
-      <a href="/dashboard" class="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-3 rounded-lg text-base hover:bg-brand-dark transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
+      <a href="/login" class="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-3 rounded-lg text-base hover:bg-brand-dark transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
         Start free trial →
       </a>
       <a href="#how" class="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-6 py-3 rounded-lg text-base hover:border-slate-300 hover:bg-slate-50 transition-all">
@@ -188,47 +188,47 @@
     <div class="pointer-events-none absolute inset-y-0 right-0 w-24 z-10" style="background:linear-gradient(to left,white,transparent)"></div>
     <div class="marquee-track">
       <!-- first set -->
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/stripe.com" alt="Stripe" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/shopify.com" alt="Shopify" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/notion.so" alt="Notion" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/figma.com" alt="Figma" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/linear.app" alt="Linear" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/vercel.com" alt="Vercel" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/github.com" alt="GitHub" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/atlassian.com" alt="Atlassian" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/hubspot.com" alt="HubSpot" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/intercom.com" alt="Intercom" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/zapier.com" alt="Zapier" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/airtable.com" alt="Airtable" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/asana.com" alt="Asana" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/monday.com" alt="Monday.com" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/zendesk.com" alt="Zendesk" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/salesforce.com" alt="Salesforce" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/dropbox.com" alt="Dropbox" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/mailchimp.com" alt="Mailchimp" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/twilio.com" alt="Twilio" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/clickup.com" alt="ClickUp" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/stripe" alt="Stripe" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/shopify" alt="Shopify" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/notion" alt="Notion" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/figma" alt="Figma" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/linear" alt="Linear" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/vercel" alt="Vercel" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/github" alt="GitHub" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/atlassian" alt="Atlassian" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/hubspot" alt="HubSpot" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/intercom" alt="Intercom" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zapier" alt="Zapier" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/airtable" alt="Airtable" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/asana" alt="Asana" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mondodotcom" alt="Monday.com" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zendesk" alt="Zendesk" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/salesforce" alt="Salesforce" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/dropbox" alt="Dropbox" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mailchimp" alt="Mailchimp" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/twilio" alt="Twilio" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/clickup" alt="ClickUp" /></div>
       <!-- duplicate for seamless loop -->
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/stripe.com" alt="Stripe" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/shopify.com" alt="Shopify" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/notion.so" alt="Notion" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/figma.com" alt="Figma" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/linear.app" alt="Linear" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/vercel.com" alt="Vercel" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/github.com" alt="GitHub" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/atlassian.com" alt="Atlassian" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/hubspot.com" alt="HubSpot" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/intercom.com" alt="Intercom" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/zapier.com" alt="Zapier" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/airtable.com" alt="Airtable" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/asana.com" alt="Asana" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/monday.com" alt="Monday.com" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/zendesk.com" alt="Zendesk" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/salesforce.com" alt="Salesforce" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/dropbox.com" alt="Dropbox" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/mailchimp.com" alt="Mailchimp" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/twilio.com" alt="Twilio" /></div>
-      <div class="logo-wrap"><img src="https://logo.clearbit.com/clickup.com" alt="ClickUp" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/stripe" alt="Stripe" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/shopify" alt="Shopify" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/notion" alt="Notion" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/figma" alt="Figma" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/linear" alt="Linear" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/vercel" alt="Vercel" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/github" alt="GitHub" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/atlassian" alt="Atlassian" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/hubspot" alt="HubSpot" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/intercom" alt="Intercom" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zapier" alt="Zapier" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/airtable" alt="Airtable" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/asana" alt="Asana" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mondodotcom" alt="Monday.com" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zendesk" alt="Zendesk" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/salesforce" alt="Salesforce" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/dropbox" alt="Dropbox" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mailchimp" alt="Mailchimp" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/twilio" alt="Twilio" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/clickup" alt="ClickUp" /></div>
     </div>
   </div>
 </section>
@@ -379,7 +379,7 @@
           <span class="text-sm text-slate-400 mb-2 ml-1">per user<br><span id="period-standard">per month</span></span>
         </div>
         <div id="billing-note-standard" class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
-        <a href="/dashboard" class="block text-center border-2 border-brand text-brand font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand hover:text-white transition-all mb-7">
+        <a href="/login" class="block text-center border-2 border-brand text-brand font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand hover:text-white transition-all mb-7">
           TRY FOR FREE
         </a>
         <div class="text-sm text-slate-500 mb-4">All the <span class="font-bold text-slate-800">Essentials</span></div>
@@ -404,7 +404,7 @@
           <span class="text-sm text-slate-400 mb-2 ml-1">per user<br><span id="period-pro">per month</span></span>
         </div>
         <div id="billing-note-pro" class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
-        <a href="/dashboard" class="block text-center bg-brand text-white font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand-dark transition-all mb-7 shadow-md">
+        <a href="/login" class="block text-center bg-brand text-white font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand-dark transition-all mb-7 shadow-md">
           TRY FOR FREE
         </a>
         <div class="text-sm text-slate-500 mb-4">Everything in <span class="font-bold text-slate-800">Standard</span> <span class="text-brand font-bold">+</span></div>
@@ -446,7 +446,7 @@
   <div class="max-w-2xl mx-auto">
     <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">Ready to stop guessing who's working?</h2>
     <p class="text-slate-500 text-lg mb-8">Connect your workspace in 5 minutes. First 14 days free.</p>
-    <a href="/dashboard" class="inline-flex items-center gap-2 bg-brand text-white font-semibold px-8 py-4 rounded-xl text-lg hover:bg-brand-dark transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+    <a href="/login" class="inline-flex items-center gap-2 bg-brand text-white font-semibold px-8 py-4 rounded-xl text-lg hover:bg-brand-dark transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
       Get started free →
     </a>
   </div>

@@ -137,7 +137,7 @@ export function AppLayout() {
     if (window.location.hash === '#billing_success') { showToast('Subscription activated!', 'success'); history.replaceState(null,'','/dashboard') }
   }, [])
 
-  const logout = () => { localStorage.removeItem('st_token'); navigate('/') }
+  const logout = () => { localStorage.removeItem('st_token'); navigate('/login') }
   const trialDays = org ? Math.max(0, Math.ceil((new Date(org.trial_ends_at).getTime() - Date.now()) / 86400000)) : 0
 
   const planLabel = org?.subscription_status === 'active'

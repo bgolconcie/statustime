@@ -12,7 +12,7 @@ const H = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' 
 
 async function req<T>(url: string, opts?: RequestInit): Promise<T> {
   const r = await fetch(url, { ...opts, headers: { ...H(), ...(opts?.headers || {}) } })
-  if (r.status === 401) { localStorage.removeItem('st_token'); window.location.href = '/'; }
+  if (r.status === 401) { localStorage.removeItem('st_token'); window.location.href = '/login'; }
   if (!r.ok) throw new Error(await r.text())
   return r.json()
 }

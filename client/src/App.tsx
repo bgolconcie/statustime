@@ -10,7 +10,7 @@ import { UserDetail } from './pages/UserDetail'
 import { useTheme } from './hooks/useTheme'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  return localStorage.getItem('st_token') ? <>{children}</> : <Navigate to="/" replace />
+  return localStorage.getItem('st_token') ? <>{children}</> : <Navigate to="/login" replace />
 }
 
 export default function App() {
@@ -18,7 +18,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
           <Route index element={<Overview />} />
           <Route path="team" element={<TeamHours />} />
