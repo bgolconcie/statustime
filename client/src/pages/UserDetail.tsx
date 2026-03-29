@@ -12,21 +12,23 @@ import { useLocalTime } from '../hooks/useLocalTime'
 import { useTheme } from '../hooks/useTheme'
 import { minsToHours, formatDate } from '../utils'
 
-interface HourSlot { hour: number; pct: number; active: number; total: number }
+interface HourSlot { dow: number; hour: number; pct: number; active: number; total: number }
 
 function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const [tooltip, setTooltip] = useState<{ hour: number; pct: number; active: number; total: number; x: number; y: number } | null>(null)
+  const [tooltip, setTooltip] = useState<{ dow: number; hour: number; pct: number; active: number; total: number; x: number; y: number } | null>(null)
 
-  // 13 discrete levels: 0/12 ... 12/12
-  // Map pct to one of 13 buckets (0=empty, 1-12=intensity)
-  const getLevel = (pct: number): number => {
-    if (pct === 0) return 0
-    return Math.max(1, Math.min(12, Math.round(pct / 100 * 12)))
-  }
+  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => {
+    if (h === 0) return '12a'
+    if (h === 12) return '12p'
+    return h < 12 ? `${h}a` : `${h - 12}p`
+  })
 
-  const getCellBg = (level: number): string => {
+  const getLevel = (pct: number) => pct === 0 ? 0 : Math.max(1, Math.min(12, Math.round(pct / 100 * 12)))
+
+  const getCellBg = (level: number) => {
     if (level === 0) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
     const r = level / 12
     return isDark
@@ -34,92 +36,95 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
       : `rgb(${Math.round(219 - r * 182)},${Math.round(234 - r * 135)},${Math.round(254 - r * 19)})`
   }
 
-  const amPm = (h: number) => {
-    if (h === 0) return '12a'
-    if (h === 12) return '12p'
-    return h < 12 ? `${h}a` : `${h - 12}p`
-  }
+  // Build 7x24 grid from flat array
+  const grid: HourSlot[][] = Array.from({ length: 7 }, (_, dow) =>
+    Array.from({ length: 24 }, (_, h) => {
+      const found = data.find(d => d.dow === dow && d.hour === h)
+      return found || { dow, hour: h, pct: 0, active: 0, total: 0 }
+    })
+  )
 
-  const filled = data.length === 24 ? data : Array.from({ length: 24 }, (_, i) => ({ hour: i, pct: 0, active: 0, total: 0 }))
-  const hasData = filled.some(s => s.total > 0)
+  const hasData = data.some(s => s.total > 0)
+  const DAY_COL_W = 36
 
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Hour labels row */}
-      <div style={{ display: 'flex', gap: 3, marginBottom: 6 }}>
-        {filled.map(slot => (
-          <div key={slot.hour} style={{ flex: 1, textAlign: 'center', fontSize: '0.6rem', color: 'var(--muted)', lineHeight: 1 }}>
-            {slot.hour % 3 === 0 ? amPm(slot.hour) : ''}
+    <div style={{ position: 'relative', overflowX: 'auto' }}>
+      {/* Hour labels header */}
+      <div style={{ display: 'flex', marginLeft: DAY_COL_W, marginBottom: 4, gap: 2 }}>
+        {HOUR_LABELS.map((label, h) => (
+          <div key={h} style={{ width: 28, flexShrink: 0, textAlign: 'center', fontSize: '0.6rem', color: 'var(--muted)', lineHeight: 1 }}>
+            {h % 3 === 0 ? label : ''}
           </div>
         ))}
       </div>
 
-      {/* Heatmap cells row */}
-      <div style={{ display: 'flex', gap: 3 }}>
-        {filled.map(slot => {
-          const level = getLevel(slot.pct)
-          return (
-            <div
-              key={slot.hour}
-              onMouseEnter={e => {
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                const parent = (e.currentTarget as HTMLElement).closest('[data-heatmap]')!.getBoundingClientRect()
-                setTooltip({ ...slot, x: rect.left - parent.left + rect.width / 2, y: rect.top - parent.top })
-              }}
-              onMouseLeave={() => setTooltip(null)}
-              style={{
-                flex: 1,
-                height: 40,
-                borderRadius: 5,
-                background: getCellBg(level),
-                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
-                cursor: slot.total > 0 ? 'default' : 'default',
-                transition: 'transform 0.1s',
-              }}
-              onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'scaleY(1.12)' }}
-              onFocus={() => {}}
-              onBlur={() => setTooltip(null)}
-            />
-          )
-        })}
-      </div>
+      {/* Grid rows */}
+      {grid.map((row, dow) => (
+        <div key={dow} style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 3 }}>
+          {/* Day label */}
+          <div style={{ width: DAY_COL_W, flexShrink: 0, fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)', textAlign: 'right', paddingRight: 8, lineHeight: 1 }}>
+            {DAY_NAMES[dow]}
+          </div>
+          {/* 24 hour cells */}
+          <div style={{ display: 'flex', gap: 2 }}>
+            {row.map(slot => {
+              const level = getLevel(slot.pct)
+              return (
+                <div
+                  key={slot.hour}
+                  onMouseEnter={e => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                    const parent = (e.currentTarget as HTMLElement).closest('[data-heatmap]')!.getBoundingClientRect()
+                    setTooltip({ ...slot, x: rect.left - parent.left + rect.width / 2, y: rect.top - parent.top })
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{
+                    width: 28,
+                    height: 22,
+                    borderRadius: 4,
+                    flexShrink: 0,
+                    background: getCellBg(level),
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+                    cursor: 'default',
+                    transition: 'filter 0.1s',
+                  }}
+                  onMouseOver={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1.2)' }}
+                  onFocus={() => {}}
+                  onBlur={() => setTooltip(null)}
+                />
+              )
+            })}
+          </div>
+        </div>
+      ))}
 
       {/* Tooltip */}
       {tooltip && (
         <div style={{
           position: 'absolute',
-          top: tooltip.y - 68,
-          left: Math.max(0, tooltip.x - 54),
+          top: tooltip.y - 72,
+          left: Math.max(0, tooltip.x - 60),
           background: isDark ? '#1e293b' : '#fff',
           border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
-          borderRadius: 8,
-          padding: '0.45rem 0.7rem',
-          fontSize: '0.75rem',
-          pointerEvents: 'none',
-          zIndex: 50,
-          whiteSpace: 'nowrap',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          lineHeight: 1.6,
+          borderRadius: 8, padding: '0.45rem 0.75rem',
+          fontSize: '0.75rem', pointerEvents: 'none', zIndex: 50,
+          whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', lineHeight: 1.7,
         }}>
-          <div style={{ fontWeight: 700, color: 'var(--text)' }}>{amPm(tooltip.hour)} &mdash; {amPm(tooltip.hour + 1 > 23 ? 0 : tooltip.hour + 1)}</div>
+          <div style={{ fontWeight: 700, color: 'var(--text)' }}>{DAY_NAMES[tooltip.dow]} {HOUR_LABELS[tooltip.hour]}&ndash;{HOUR_LABELS[(tooltip.hour + 1) % 24]}</div>
           <div style={{ color: 'var(--accent)', fontWeight: 600 }}>{tooltip.pct.toFixed(1)}% active</div>
           <div style={{ color: 'var(--muted)', fontSize: '0.7rem' }}>{tooltip.active} / {tooltip.total} polls</div>
         </div>
       )}
 
       {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 10, fontSize: '0.7rem', color: 'var(--muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: '0.7rem', color: 'var(--muted)', marginLeft: DAY_COL_W }}>
         <span>0%</span>
-        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(l => (
-          <div key={l} style={{
-            width: 14, height: 14, borderRadius: 3,
-            background: getCellBg(l),
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
-          }} />
+        {[0,1,2,3,4,5,6,7,8,9,10,11,12].map(l => (
+          <div key={l} style={{ width: 13, height: 13, borderRadius: 3, background: getCellBg(l), border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}` }} />
         ))}
         <span>100%</span>
-        <span style={{ marginLeft: 'auto', opacity: 0.55, fontSize: '0.65rem' }}>
-          {hasData ? `5-min polls over last ${days} days` : 'Waiting for first poll data...'}
+        <span style={{ marginLeft: 'auto', opacity: 0.5, fontSize: '0.65rem' }}>
+          {hasData ? `5-min polls · last ${days} days` : 'Waiting for first poll data...'}
         </span>
       </div>
     </div>
