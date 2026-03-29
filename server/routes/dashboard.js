@@ -342,60 +342,68 @@ router.get('/users/:userId/hourly', auth, async (req, res) => {
 });
 
 
-// Activity log from presence_snapshots — per day summary + full view
-// Summary: [{date, dow, active, away, total, pct}]
-// Full:    [{date, dow, hour, active, away, total, pct}]
+// Activity log — per day timeline from presence_snapshots
+// Returns [{date, dow, slots:[{hour,is_active}...], active_polls, total_polls, first_active, last_active}]
 router.get('/users/:userId/activity-log', auth, async (req, res) => {
-  const { days = 14, mode = 'summary' } = req.query;
+  const { days = 14 } = req.query;
   const daysInt = parseInt(days);
   try {
-    let result;
-    if (mode === 'full') {
-      result = await db.query(
-        `SELECT
-           (polled_at AT TIME ZONE 'UTC')::date AS date,
-           TO_CHAR(polled_at AT TIME ZONE 'UTC', 'Day') AS dow,
-           EXTRACT(HOUR FROM polled_at AT TIME ZONE 'UTC')::int AS hour,
-           COUNT(*) AS total,
-           COUNT(*) FILTER (WHERE is_active = true) AS active,
-           COUNT(*) FILTER (WHERE is_active = false) AS away
-         FROM presence_snapshots
-         WHERE user_id = $1
-           AND org_id = $2
-           AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
-         GROUP BY date, dow, hour
-         ORDER BY date DESC, hour ASC`,
-        [req.params.userId, req.org.id, daysInt]
-      );
-    } else {
-      result = await db.query(
-        `SELECT
-           (polled_at AT TIME ZONE 'UTC')::date AS date,
-           TO_CHAR(polled_at AT TIME ZONE 'UTC', 'FMDay') AS dow,
-           TO_CHAR(polled_at AT TIME ZONE 'UTC', 'FMMonth') AS month,
-           EXTRACT(DAY FROM polled_at AT TIME ZONE 'UTC')::int AS day_of_month,
-           COUNT(*) AS total,
-           COUNT(*) FILTER (WHERE is_active = true) AS active,
-           COUNT(*) FILTER (WHERE is_active = false) AS away
-         FROM presence_snapshots
-         WHERE user_id = $1
-           AND org_id = $2
-           AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
-         GROUP BY date, dow, month, day_of_month
-         ORDER BY date DESC`,
-        [req.params.userId, req.org.id, daysInt]
-      );
+    // Get every snapshot slot: date + hour + is_active count
+    const result = await db.query(
+      `SELECT
+         (polled_at AT TIME ZONE 'UTC')::date AS date,
+         TO_CHAR(polled_at AT TIME ZONE 'UTC', 'FMDay') AS dow,
+         EXTRACT(HOUR FROM polled_at AT TIME ZONE 'UTC')::int AS hour,
+         COUNT(*) FILTER (WHERE is_active = true) AS active,
+         COUNT(*) FILTER (WHERE is_active = false) AS away,
+         COUNT(*) AS total
+       FROM presence_snapshots
+       WHERE user_id = $1 AND org_id = $2
+         AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
+       GROUP BY date, dow, hour
+       ORDER BY date DESC, hour ASC`,
+      [req.params.userId, req.org.id, daysInt]
+    );
+
+    // Group by date
+    const byDate = {};
+    for (const row of result.rows) {
+      const ds = typeof row.date === 'string' ? row.date.split('T')[0] : new Date(row.date).toISOString().split('T')[0];
+      if (!byDate[ds]) byDate[ds] = { date: ds, dow: row.dow.trim(), hours: [] };
+      byDate[ds].hours.push({
+        hour: parseInt(row.hour),
+        active: parseInt(row.active),
+        away: parseInt(row.away),
+        total: parseInt(row.total)
+      });
     }
-    const rows = result.rows.map(r => ({
-      ...r,
-      total: parseInt(r.total),
-      active: parseInt(r.active),
-      away: parseInt(r.away),
-      pct: parseInt(r.total) > 0
-        ? Math.round((parseInt(r.active) / parseInt(r.total)) * 10000) / 100
-        : 0
-    }));
-    res.json(rows);
+
+    // Build response with summary stats per day
+    const days_out = Object.values(byDate).map((day) => {
+      const d = day;
+      let total_active = 0, total_polls = 0, first_active = null, last_active = null;
+      for (const h of d.hours) {
+        total_active += h.active;
+        total_polls += h.total;
+        if (h.active > 0) {
+          if (first_active === null) first_active = h.hour;
+          last_active = h.hour;
+        }
+      }
+      return {
+        date: d.date,
+        dow: d.dow,
+        hours: d.hours,
+        active_polls: total_active,
+        total_polls,
+        active_minutes: total_active * 5,
+        pct: total_polls > 0 ? Math.round((total_active / total_polls) * 1000) / 10 : 0,
+        first_active,
+        last_active
+      };
+    });
+
+    res.json(days_out);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
