@@ -3,51 +3,16 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const db = require('../db');
 const auth = require('../middleware/auth');
 
-// Price IDs resolved at startup via setupStripeProducts()
-const priceIds = { standard: null, pro: null, standard_yearly: null, pro_yearly: null };
-
-const PLANS = {
-  standard:        { name: 'Status Standard', amount: 600,  interval: 'month' },
-  pro:             { name: 'Status Pro',       amount: 900,  interval: 'month' },
-  standard_yearly: { name: 'Status Standard', amount: 6000, interval: 'year'  },
-  pro_yearly:      { name: 'Status Pro',       amount: 9000, interval: 'year'  },
+// Hardcoded Stripe price IDs (Status Stripe account)
+const priceIds = {
+  standard:        'price_1TGPrtIH8WZvWjkGhexkd3em',
+  pro:             'price_1TGPtAIH8WZvWjkGXJmLXfi0',
+  standard_yearly: 'price_1TGPsfIH8WZvWjkGja6Wc9kw',
+  pro_yearly:      'price_1TGPtXIH8WZvWjkGAKvlppYk',
 };
 
-async function setupStripeProducts() {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    console.log('STRIPE_SECRET_KEY not set — billing disabled');
-    return;
-  }
-  try {
-    const { data: products } = await stripe.products.list({ limit: 100, active: true });
-    // Build product map by name (each product shared by monthly + yearly prices)
-    const productMap = {};
-    for (const p of products) productMap[p.name] = p;
-
-    for (const [key, plan] of Object.entries(PLANS)) {
-      if (!productMap[plan.name]) {
-        productMap[plan.name] = await stripe.products.create({ name: plan.name });
-        console.log(`Stripe: created product "${plan.name}"`);
-      }
-      const product = productMap[plan.name];
-      const { data: prices } = await stripe.prices.list({ product: product.id, active: true, limit: 20 });
-      let price = prices.find(p => p.unit_amount === plan.amount && p.currency === 'usd' && p.recurring?.interval === plan.interval);
-      if (!price) {
-        price = await stripe.prices.create({
-          product: product.id,
-          unit_amount: plan.amount,
-          currency: 'usd',
-          recurring: { interval: plan.interval },
-        });
-        console.log(`Stripe: created ${plan.interval}ly price for "${plan.name}" → ${price.id}`);
-      }
-      priceIds[key] = price.id;
-    }
-    console.log('Stripe products ready — standard:', priceIds.standard, '| pro:', priceIds.pro);
-  } catch (err) {
-    console.error('Stripe setup error:', err.message);
-    throw err; // propagate so callers can surface the real error
-  }
+function setupStripeProducts() {
+  console.log('Stripe price IDs loaded — standard:', priceIds.standard, '| pro:', priceIds.pro);
 }
 
 // Checkout — accepts body: { plan: 'standard' | 'pro', billing: 'monthly' | 'yearly' }
@@ -55,18 +20,8 @@ router.post('/checkout', auth, async (req, res) => {
   const plan    = req.body?.plan === 'standard' ? 'standard' : 'pro';
   const billing = req.body?.billing === 'yearly' ? 'yearly' : 'monthly';
   const key     = billing === 'yearly' ? `${plan}_yearly` : plan;
-  let priceId = priceIds[key];
-  if (!priceId) {
-    try {
-      await setupStripeProducts();
-    } catch (setupErr) {
-      return res.status(503).json({ error: `Stripe setup error: ${setupErr.message}` });
-    }
-    priceId = priceIds[key];
-  }
-  if (!priceId) {
-    return res.status(503).json({ error: 'Stripe setup succeeded but price IDs are still missing — check Railway logs' });
-  }
+  const priceId = priceIds[key];
+  if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ error: 'STRIPE_SECRET_KEY not set in Railway' });
   try {
     const { rows: [org] } = await db.query('SELECT * FROM organizations WHERE id = $1', [req.org.id]);
     const { rows: [{ count }] } = await db.query('SELECT COUNT(*) FROM tracked_users WHERE org_id=$1 AND is_active=true', [req.org.id]);
@@ -131,8 +86,8 @@ router.post('/webhook', require('express').raw({ type: 'application/json' }), as
   if (event.type === 'customer.subscription.updated') {
     const status = obj.status === 'active' ? 'active' : 'past_due';
     const activePriceId = obj.items?.data[0]?.price?.id;
-    const plan = activePriceId === priceIds.standard ? 'standard'
-               : activePriceId === priceIds.pro      ? 'pro'
+    const plan = (activePriceId === priceIds.standard || activePriceId === priceIds.standard_yearly) ? 'standard'
+               : (activePriceId === priceIds.pro      || activePriceId === priceIds.pro_yearly)      ? 'pro'
                : null;
     if (plan) {
       await db.query('UPDATE organizations SET subscription_status=$1, plan=$2 WHERE stripe_subscription_id=$3', [status, plan, obj.id]);
