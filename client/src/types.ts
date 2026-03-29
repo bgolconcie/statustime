@@ -93,3 +93,8 @@ export interface Stats {
   todayMinutes: number
   weekMinutes: number
 }
+
+export interface TimesheetDay { date: string; hours: number }
+export interface TimesheetResource { display_name: string; days: TimesheetDay[]; total: number }
+export interface TimesheetProject { name: string | null; resources: TimesheetResource[]; total: number }
+export interface Timesheet { from: string; to: string; dates: string[]; projects: TimesheetProject[] }

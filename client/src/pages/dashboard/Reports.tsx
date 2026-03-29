@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { api } from '../../api'
-import type { Invoice } from '../../types'
+import type { Invoice, Timesheet } from '../../types'
 
 export function Reports() {
   const today = new Date().toISOString().split('T')[0]
@@ -15,6 +15,12 @@ export function Reports() {
   const [loading, setLoading] = useState(false)
   const [invError, setInvError] = useState('')
 
+  const [tsFrom, setTsFrom] = useState(weekAgo)
+  const [tsTo, setTsTo] = useState(today)
+  const [timesheet, setTimesheet] = useState<Timesheet | null>(null)
+  const [tsLoading, setTsLoading] = useState(false)
+  const [tsError, setTsError] = useState('')
+
   const generateInvoice = async () => {
     setLoading(true); setInvError(''); setInvoice(null)
     try {
@@ -27,12 +33,26 @@ export function Reports() {
     }
   }
 
+  const generateTimesheet = async () => {
+    setTsLoading(true); setTsError(''); setTimesheet(null)
+    try {
+      const data = await api.timesheet(tsFrom, tsTo)
+      setTimesheet(data)
+    } catch {
+      setTsError('Failed to generate timesheet')
+    } finally {
+      setTsLoading(false)
+    }
+  }
+
   const inp: React.CSSProperties = {
     background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8,
     padding:'0.6rem 0.9rem', color:'var(--text)', fontSize:'0.875rem', outline:'none', width:'100%', fontFamily:'inherit',
   }
 
   const fmt = (n: number, cur: string) => new Intl.NumberFormat('en-US', { style:'currency', currency: cur }).format(n)
+  const fmtDate = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { month:'short', day:'numeric', timeZone:'UTC' })
+  const fmtH = (h: number) => h === 0 ? '—' : h < 1 ? `${Math.round(h * 60)}m` : `${h}h`
 
   return (
     <>
@@ -125,6 +145,83 @@ export function Reports() {
                 </div>
               )
             })()
+          )}
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Timesheet by Project" />
+        <div style={{ padding:'1.5rem' }}>
+          <div style={{ display:'flex', gap:'1rem', alignItems:'flex-end', flexWrap:'wrap', maxWidth:520, marginBottom:'1.25rem' }}>
+            <div style={{ flex:1, minWidth:140 }}>
+              <label style={{ display:'block', fontSize:'0.8rem', color:'var(--muted)', marginBottom:'0.4rem' }}>From</label>
+              <input type="date" style={inp} value={tsFrom} onChange={e => setTsFrom(e.target.value)} />
+            </div>
+            <div style={{ flex:1, minWidth:140 }}>
+              <label style={{ display:'block', fontSize:'0.8rem', color:'var(--muted)', marginBottom:'0.4rem' }}>To</label>
+              <input type="date" style={inp} value={tsTo} onChange={e => setTsTo(e.target.value)} />
+            </div>
+            <button onClick={generateTimesheet} disabled={tsLoading}
+              style={{ background:'var(--accent)', color:'var(--bg)', border:'none', borderRadius:8, padding:'0.6rem 1.25rem', fontSize:'0.875rem', fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity: tsLoading ? 0.7 : 1, whiteSpace:'nowrap' }}>
+              {tsLoading ? 'Generating...' : 'Generate'}
+            </button>
+          </div>
+
+          {tsError && <div style={{ color:'var(--red)', fontSize:'0.875rem', marginBottom:'1rem' }}>{tsError}</div>}
+
+          {timesheet && (
+            timesheet.projects.length === 0 ? (
+              <div style={{ color:'var(--muted)', fontSize:'0.875rem' }}>No activity data in this period.</div>
+            ) : (
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'0.8rem', minWidth: 400 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign:'left', padding:'0.5rem 1rem', fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', borderBottom:'2px solid var(--border)', fontWeight:500, minWidth:160, position:'sticky', left:0, background:'var(--surface)' }}>Resource</th>
+                      {timesheet.dates.map(d => (
+                        <th key={d} style={{ textAlign:'center', padding:'0.5rem 0.4rem', fontSize:'0.65rem', color:'var(--muted)', borderBottom:'2px solid var(--border)', fontWeight:500, minWidth:52, whiteSpace:'nowrap' }}>
+                          {fmtDate(d)}
+                        </th>
+                      ))}
+                      <th style={{ textAlign:'right', padding:'0.5rem 1rem', fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', borderBottom:'2px solid var(--border)', fontWeight:600 }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timesheet.projects.map((project, pi) => [
+                      <tr key={'ph'+pi}>
+                        <td colSpan={timesheet.dates.length + 2} style={{ padding:'0.55rem 1rem', background:'var(--surface2)', fontWeight:700, fontSize:'0.78rem', color:'var(--accent)', borderTop: pi > 0 ? '2px solid var(--border)' : undefined, borderBottom:'1px solid var(--border)', position:'sticky', left:0 }}>
+                          {project.name ?? 'No project'}
+                        </td>
+                      </tr>,
+                      ...project.resources.map((res, ri) => (
+                        <tr key={'pr'+pi+ri} style={{ background: ri % 2 === 1 ? 'var(--surface2)' : undefined }}>
+                          <td style={{ padding:'0.55rem 1rem', borderBottom:'1px solid var(--border)', fontWeight:500, paddingLeft:'1.75rem', position:'sticky', left:0, background: ri % 2 === 1 ? 'var(--surface2)' : 'var(--surface)' }}>{res.display_name}</td>
+                          {res.days.map((day, di) => (
+                            <td key={di} style={{ padding:'0.55rem 0.4rem', borderBottom:'1px solid var(--border)', textAlign:'center', color: day.hours > 0 ? 'var(--text)' : 'var(--border)', fontWeight: day.hours >= 7 ? 700 : 400 }}>
+                              {fmtH(day.hours)}
+                            </td>
+                          ))}
+                          <td style={{ padding:'0.55rem 1rem', borderBottom:'1px solid var(--border)', textAlign:'right', fontWeight:700, color:'var(--accent)' }}>{res.total}h</td>
+                        </tr>
+                      )),
+                      project.resources.length > 1 && (
+                        <tr key={'pt'+pi} style={{ background:'var(--surface2)' }}>
+                          <td style={{ padding:'0.5rem 1rem 0.5rem 1.75rem', borderBottom:'1px solid var(--border)', fontWeight:600, fontSize:'0.75rem', color:'var(--muted)', position:'sticky', left:0, background:'var(--surface2)' }}>Project total</td>
+                          {timesheet.dates.map((d, di) => {
+                            const dayTotal = project.resources.reduce((s, r) => s + r.days[di].hours, 0)
+                            return <td key={di} style={{ padding:'0.5rem 0.4rem', borderBottom:'1px solid var(--border)', textAlign:'center', fontWeight:600, color: dayTotal > 0 ? 'var(--text)' : 'var(--border)' }}>{fmtH(Math.round(dayTotal * 100) / 100)}</td>
+                          })}
+                          <td style={{ padding:'0.5rem 1rem', borderBottom:'1px solid var(--border)', textAlign:'right', fontWeight:800 }}>{project.total}h</td>
+                        </tr>
+                      ),
+                    ])}
+                  </tbody>
+                </table>
+                <div style={{ marginTop:'0.75rem', fontSize:'0.75rem', color:'var(--muted)' }}>
+                  Period: {timesheet.from} → {timesheet.to} · Hours based on presence polls (5-min intervals) in each user's timezone.
+                </div>
+              </div>
+            )
           )}
         </div>
       </Card>

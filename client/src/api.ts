@@ -1,4 +1,4 @@
-import type { Org, User, UserDetail, DayHours, Session, UserStats, Integration, LeaveRequest, Stats, Invoice } from './types'
+import type { Org, User, UserDetail, DayHours, Session, UserStats, Integration, LeaveRequest, Stats, Invoice, Timesheet } from './types'
 
 export interface HeatmapCell {
   date: string
@@ -39,6 +39,7 @@ export const api = {
   updateUserBilling: (id: string, data: { cost_type?: string; cost_amount?: number | null; price_type: string; price_amount: number | null; currency: string; project_name?: string | null }) =>
     req(`/api/dashboard/users/${id}/billing`, { method: 'PATCH', body: JSON.stringify(data) }),
   invoice: (from: string, to: string) => req<Invoice>(`/api/dashboard/reports/invoice?from=${from}&to=${to}`),
+  timesheet: (from: string, to: string) => req<Timesheet>(`/api/dashboard/reports/timesheet?from=${from}&to=${to}`),
   billingCheckout: () => req<{ url: string }>('/api/billing/checkout', { method: 'POST' }),
   billingPortal: () => req<{ url: string }>('/api/billing/portal', { method: 'POST' }),
 }

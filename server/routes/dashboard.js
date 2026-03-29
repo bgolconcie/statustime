@@ -483,6 +483,73 @@ router.get('/reports/invoice', auth, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+// Timesheet: daily hours per resource grouped by project
+router.get('/reports/timesheet', auth, async (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+  try {
+    const users = await db.query(
+      `SELECT id, display_name, project_name, timezone
+       FROM tracked_users WHERE org_id=$1 AND is_active=true
+       ORDER BY project_name NULLS LAST, display_name`,
+      [req.org.id]
+    );
+
+    const snapshots = await db.query(
+      `SELECT ps.user_id,
+         (ps.polled_at AT TIME ZONE COALESCE(tu.timezone, 'UTC'))::date AS date,
+         ROUND(COUNT(*) FILTER (WHERE ps.is_active=true) * 5.0 / 60, 2) AS active_hours
+       FROM presence_snapshots ps
+       JOIN tracked_users tu ON tu.id = ps.user_id
+       WHERE ps.org_id=$1
+         AND ps.polled_at >= $2::date
+         AND ps.polled_at < $3::date + INTERVAL '1 day'
+       GROUP BY ps.user_id, date, tu.timezone
+       ORDER BY date`,
+      [req.org.id, from, to]
+    );
+
+    // Build date array
+    const dates = [];
+    const cur = new Date(from + 'T12:00:00Z');
+    const end = new Date(to + 'T12:00:00Z');
+    while (cur <= end) {
+      dates.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    // hours map: userId__date -> hours
+    const hoursMap = {};
+    for (const r of snapshots.rows) {
+      hoursMap[`${r.user_id}__${r.date}`] = parseFloat(r.active_hours);
+    }
+
+    // Group users by project
+    const projectMap = new Map();
+    for (const u of users.rows) {
+      const key = u.project_name || null;
+      if (!projectMap.has(key)) projectMap.set(key, []);
+      projectMap.get(key).push(u);
+    }
+
+    const projects = [];
+    for (const [pName, pUsers] of projectMap) {
+      const resources = [];
+      for (const u of pUsers) {
+        const days = dates.map(date => ({ date, hours: hoursMap[`${u.id}__${date}`] || 0 }));
+        const total = Math.round(days.reduce((s, d) => s + d.hours, 0) * 100) / 100;
+        if (total > 0) resources.push({ display_name: u.display_name, days, total });
+      }
+      if (resources.length) {
+        const total = Math.round(resources.reduce((s, r) => s + r.total, 0) * 100) / 100;
+        projects.push({ name: pName, resources, total });
+      }
+    }
+
+    res.json({ from, to, dates, projects });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 // Update cost/price for a user
 router.patch('/users/:userId/billing', auth, async (req, res) => {
   const { cost_type, cost_amount, price_type, price_amount, currency, project_name } = req.body;
