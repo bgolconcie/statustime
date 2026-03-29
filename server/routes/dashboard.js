@@ -8,6 +8,7 @@ router.get('/users', auth, async (req, res) => {
   try {
     const result = await db.query(
       `SELECT tu.id, tu.platform_user_id, tu.display_name, tu.email, tu.avatar_url, tu.user_type, tu.timezone,
+        tu.project_name, tu.price_type, tu.price_amount, tu.currency,
         i.platform, i.team_name,
         COALESCE(today.minutes,0) as today_minutes,
         COALESCE(week.minutes,0) as week_minutes

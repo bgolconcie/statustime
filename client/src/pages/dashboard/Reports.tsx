@@ -1,13 +1,44 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { api } from '../../api'
-import type { Invoice, Timesheet } from '../../types'
+import type { Invoice, Timesheet, User } from '../../types'
 
 export function Reports() {
   const today = new Date().toISOString().split('T')[0]
   const weekAgo = new Date(Date.now()-6*86400000).toISOString().split('T')[0]
   const [from, setFrom] = useState(weekAgo)
   const [to, setTo] = useState(today)
+
+  const [users, setUsers] = useState<User[]>([])
+  const [projectDraft, setProjectDraft] = useState<Record<string, string>>({})
+  const [savingRow, setSavingRow] = useState<string | null>(null)
+  const [savedRow, setSavedRow] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.users().then(us => {
+      setUsers(us)
+      const draft: Record<string, string> = {}
+      us.forEach(u => { draft[u.id] = u.project_name || '' })
+      setProjectDraft(draft)
+    }).catch(() => {})
+  }, [])
+
+  const saveProject = async (user: User) => {
+    setSavingRow(user.id)
+    const token = localStorage.getItem('st_token')
+    await fetch(`/api/dashboard/users/${user.id}/billing`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        price_type: user.price_type || 'hourly',
+        price_amount: user.price_amount,
+        currency: user.currency || 'USD',
+        project_name: projectDraft[user.id] || null
+      })
+    })
+    setSavingRow(null); setSavedRow(user.id)
+    setTimeout(() => setSavedRow(v => v === user.id ? null : v), 1500)
+  }
 
   const [invFrom, setInvFrom] = useState(weekAgo)
   const [invTo, setInvTo] = useState(today)
@@ -60,6 +91,52 @@ export function Reports() {
         <h1 style={{ fontFamily:'Inter,sans-serif', fontSize:'1.6rem', fontWeight:800, letterSpacing:'-0.5px' }}>Reports</h1>
         <p style={{ color:'var(--muted)', fontSize:'0.875rem', marginTop:'0.25rem' }}>Export time data for payroll, billing, or compliance</p>
       </div>
+
+      <Card>
+        <CardHeader title="Resource & Project Settings" />
+        <div style={{ padding:'0' }}>
+          {users.length === 0 ? (
+            <div style={{ padding:'1.5rem', color:'var(--muted)', fontSize:'0.875rem' }}>Loading...</div>
+          ) : (
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'0.875rem' }}>
+              <thead>
+                <tr>
+                  {['Resource','Project','Rate'].map(h => (
+                    <th key={h} style={{ textAlign:'left', padding:'0.6rem 1.25rem', fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', borderBottom:'1px solid var(--border)', fontWeight:500 }}>{h}</th>
+                  ))}
+                  <th style={{ width:80, borderBottom:'1px solid var(--border)' }} />
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u.id}>
+                    <td style={{ padding:'0.65rem 1.25rem', borderBottom:'1px solid var(--border)', fontWeight:500 }}>{u.display_name}</td>
+                    <td style={{ padding:'0.5rem 1.25rem', borderBottom:'1px solid var(--border)' }}>
+                      <input
+                        type="text"
+                        placeholder="No project"
+                        value={projectDraft[u.id] ?? ''}
+                        onChange={e => setProjectDraft(d => ({ ...d, [u.id]: e.target.value }))}
+                        onKeyDown={e => e.key === 'Enter' && saveProject(u)}
+                        style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, padding:'0.35rem 0.6rem', fontSize:'0.8rem', color:'var(--text)', width:'100%', maxWidth:200, outline:'none' }}
+                      />
+                    </td>
+                    <td style={{ padding:'0.65rem 1.25rem', borderBottom:'1px solid var(--border)', color:'var(--muted)', fontSize:'0.8rem' }}>
+                      {u.price_amount ? `${u.currency || 'USD'} ${u.price_amount}/${u.price_type === 'monthly' ? 'mo' : 'hr'}` : '—'}
+                    </td>
+                    <td style={{ padding:'0.5rem 1rem', borderBottom:'1px solid var(--border)', textAlign:'right' }}>
+                      <button onClick={() => saveProject(u)} disabled={savingRow === u.id}
+                        style={{ background: savedRow === u.id ? 'var(--green)' : 'var(--accent)', color:'var(--bg)', border:'none', borderRadius:6, padding:'0.3rem 0.75rem', fontSize:'0.775rem', fontWeight:600, cursor:'pointer', opacity: savingRow === u.id ? 0.6 : 1, transition:'background 0.2s' }}>
+                        {savingRow === u.id ? '...' : savedRow === u.id ? 'Saved' : 'Save'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </Card>
 
       <Card>
         <CardHeader title="Pro Forma Invoice" />

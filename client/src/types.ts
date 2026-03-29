@@ -16,6 +16,10 @@ export interface User {
   team_name: string
   today_minutes: number
   week_minutes: number
+  project_name: string | null
+  price_type: string
+  price_amount: number | null
+  currency: string
 }
 
 export interface UserDetail extends User {
