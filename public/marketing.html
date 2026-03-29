@@ -3,406 +3,310 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StatusTime - Automatic Time Tracking via Slack and Teams</title>
-  <meta name="description" content="StatusTime reads your team's Slack and Teams presence to calculate exact working hours. No timers, no manual input." />
+  <title>StatusTime — Automatic Time Tracking via Slack</title>
+  <meta name="description" content="StatusTime reads your team's Slack presence to calculate exact working hours. No timers, no manual input." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { DEFAULT: '#0284c7', light: '#38bdf8', dark: '#0369a1' }
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #080c12;
-      --surface: #0e1420;
-      --border: rgba(255,255,255,0.08);
-      --accent: #0ea5e9;
-      --accent2: #818cf8;
-      --text: #f1f5f9;
-      --muted: #64748b;
-      --green: #10b981;
-    }
-    html { scroll-behavior: smooth; }
-    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; line-height: 1.6; overflow-x: hidden; }
-
-    /* NAV */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 1rem 2rem;
-      background: rgba(8,12,18,0.85); backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-    }
-    .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.25rem; }
-    .logo span { color: var(--accent); }
-    .logo em { color: var(--text); font-style: normal; }
-    nav a { color: var(--muted); text-decoration: none; font-size: 0.875rem; transition: color 0.2s; }
-    nav a:hover { color: var(--text); }
-    .nav-links { display: flex; gap: 2rem; align-items: center; }
-    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.25rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; border: none; text-decoration: none; transition: all 0.2s; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: #38bdf8; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(14,165,233,0.35); }
-    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
-    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* HERO */
-    .hero {
-      min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; padding: 8rem 1.5rem 4rem;
-      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(14,165,233,0.12) 0%, transparent 70%);
-      position: relative;
-    }
-    .badge {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.25);
-      color: var(--accent); border-radius: 100px; padding: 0.35rem 1rem; font-size: 0.8rem; font-weight: 600;
-      margin-bottom: 2rem;
-    }
-    .badge::before { content: ''; width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(2.5rem, 6vw, 5rem); line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 1.5rem; }
-    h1 .accent { color: var(--accent); }
-    h1 .accent2 { color: var(--accent2); }
-    .hero-sub { font-size: clamp(1rem, 2vw, 1.2rem); color: var(--muted); max-width: 560px; margin: 0 auto 2.5rem; }
-    .hero-cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 4rem; }
-    .hero-cta .btn-primary { padding: 0.875rem 2rem; font-size: 1rem; }
-
-    /* STATS ROW */
-    .stats { display: flex; gap: 3rem; justify-content: center; flex-wrap: wrap; margin-bottom: 5rem; }
-    .stat-item { text-align: center; }
-    .stat-val { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--accent); }
-    .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
-
-    /* DASHBOARD PREVIEW */
-    .preview {
-      width: 100%; max-width: 900px; margin: 0 auto;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-      overflow: hidden; box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(14,165,233,0.1);
-    }
-    .preview-bar { background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.5rem; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; }
-    .preview-content { padding: 1.5rem; }
-    .preview-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.75rem; margin-bottom: 1rem; }
-    .ps { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
-    .ps-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.4rem; }
-    .ps-val { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; }
-    .ps-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
-    .preview-rows { display: flex; flex-direction: column; gap: 0; }
-    .prow { display: flex; align-items: center; gap: 1rem; padding: 0.65rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.8rem; }
-    .prow:last-child { border-bottom: none; }
-    .pavatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
-    .pname { flex: 1; font-weight: 500; }
-    .pbadge { padding: 0.15rem 0.5rem; border-radius: 100px; font-size: 0.65rem; font-weight: 600; }
-    .pstatus { display: flex; align-items: center; gap: 0.35rem; }
-    .pdot { width: 7px; height: 7px; border-radius: 50%; }
-    .pbar-wrap { width: 70px; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; }
-    .pbar { height: 100%; border-radius: 2px; }
-    .phours { font-size: 0.75rem; font-weight: 600; min-width: 36px; text-align: right; }
-
-    /* SECTIONS */
-    section { padding: 5rem 1.5rem; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    .section-label { text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; font-weight: 700; color: var(--accent); margin-bottom: 1rem; }
-    h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(1.75rem, 3.5vw, 2.75rem); letter-spacing: -0.02em; margin-bottom: 1rem; }
-    .section-sub { color: var(--muted); font-size: 1.05rem; max-width: 520px; line-height: 1.7; }
-
-    /* HOW IT WORKS */
-    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 1.5rem; margin-top: 3rem; }
-    .step { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; position: relative; }
-    .step-num { font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800; color: rgba(14,165,233,0.15); margin-bottom: 0.75rem; }
-    .step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .step p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
-
-    /* FEATURES */
-    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1rem; margin-top: 3rem; }
-    .feature { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; transition: border-color 0.2s; }
-    .feature:hover { border-color: rgba(14,165,233,0.3); }
-    .feature-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem; }
-    .feature h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
-    .feature p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
-
-    /* PRICING */
-    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 1.5rem; margin-top: 3rem; max-width: 780px; margin-left: auto; margin-right: auto; }
-    .pricing-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 2.25rem;
-      display: flex; flex-direction: column; transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .pricing-card:hover { border-color: rgba(14,165,233,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
-    .pricing-card.featured { border-color: rgba(14,165,233,0.4); background: linear-gradient(135deg, var(--surface) 0%, rgba(14,165,233,0.05) 100%); }
-    .plan-name { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
-    .pricing-card.featured .plan-name { color: var(--accent); }
-    .plan-desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.5; min-height: 2.5rem; }
-    .price-row { display: flex; align-items: flex-end; gap: 0.2rem; margin-bottom: 0.35rem; }
-    .price-symbol { font-size: 1.1rem; font-weight: 600; color: var(--muted); line-height: 1; margin-bottom: 0.6rem; }
-    .price-currency { font-size: 0.65rem; color: var(--muted); margin-bottom: 0.5rem; line-height: 1.2; }
-    .price-num { font-family: 'Syne', sans-serif; font-size: 4.5rem; font-weight: 800; color: var(--accent); line-height: 1; }
-    .price-per { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.1rem; align-self: flex-end; padding-bottom: 0.5rem; }
-    .price-period { color: var(--muted); font-size: 0.78rem; margin-bottom: 1.5rem; }
-    .btn-plan { display: block; text-align: center; padding: 0.75rem; border-radius: 100px; font-weight: 700; font-size: 0.875rem; cursor: pointer; text-decoration: none; letter-spacing: 0.04em; margin-bottom: 1.75rem; border: 2px solid var(--accent); color: var(--accent); background: transparent; transition: all 0.2s; }
-    .btn-plan:hover { background: var(--accent); color: #fff; }
-    .plan-tier { font-size: 0.9rem; color: var(--muted); margin-bottom: 1rem; }
-    .plan-tier strong { color: var(--text); font-weight: 700; }
-    .plan-tier .plus { color: var(--accent); }
-    .price-features { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; flex: 1; }
-    .price-features li { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.875rem; color: var(--muted); line-height: 1.4; }
-    .price-features li::before { content: ''; display: inline-block; width: 16px; height: 16px; min-width: 16px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2310b981'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E") center/contain no-repeat; margin-top: 2px; }
-
-    /* CTA */
-    .cta-section {
-      background: radial-gradient(ellipse 70% 80% at 50% 50%, rgba(14,165,233,0.1) 0%, transparent 70%);
-      text-align: center;
-    }
-    .cta-section h2 { margin-bottom: 1rem; }
-    .cta-section p { color: var(--muted); margin-bottom: 2rem; }
-
-    /* FOOTER */
-    footer { border-top: 1px solid var(--border); padding: 2rem 1.5rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
-
-    @media (max-width: 640px) {
-      .nav-links { display: none; }
-      .preview-stats { grid-template-columns: repeat(3,1fr); }
-      .prow .phours { display: none; }
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-hero { background: radial-gradient(ellipse 80% 50% at 50% -5%, rgba(2,132,199,0.08) 0%, transparent 65%); }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .pulse-dot { animation: pulse-dot 2s infinite; }
+    .check-item::before {
+      content: '';
+      display: inline-block;
+      width: 16px; height: 16px;
+      min-width: 16px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2322c55e'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E") center/contain no-repeat;
+      margin-top: 3px;
     }
   </style>
 </head>
-<body>
+<body class="bg-white text-slate-900 antialiased">
 
-<nav>
-  <div class="logo"><span>Status</span><em>Time</em></div>
-  <div class="nav-links">
-    <a href="#how">How it works</a>
-    <a href="#features">Features</a>
-    <a href="#pricing">Pricing</a>
-  </div>
-  <div style="display:flex;gap:0.75rem;align-items:center;">
-    <a href="/dashboard" class="btn btn-outline">Log in</a>
-    <a href="/dashboard" class="btn btn-primary">Get started free</a>
+<!-- NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+    <div class="font-extrabold text-xl tracking-tight">
+      <span class="text-brand">Status</span><span class="text-slate-900">Time</span>
+    </div>
+    <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-500">
+      <a href="#how" class="hover:text-slate-900 transition-colors">How it works</a>
+      <a href="#features" class="hover:text-slate-900 transition-colors">Features</a>
+      <a href="#pricing" class="hover:text-slate-900 transition-colors">Pricing</a>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/dashboard" class="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Log in</a>
+      <a href="/dashboard" class="inline-flex items-center gap-1.5 bg-brand text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-dark transition-colors shadow-sm">
+        Get started free
+      </a>
+    </div>
   </div>
 </nav>
 
 <!-- HERO -->
-<section class="hero">
-  <div class="badge">Now live &mdash; Slack &amp; Microsoft Teams</div>
-  <h1>Track remote hours<br><span class="accent">automatically</span> via<br><span class="accent2">status changes</span></h1>
-  <p class="hero-sub">StatusTime reads your team's Slack and Teams presence to calculate exact working hours &mdash; no timers, no manual input, no friction.</p>
-  <div class="hero-cta">
-    <a href="/dashboard" class="btn btn-primary">Start free trial &rarr;</a>
-    <a href="#how" class="btn btn-outline">See how it works</a>
-  </div>
-
-  <!-- LIVE DASHBOARD PREVIEW -->
-  <div class="preview">
-    <div class="preview-bar">
-      <div class="dot" style="background:#ff5f57"></div>
-      <div class="dot" style="background:#febc2e"></div>
-      <div class="dot" style="background:#28c840"></div>
-      <div style="flex:1;text-align:center;font-size:0.72rem;color:var(--muted);">statustime-production.up.railway.app/dashboard</div>
+<section class="gradient-hero pt-32 pb-20 px-4 sm:px-6 text-center">
+  <div class="max-w-4xl mx-auto">
+    <div class="inline-flex items-center gap-2 bg-brand/5 border border-brand/20 text-brand text-xs font-semibold px-3.5 py-1.5 rounded-full mb-8">
+      <span class="w-1.5 h-1.5 bg-green-500 rounded-full pulse-dot"></span>
+      Now live — Slack &amp; Microsoft Teams
     </div>
-    <div class="preview-content">
-      <div class="preview-stats">
-        <div class="ps">
-          <div class="ps-label">Today's hours</div>
-          <div class="ps-val" style="color:var(--green)">16h 47m</div>
-          <div class="ps-sub">across all users</div>
+    <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6 text-slate-900">
+      Track remote hours<br>
+      <span class="text-brand">automatically</span><br>
+      via status changes
+    </h1>
+    <p class="text-lg sm:text-xl text-slate-500 max-w-xl mx-auto mb-10 leading-relaxed">
+      StatusTime reads your team's Slack and Teams presence to calculate exact working hours — no timers, no manual input, no friction.
+    </p>
+    <div class="flex flex-wrap gap-3 justify-center mb-16">
+      <a href="/dashboard" class="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-3 rounded-lg text-base hover:bg-brand-dark transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
+        Start free trial →
+      </a>
+      <a href="#how" class="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-6 py-3 rounded-lg text-base hover:border-slate-300 hover:bg-slate-50 transition-all">
+        See how it works
+      </a>
+    </div>
+
+    <!-- DASHBOARD MOCK -->
+    <div class="max-w-3xl mx-auto rounded-2xl border border-slate-200 shadow-2xl overflow-hidden text-left bg-white">
+      <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-red-400"></div>
+        <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+        <div class="w-3 h-3 rounded-full bg-green-400"></div>
+        <div class="flex-1 text-center text-xs text-slate-400 font-medium">statustime-production.up.railway.app/dashboard</div>
+      </div>
+      <div class="p-5">
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+            <div class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Today's hours</div>
+            <div class="text-2xl font-bold text-green-600">16h 47m</div>
+            <div class="text-xs text-slate-400 mt-0.5">across all users</div>
+          </div>
+          <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+            <div class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">This week</div>
+            <div class="text-2xl font-bold text-brand">31h 28m</div>
+            <div class="text-xs text-slate-400 mt-0.5">last 7 days</div>
+          </div>
+          <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+            <div class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Team size</div>
+            <div class="text-2xl font-bold text-slate-700">11</div>
+            <div class="text-xs text-slate-400 mt-0.5">tracked users</div>
+          </div>
         </div>
-        <div class="ps">
-          <div class="ps-label">This week</div>
-          <div class="ps-val" style="color:var(--accent)">31h 28m</div>
-          <div class="ps-sub">last 7 days</div>
-        </div>
-        <div class="ps">
-          <div class="ps-label">Team size</div>
-          <div class="ps-val" style="color:var(--accent2)">11</div>
-          <div class="ps-sub">tracked users</div>
+        <div class="divide-y divide-slate-100">
+          <div class="flex items-center gap-3 py-2.5 text-sm">
+            <div class="w-7 h-7 rounded-full bg-brand/10 text-brand font-bold text-xs flex items-center justify-center flex-shrink-0">AB</div>
+            <div class="flex-1 font-medium text-slate-800">Abdulrehman <span class="ml-1 text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-full font-semibold">Member</span></div>
+            <div class="flex items-center gap-1.5 text-xs text-green-600 font-medium"><span class="w-2 h-2 bg-green-500 rounded-full"></span>Online</div>
+            <div class="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-brand rounded-full" style="width:35%"></div></div>
+            <div class="text-xs font-semibold text-brand w-12 text-right">1h 59m</div>
+          </div>
+          <div class="flex items-center gap-3 py-2.5 text-sm">
+            <div class="w-7 h-7 rounded-full bg-violet-100 text-violet-600 font-bold text-xs flex items-center justify-center flex-shrink-0">AR</div>
+            <div class="flex-1 font-medium text-slate-800">Abrar Ashfaq <span class="ml-1 text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">External</span></div>
+            <div class="flex items-center gap-1.5 text-xs text-green-600 font-medium"><span class="w-2 h-2 bg-green-500 rounded-full"></span>Online</div>
+            <div class="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-violet-400 rounded-full" style="width:85%"></div></div>
+            <div class="text-xs font-semibold text-violet-600 w-12 text-right">5h 35m</div>
+          </div>
+          <div class="flex items-center gap-3 py-2.5 text-sm">
+            <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-xs flex items-center justify-center flex-shrink-0">BK</div>
+            <div class="flex-1 font-medium text-slate-800">Bilal K. <span class="ml-1 text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-full font-semibold">Member</span></div>
+            <div class="flex items-center gap-1.5 text-xs text-slate-400 font-medium"><span class="w-2 h-2 bg-slate-300 rounded-full"></span>Away</div>
+            <div class="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-green-500 rounded-full" style="width:60%"></div></div>
+            <div class="text-xs font-semibold text-green-600 w-12 text-right">3h 12m</div>
+          </div>
         </div>
       </div>
-      <div class="preview-rows">
-        <div class="prow">
-          <div class="pavatar" style="background:rgba(14,165,233,0.2);color:var(--accent)">AB</div>
-          <div class="pname">Abdulrehman <span class="pbadge" style="background:rgba(14,165,233,0.1);color:var(--accent)">Member</span></div>
-          <div class="pstatus"><div class="pdot" style="background:#10b981"></div><span style="color:#10b981;font-size:0.75rem">Online</span></div>
-          <div class="pbar-wrap"><div class="pbar" style="width:35%;background:var(--accent)"></div></div>
-          <div class="phours" style="color:var(--accent)">1h 59m</div>
-        </div>
-        <div class="prow">
-          <div class="pavatar" style="background:rgba(129,140,248,0.2);color:var(--accent2)">AR</div>
-          <div class="pname">Abrar Ashfaq <span class="pbadge" style="background:rgba(129,140,248,0.1);color:var(--accent2)">External</span></div>
-          <div class="pstatus"><div class="pdot" style="background:#10b981"></div><span style="color:#10b981;font-size:0.75rem">Online</span></div>
-          <div class="pbar-wrap"><div class="pbar" style="width:85%;background:var(--accent2)"></div></div>
-          <div class="phours" style="color:var(--accent2)">5h 35m</div>
-        </div>
-        <div class="prow">
-          <div class="pavatar" style="background:rgba(16,185,129,0.15);color:#10b981">BK</div>
-          <div class="pname">Bilal K. <span class="pbadge" style="background:rgba(14,165,233,0.1);color:var(--accent)">Member</span></div>
-          <div class="pstatus"><div class="pdot" style="background:var(--muted)"></div><span style="color:var(--muted);font-size:0.75rem">Away</span></div>
-          <div class="pbar-wrap"><div class="pbar" style="width:60%;background:#10b981"></div></div>
-          <div class="phours" style="color:#10b981">3h 12m</div>
-        </div>
-        <div class="prow">
-          <div class="pavatar" style="background:rgba(251,191,36,0.15);color:#fbbf24">MK</div>
-          <div class="pname">Muhammad K. <span class="pbadge" style="background:rgba(14,165,233,0.1);color:var(--accent)">Member</span></div>
-          <div class="pstatus"><div class="pdot" style="background:#10b981"></div><span style="color:#10b981;font-size:0.75rem">Online</span></div>
-          <div class="pbar-wrap"><div class="pbar" style="width:45%;background:#fbbf24"></div></div>
-          <div class="phours" style="color:#fbbf24">2h 48m</div>
-        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="flex flex-wrap gap-8 justify-center mt-14">
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-slate-900">100%</div>
+        <div class="text-sm text-slate-400 mt-1">Automatic tracking</div>
+      </div>
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-slate-900">0</div>
+        <div class="text-sm text-slate-400 mt-1">Manual timers needed</div>
+      </div>
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-slate-900">$6</div>
+        <div class="text-sm text-slate-400 mt-1">Starting per user/month</div>
+      </div>
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-slate-900">5 min</div>
+        <div class="text-sm text-slate-400 mt-1">Setup time</div>
       </div>
     </div>
-  </div>
-
-  <!-- STATS -->
-  <div class="stats" style="margin-top:4rem">
-    <div class="stat-item"><div class="stat-val">100%</div><div class="stat-label">Automatic tracking</div></div>
-    <div class="stat-item"><div class="stat-val">0</div><div class="stat-label">Manual timers needed</div></div>
-    <div class="stat-item"><div class="stat-val">$6</div><div class="stat-label">Starting per user / month</div></div>
-    <div class="stat-item"><div class="stat-val">5 min</div><div class="stat-label">Setup time</div></div>
   </div>
 </section>
 
 <!-- HOW IT WORKS -->
-<section id="how" style="background:rgba(255,255,255,0.015)">
-  <div class="container">
-    <div class="section-label">How it works</div>
-    <h2>Three steps to automatic time tracking</h2>
-    <p class="section-sub">StatusTime connects to your workspace and starts tracking instantly &mdash; no code, no plugins, no browser extensions.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">01</div>
-        <h3>Connect Slack or Teams</h3>
-        <p>One-click OAuth. StatusTime gets read-only access to presence data. Takes under 60 seconds.</p>
+<section id="how" class="py-24 px-4 sm:px-6 bg-slate-50">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-xs font-bold uppercase tracking-widest text-brand mb-3">How it works</div>
+    <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">Three steps to automatic time tracking</h2>
+    <p class="text-slate-500 text-lg max-w-lg leading-relaxed mb-12">Connect your workspace and start tracking instantly — no code, no plugins, no browser extensions.</p>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div class="text-4xl font-extrabold text-slate-100 mb-4">01</div>
+        <h3 class="font-bold text-base mb-2">Connect Slack or Teams</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">One-click OAuth. StatusTime gets read-only access to presence data. Takes under 60 seconds.</p>
       </div>
-      <div class="step">
-        <div class="step-num">02</div>
-        <h3>We track status changes</h3>
-        <p>Every time a user goes online or away, we log it. Members and guests are automatically classified.</p>
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div class="text-4xl font-extrabold text-slate-100 mb-4">02</div>
+        <h3 class="font-bold text-base mb-2">We track status changes</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Every time a user goes online or away, we log it. Members and guests are automatically classified.</p>
       </div>
-      <div class="step">
-        <div class="step-num">03</div>
-        <h3>See hours in real time</h3>
-        <p>Your dashboard shows today's hours, weekly totals, timezones, and per-user breakdowns instantly.</p>
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div class="text-4xl font-extrabold text-slate-100 mb-4">03</div>
+        <h3 class="font-bold text-base mb-2">See hours in real time</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Your dashboard shows today's hours, weekly totals, timezones, and per-user breakdowns instantly.</p>
       </div>
-      <div class="step">
-        <div class="step-num">04</div>
-        <h3>Export for payroll</h3>
-        <p>Download CSV reports for any date range. Perfect for billing clients or running remote payroll.</p>
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div class="text-4xl font-extrabold text-slate-100 mb-4">04</div>
+        <h3 class="font-bold text-base mb-2">Export for payroll</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Download CSV reports, pro forma invoices, and timesheets for any date range. Perfect for client billing.</p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- FEATURES -->
-<section id="features">
-  <div class="container">
-    <div class="section-label">Features</div>
-    <h2>Everything you need for remote teams</h2>
-    <p class="section-sub">Built for managers of distributed teams who need visibility without micromanaging.</p>
-    <div class="features">
-      <div class="feature">
-        <div class="feature-icon" style="background:rgba(14,165,233,0.1)">&#128337;</div>
-        <h3>Real-time presence tracking</h3>
-        <p>Live status indicators for every team member. See who's online right now, with local timezone clocks.</p>
+<section id="features" class="py-24 px-4 sm:px-6 bg-white">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-xs font-bold uppercase tracking-widest text-brand mb-3">Features</div>
+    <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">Everything you need for remote teams</h2>
+    <p class="text-slate-500 text-lg max-w-lg leading-relaxed mb-12">Built for managers of distributed teams who need visibility without micromanaging.</p>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="rounded-2xl border border-slate-200 p-6 hover:border-brand/30 hover:shadow-md transition-all">
+        <div class="w-10 h-10 rounded-xl bg-brand/8 flex items-center justify-center text-xl mb-4">⏱</div>
+        <h3 class="font-bold text-base mb-2">Real-time presence tracking</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Live status indicators for every team member. See who's online right now, with local timezone clocks.</p>
       </div>
-      <div class="feature">
-        <div class="feature-icon" style="background:rgba(129,140,248,0.1)">&#128101;</div>
-        <h3>Members vs Externals</h3>
-        <p>Automatically distinguishes full workspace members from Single-Channel Guests and external contractors.</p>
+      <div class="rounded-2xl border border-slate-200 p-6 hover:border-brand/30 hover:shadow-md transition-all">
+        <div class="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-xl mb-4">👥</div>
+        <h3 class="font-bold text-base mb-2">Members vs Externals</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Automatically distinguishes full workspace members from Single-Channel Guests and external contractors.</p>
       </div>
-      <div class="feature">
-        <div class="feature-icon" style="background:rgba(16,185,129,0.1)">&#127758;</div>
-        <h3>Timezone-aware</h3>
-        <p>Each user's local time is displayed live. Compare working hours across Karachi, Jerusalem, and Muscat at a glance.</p>
+      <div class="rounded-2xl border border-slate-200 p-6 hover:border-brand/30 hover:shadow-md transition-all">
+        <div class="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-xl mb-4">🌍</div>
+        <h3 class="font-bold text-base mb-2">Timezone-aware</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Each user's local time is displayed live. Compare working hours across Karachi, Jerusalem, and Muscat at a glance.</p>
       </div>
-      <div class="feature">
-        <div class="feature-icon" style="background:rgba(251,191,36,0.1)">&#128202;</div>
-        <h3>Activity heatmaps</h3>
-        <p>GitHub-style contribution heatmaps show patterns over time. Spot who works weekends or late nights.</p>
+      <div class="rounded-2xl border border-slate-200 p-6 hover:border-brand/30 hover:shadow-md transition-all">
+        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-xl mb-4">📊</div>
+        <h3 class="font-bold text-base mb-2">Activity heatmaps</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">GitHub-style contribution heatmaps show patterns over time. Spot who works weekends or late nights.</p>
       </div>
-      <div class="feature">
-        <div class="feature-icon" style="background:rgba(239,68,68,0.1)">&#128197;</div>
-        <h3>Leave management</h3>
-        <p>Approve or reject PTO requests in one click. Track vacation, sick days, and public holidays centrally.</p>
+      <div class="rounded-2xl border border-slate-200 p-6 hover:border-brand/30 hover:shadow-md transition-all">
+        <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-xl mb-4">📅</div>
+        <h3 class="font-bold text-base mb-2">Leave management</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Approve or reject PTO requests in one click. Track vacation, sick days, and public holidays centrally.</p>
       </div>
-      <div class="feature">
-        <div class="feature-icon" style="background:rgba(14,165,233,0.1)">&#128196;</div>
-        <h3>CSV export</h3>
-        <p>Download time data for any date range. Ready for payroll systems, client billing, or compliance audits.</p>
+      <div class="rounded-2xl border border-slate-200 p-6 hover:border-brand/30 hover:shadow-md transition-all">
+        <div class="w-10 h-10 rounded-xl bg-brand/8 flex items-center justify-center text-xl mb-4">📄</div>
+        <h3 class="font-bold text-base mb-2">Pro forma invoices</h3>
+        <p class="text-sm text-slate-500 leading-relaxed">Set hourly or monthly rates per resource. Generate project-grouped invoices and timesheets in seconds.</p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- PRICING -->
-<section id="pricing" style="background:rgba(255,255,255,0.015)">
-  <div class="container" style="text-align:center">
-    <div class="section-label">Pricing</div>
-    <h2>Simple, transparent pricing</h2>
-    <p class="section-sub" style="margin:0 auto">Pay only for active users. Start free, upgrade when you're ready. Cancel anytime.</p>
-    <div class="pricing-grid">
+<section id="pricing" class="py-24 px-4 sm:px-6 bg-slate-50">
+  <div class="max-w-6xl mx-auto text-center">
+    <div class="text-xs font-bold uppercase tracking-widest text-brand mb-3">Pricing</div>
+    <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">Simple, transparent pricing</h2>
+    <p class="text-slate-500 text-lg max-w-md mx-auto leading-relaxed mb-12">Pay only for active users. Start free, upgrade when you're ready. Cancel anytime.</p>
+
+    <div class="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
 
       <!-- STANDARD -->
-      <div class="pricing-card">
-        <div class="plan-name">Standard</div>
-        <div class="plan-desc">For teams that need effortless tracking &amp; visibility basics</div>
-        <div class="price-row">
-          <div>
-            <div class="price-symbol">$</div>
-            <div class="price-currency">USD</div>
-          </div>
-          <div class="price-num">6</div>
-          <div class="price-per">per user<br>per month</div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-8 text-left shadow-sm flex flex-col">
+        <div class="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-1">Standard</div>
+        <p class="text-sm text-slate-500 mb-6 leading-relaxed min-h-10">For teams that need effortless tracking &amp; visibility basics</p>
+        <div class="flex items-end gap-1 mb-1">
+          <span class="text-lg font-semibold text-slate-400 mb-2">$</span>
+          <span class="text-6xl font-extrabold text-slate-900 leading-none">6</span>
+          <span class="text-sm text-slate-400 mb-2 ml-1">per user<br>per month</span>
         </div>
-        <a href="/dashboard" class="btn-plan">TRY FOR FREE</a>
-        <div class="plan-tier">All the <strong>Essentials</strong></div>
-        <ul class="price-features">
-          <li>Time tracking &amp; editing</li>
-          <li>Custom leave types &amp; approvals</li>
-          <li>Hybrid statusing &amp; planning</li>
-          <li>Real-time reports</li>
-          <li>Calendar integration</li>
-          <li>Robust reminders, notifications, and announcements</li>
+        <div class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
+        <a href="/dashboard" class="block text-center border-2 border-brand text-brand font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand hover:text-white transition-all mb-7">
+          TRY FOR FREE
+        </a>
+        <div class="text-sm text-slate-500 mb-4">All the <span class="font-bold text-slate-800">Essentials</span></div>
+        <ul class="flex flex-col gap-3 flex-1">
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Time tracking &amp; editing</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Custom leave types &amp; approvals</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Hybrid statusing &amp; planning</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Real-time reports</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Calendar integration</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Robust reminders, notifications, and announcements</li>
         </ul>
       </div>
 
       <!-- PRO -->
-      <div class="pricing-card featured">
-        <div class="plan-name">Pro</div>
-        <div class="plan-desc">For organizations that value automation and admin controls</div>
-        <div class="price-row">
-          <div>
-            <div class="price-symbol">$</div>
-            <div class="price-currency">USD</div>
-          </div>
-          <div class="price-num">9</div>
-          <div class="price-per">per user<br>per month</div>
+      <div class="bg-white rounded-2xl border-2 border-brand p-8 text-left shadow-lg flex flex-col relative">
+        <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-brand text-white text-xs font-bold px-4 py-1 rounded-full tracking-wide">MOST POPULAR</div>
+        <div class="text-xs font-extrabold uppercase tracking-widest text-brand mb-1">Pro</div>
+        <p class="text-sm text-slate-500 mb-6 leading-relaxed min-h-10">For organizations that value automation and admin controls</p>
+        <div class="flex items-end gap-1 mb-1">
+          <span class="text-lg font-semibold text-slate-400 mb-2">$</span>
+          <span class="text-6xl font-extrabold text-brand leading-none">9</span>
+          <span class="text-sm text-slate-400 mb-2 ml-1">per user<br>per month</span>
         </div>
-        <a href="/dashboard" class="btn-plan">TRY FOR FREE</a>
-        <div class="plan-tier">Everything in <strong>Standard</strong> <span class="plus">+</span></div>
-        <ul class="price-features">
-          <li>Custom workweeks and overtime</li>
-          <li>Leave accruals and balances</li>
-          <li>Live status board</li>
-          <li>Timesheet approvals</li>
-          <li>Project, Task, &amp; Client Tracking</li>
-          <li>Shift rostering &amp; employee scheduling</li>
+        <div class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
+        <a href="/dashboard" class="block text-center bg-brand text-white font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand-dark transition-all mb-7 shadow-md">
+          TRY FOR FREE
+        </a>
+        <div class="text-sm text-slate-500 mb-4">Everything in <span class="font-bold text-slate-800">Standard</span> <span class="text-brand font-bold">+</span></div>
+        <ul class="flex flex-col gap-3 flex-1">
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Custom workweeks and overtime</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Leave accruals and balances</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Live status board</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Timesheet approvals</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Project, Task, &amp; Client Tracking</li>
+          <li class="check-item flex items-start gap-2.5 text-sm text-slate-600">Shift rostering &amp; employee scheduling</li>
         </ul>
       </div>
 
     </div>
-    <p style="margin-top:1.5rem;font-size:0.8rem;color:var(--muted)">14-day free trial &mdash; no credit card required.</p>
+    <p class="mt-8 text-sm text-slate-400">14-day free trial · No credit card required · Cancel anytime</p>
   </div>
 </section>
 
 <!-- CTA -->
-<section class="cta-section">
-  <div class="container">
-    <h2>Ready to stop guessing who's working?</h2>
-    <p>Connect your workspace in 5 minutes. First 14 days free.</p>
-    <a href="/dashboard" class="btn btn-primary" style="padding:0.875rem 2.5rem;font-size:1.05rem">Get started free &rarr;</a>
+<section class="py-24 px-4 sm:px-6 bg-white text-center">
+  <div class="max-w-2xl mx-auto">
+    <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">Ready to stop guessing who's working?</h2>
+    <p class="text-slate-500 text-lg mb-8">Connect your workspace in 5 minutes. First 14 days free.</p>
+    <a href="/dashboard" class="inline-flex items-center gap-2 bg-brand text-white font-semibold px-8 py-4 rounded-xl text-lg hover:bg-brand-dark transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+      Get started free →
+    </a>
   </div>
 </section>
 
 <!-- FOOTER -->
-<footer>
-  <div style="margin-bottom:0.5rem">
-    <span style="font-family:'Syne',sans-serif;font-weight:800;color:var(--accent)">Status</span><span style="font-family:'Syne',sans-serif;font-weight:800">Time</span>
+<footer class="border-t border-slate-200 py-8 px-4 sm:px-6 text-center text-sm text-slate-400">
+  <div class="font-extrabold text-base mb-2">
+    <span class="text-brand">Status</span><span class="text-slate-900">Time</span>
   </div>
-  <div>&copy; 2026 StatusTime. Automatic time tracking for remote teams.</div>
+  &copy; 2026 StatusTime. Automatic time tracking for remote teams.
 </footer>
 
 </body>

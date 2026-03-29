@@ -23,13 +23,13 @@ app.use('/api/slack', require('./routes/slack').router);
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/billing', require('./routes/billing'));
 
-// Serve static assets (Vite build: JS/CSS chunks)
-app.use(express.static(PUBLIC));
-
-// Marketing landing page at exactly /
+// Marketing landing page at exactly / (must be before static middleware)
 app.get('/', (req, res) => {
   res.sendFile(path.join(PUBLIC, 'marketing.html'));
 });
+
+// Serve static assets (index: false prevents auto-serving index.html for /)
+app.use(express.static(PUBLIC, { index: false }));
 
 // React SPA for all app routes - served from Vite's index.html
 app.get(['/dashboard', '/dashboard/*', '/user/:id', '/login'], (req, res) => {
