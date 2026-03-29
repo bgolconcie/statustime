@@ -15,7 +15,7 @@ import { minsToHours, formatDate } from '../utils'
 function Heatmap({ hours, days }: { hours: DayHours[]; days: number }) {
   const { theme } = useTheme()
   const map: Record<string, number> = {}
-  hours.forEach(h => { map[h.date.split('T')[0]] = h.total_minutes })
+  hours.forEach(h => { map[String(h.date).split('T')[0]] = h.total_minutes })
   const maxM = Math.max(...Object.values(map), 1)
   const end = new Date(), start = new Date(end)
   start.setDate(start.getDate() - days + 1)
@@ -58,14 +58,8 @@ function Heatmap({ hours, days }: { hours: DayHours[]; days: number }) {
           {weeks.map((week, wi) => (
             <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {week.map((cell, di) => (
-                <div key={di}
-                  title={cell.inRange ? `${cell.dateStr}: ${cell.mins ? minsToHours(cell.mins) : '0m'}` : ''}
-                  style={{
-                    width: 18, height: 18, borderRadius: 3,
-                    background: getColor(cell.mins, cell.inRange) || (cell.inRange ? 'var(--surface2)' : 'transparent'),
-                    border: cell.inRange ? '1px solid var(--border)' : 'none'
-                  }}
-                />
+                <div key={di} title={cell.inRange ? `${cell.dateStr}: ${cell.mins ? minsToHours(cell.mins) : '0m'}` : ''}
+                  style={{ width: 18, height: 18, borderRadius: 3, background: getColor(cell.mins, cell.inRange) || (cell.inRange ? 'var(--surface2)' : 'transparent'), border: cell.inRange ? '1px solid var(--border)' : 'none' }} />
               ))}
             </div>
           ))}
@@ -109,13 +103,30 @@ export function UserDetail() {
     return () => clearInterval(tid)
   }, [id])
 
-  useEffect(() => { if (id) api.userHours(id, chartDays).then(setHours).catch(() => {}) }, [id, chartDays])
-  useEffect(() => { if (id) api.userSessions(id, logDays).then(setSessions).catch(() => {}) }, [id, logDays])
+  useEffect(() => {
+    if (id) api.userHours(id, chartDays).then(setHours).catch(() => {})
+  }, [id, chartDays])
 
-  const chartData = hours.map(h => ({
-    date: new Date(h.date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }),
-    hours: Math.round(h.total_minutes / 6) / 10
-  }))
+  useEffect(() => {
+    if (id) api.userSessions(id, logDays).then(setSessions).catch(() => {})
+  }, [id, logDays])
+
+  // Build a map from the API response (handles both "YYYY-MM-DD" and "YYYY-MM-DDT..." formats)
+  const hoursMap: Record<string, number> = {}
+  hours.forEach(h => {
+    const key = String(h.date).split('T')[0]
+    hoursMap[key] = h.total_minutes
+  })
+
+  // Generate exactly chartDays entries ending today, filling 0 for missing days
+  const chartData = Array.from({ length: chartDays }, (_, i) => {
+    const d = new Date()
+    d.setUTCDate(d.getUTCDate() - (chartDays - 1 - i))
+    const key = d.toISOString().split('T')[0]
+    const mins = hoursMap[key] || 0
+    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+    return { date: label, hours: Math.round(mins / 6) / 10 }
+  })
 
   const isDark = theme === 'dark'
   const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'
@@ -129,7 +140,7 @@ export function UserDetail() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 56, display: 'flex', alignItems: 'center', gap: '1rem', position: 'sticky', top: 0, zIndex: 100, boxShadow: 'var(--shadow)' }}>
         <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--muted)', fontSize: '0.875rem', padding: '0.35rem 0.75rem', borderRadius: 6, border: '1px solid var(--border)' }}>
-            Back
+          Back
         </Link>
         <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent)' }}>
           Status<span style={{ color: 'var(--text)' }}>Time</span>
@@ -178,18 +189,15 @@ export function UserDetail() {
             </select>
           } />
           <div style={{ padding: '1.5rem' }}>
-            {chartData.length === 0
-              ? <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>No activity data yet</div>
-              : <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="date" tick={{ fill: labelColor, fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: labelColor, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => v + 'h'} />
-                    <Tooltip formatter={(v: number) => [v + 'h', 'Active hours']} contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.85rem' }} />
-                    <Bar dataKey="hours" fill="var(--accent)" radius={[4, 4, 0, 0]} fillOpacity={0.85} />
-                  </BarChart>
-                </ResponsiveContainer>
-            }
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="date" tick={{ fill: labelColor, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: labelColor, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => v + 'h'} />
+                <Tooltip formatter={(v: number) => [v + 'h', 'Active hours']} contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.85rem' }} />
+                <Bar dataKey="hours" fill="var(--accent)" radius={[4, 4, 0, 0]} fillOpacity={0.85} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </Card>
         <Card>
