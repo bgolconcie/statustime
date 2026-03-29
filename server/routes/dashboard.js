@@ -299,13 +299,14 @@ router.get('/users/:userId/heatmap', auth, async (req, res) => {
 // Hourly heatmap — 7 rows (day of week) x 24 cols (hour)
 // Returns [{dow:0-6, hour:0-23, active:N, total:N, pct:0-100}]
 router.get('/users/:userId/hourly', auth, async (req, res) => {
-  const { days = 30 } = req.query;
+  const { days = 30, tz = 'UTC' } = req.query;
   const daysInt = parseInt(days);
+  const safeTz = tz.replace(/[^A-Za-z0-9/_+-]/g, '') || 'UTC';
   try {
     const result = await db.query(
       `SELECT
-         EXTRACT(DOW FROM polled_at AT TIME ZONE 'UTC')::int AS dow,
-         EXTRACT(HOUR FROM polled_at AT TIME ZONE 'UTC')::int AS hour,
+         EXTRACT(DOW FROM polled_at AT TIME ZONE $4)::int AS dow,
+         EXTRACT(HOUR FROM polled_at AT TIME ZONE $4)::int AS hour,
          COUNT(*) AS total,
          COUNT(*) FILTER (WHERE is_active = true) AS active
        FROM presence_snapshots
@@ -314,7 +315,7 @@ router.get('/users/:userId/hourly', auth, async (req, res) => {
          AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
        GROUP BY dow, hour
        ORDER BY dow, hour`,
-      [req.params.userId, req.org.id, daysInt]
+      [req.params.userId, req.org.id, daysInt, safeTz]
     );
     // Build full 7x24 grid, zero-fill missing slots
     const map = {};
@@ -345,15 +346,16 @@ router.get('/users/:userId/hourly', auth, async (req, res) => {
 // Activity log — per day timeline from presence_snapshots
 // Returns [{date, dow, slots:[{hour,is_active}...], active_polls, total_polls, first_active, last_active}]
 router.get('/users/:userId/activity-log', auth, async (req, res) => {
-  const { days = 14 } = req.query;
+  const { days = 14, tz = 'UTC' } = req.query;
   const daysInt = parseInt(days);
+  const safeTz2 = tz.replace(/[^A-Za-z0-9/_+-]/g, '') || 'UTC';
   try {
     // Get every snapshot slot: date + hour + is_active count
     const result = await db.query(
       `SELECT
-         (polled_at AT TIME ZONE 'UTC')::date AS date,
-         TO_CHAR(polled_at AT TIME ZONE 'UTC', 'FMDay') AS dow,
-         EXTRACT(HOUR FROM polled_at AT TIME ZONE 'UTC')::int AS hour,
+         (polled_at AT TIME ZONE $4)::date AS date,
+         TO_CHAR(polled_at AT TIME ZONE $4, 'FMDay') AS dow,
+         EXTRACT(HOUR FROM polled_at AT TIME ZONE $4)::int AS hour,
          COUNT(*) FILTER (WHERE is_active = true) AS active,
          COUNT(*) FILTER (WHERE is_active = false) AS away,
          COUNT(*) AS total
@@ -362,7 +364,7 @@ router.get('/users/:userId/activity-log', auth, async (req, res) => {
          AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
        GROUP BY date, dow, hour
        ORDER BY date DESC, hour ASC`,
-      [req.params.userId, req.org.id, daysInt]
+      [req.params.userId, req.org.id, daysInt, safeTz2]
     );
 
     // Group by date
