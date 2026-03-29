@@ -60,8 +60,7 @@ router.post('/checkout', auth, async (req, res) => {
   const priceId = priceIds[key];
   try {
     const { rows: [org] } = await db.query('SELECT * FROM organizations WHERE id = $1', [req.org.id]);
-    const { rows: [{ count }] } = await db.query('SELECT COUNT(*) FROM tracked_users WHERE org_id=$1 AND is_active=true', [req.org.id]);
-    const quantity = Math.max(1, parseInt(count));
+    const quantity = 1;
     let customerId = org.stripe_customer_id;
     if (!customerId) {
       const customer = await getStripe().customers.create({ email: org.email, name: org.name });
