@@ -209,7 +209,7 @@ export function UserDetail() {
       </div>
 
       {/* Billing */}
-      {user && <BillingPanel userId={user.id} costType={user.cost_type} costAmount={user.cost_amount} priceType={user.price_type} priceAmount={user.price_amount} currency={user.currency} />}
+      {user && <BillingPanel userId={user.id} costType={user.cost_type} costAmount={user.cost_amount} priceType={user.price_type} priceAmount={user.price_amount} currency={user.currency} projectName={user.project_name} />}
 
       {/* Daily bar chart */}
       <Card>

@@ -6,14 +6,16 @@ interface BillingProps {
   costType?: string; costAmount?: number | null
   priceType?: string; priceAmount?: number | null
   currency?: string
+  projectName?: string | null
 }
 
-export function BillingPanel({ userId, costType: ct, costAmount: ca, priceType: pt, priceAmount: pa, currency: cur }: BillingProps) {
+export function BillingPanel({ userId, costType: ct, costAmount: ca, priceType: pt, priceAmount: pa, currency: cur, projectName: pn }: BillingProps) {
   const [costType, setCostType] = useState<string>(ct || 'hourly')
   const [costAmount, setCostAmount] = useState(ca != null ? String(ca) : '')
   const [priceType, setPriceType] = useState<string>(pt || 'hourly')
   const [priceAmount, setPriceAmount] = useState(pa != null ? String(pa) : '')
   const [currency, setCurrency] = useState(cur || 'USD')
+  const [projectName, setProjectName] = useState(pn || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -28,7 +30,7 @@ export function BillingPanel({ userId, costType: ct, costAmount: ca, priceType: 
     await fetch(`/api/dashboard/users/${userId}/billing`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ cost_type: costType, cost_amount: costAmount ? parseFloat(costAmount) : null, price_type: priceType, price_amount: priceAmount ? parseFloat(priceAmount) : null, currency })
+      body: JSON.stringify({ cost_type: costType, cost_amount: costAmount ? parseFloat(costAmount) : null, price_type: priceType, price_amount: priceAmount ? parseFloat(priceAmount) : null, currency, project_name: projectName || null })
     })
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
@@ -39,6 +41,16 @@ export function BillingPanel({ userId, costType: ct, costAmount: ca, priceType: 
   return (
     <Card>
       <CardHeader title="Cost & Price" />
+      <div style={{ padding: '1.25rem 1.25rem 0' }}>
+        <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: '0.4rem' }}>Project (optional — groups this resource in the Pro Forma Invoice)</div>
+        <input
+          type="text"
+          placeholder="e.g. Client Alpha"
+          value={projectName}
+          onChange={e => setProjectName(e.target.value)}
+          style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.45rem 0.7rem', fontSize: '0.875rem', color: 'var(--text)', width: '100%', outline: 'none', maxWidth: 320, boxSizing: 'border-box' }}
+        />
+      </div>
       <div style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <div>
           <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.6rem' }}>

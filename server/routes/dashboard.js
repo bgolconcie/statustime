@@ -424,7 +424,7 @@ router.get('/reports/invoice', auth, async (req, res) => {
   if (!from || !to) return res.status(400).json({ error: 'from and to required' });
   try {
     const users = await db.query(
-      `SELECT id, display_name, price_type, price_amount, currency
+      `SELECT id, display_name, price_type, price_amount, currency, project_name
        FROM tracked_users WHERE org_id=$1 AND is_active=true AND price_amount > 0`,
       [req.org.id]
     );
@@ -465,6 +465,7 @@ router.get('/reports/invoice', auth, async (req, res) => {
       total += amount;
       lines.push({
         display_name: u.display_name,
+        project_name: u.project_name || null,
         price_type: u.price_type,
         price_amount: monthlyRate,
         hourly_rate: Math.round(hourlyRate * 100) / 100,
@@ -473,13 +474,18 @@ router.get('/reports/invoice', auth, async (req, res) => {
         currency: u.currency || 'USD',
       });
     }
-    res.json({ from, to, lines: lines.sort((a, b) => b.amount - a.amount), total: Math.round(total * 100) / 100, currency: lines[0]?.currency || 'USD' });
+    lines.sort((a, b) => {
+      if ((a.project_name || '') < (b.project_name || '')) return -1;
+      if ((a.project_name || '') > (b.project_name || '')) return 1;
+      return b.amount - a.amount;
+    });
+    res.json({ from, to, lines, total: Math.round(total * 100) / 100, currency: lines[0]?.currency || 'USD' });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
 // Update cost/price for a user
 router.patch('/users/:userId/billing', auth, async (req, res) => {
-  const { cost_type, cost_amount, price_type, price_amount, currency } = req.body;
+  const { cost_type, cost_amount, price_type, price_amount, currency, project_name } = req.body;
   try {
     await db.query(
       `UPDATE tracked_users SET
@@ -487,11 +493,12 @@ router.patch('/users/:userId/billing', auth, async (req, res) => {
         cost_amount = $2,
         price_type = COALESCE($3, price_type),
         price_amount = $4,
-        currency = COALESCE($5, currency)
-       WHERE id = $6 AND org_id = $7`,
-      [cost_type, cost_amount ?? null, price_type, price_amount ?? null, currency || 'USD', req.params.userId, req.org.id]
+        currency = COALESCE($5, currency),
+        project_name = $6
+       WHERE id = $7 AND org_id = $8`,
+      [cost_type, cost_amount ?? null, price_type, price_amount ?? null, currency || 'USD', project_name || null, req.params.userId, req.org.id]
     );
-    const result = await db.query('SELECT cost_type,cost_amount,price_type,price_amount,currency FROM tracked_users WHERE id=$1', [req.params.userId]);
+    const result = await db.query('SELECT cost_type,cost_amount,price_type,price_amount,currency,project_name FROM tracked_users WHERE id=$1', [req.params.userId]);
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);

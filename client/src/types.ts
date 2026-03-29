@@ -27,10 +27,12 @@ export interface UserDetail extends User {
   price_type: 'hourly' | 'monthly'
   price_amount: number | null
   currency: string
+  project_name: string | null
 }
 
 export interface InvoiceLine {
   display_name: string
+  project_name: string | null
   price_type: string
   price_amount: number
   hourly_rate: number
