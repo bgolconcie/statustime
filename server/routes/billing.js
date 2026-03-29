@@ -6,19 +6,38 @@ const auth = require('../middleware/auth');
 // Lazily initialized — reads key at request time, not at module load
 let _stripe = null;
 function getStripe() {
-  if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+  if (!_stripe) _stripe = new Stripe((process.env.STRIPE_SECRET_KEY || '').trim(), { apiVersion: '2023-10-16' });
   return _stripe;
 }
 
-// Debug: test Stripe connectivity (no auth required)
+// Debug: raw connectivity test
 router.get('/ping', async (req, res) => {
-  const keySnippet = process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.slice(0, 12) + '...' : 'NOT SET';
+  const https = require('https');
+  const dns   = require('dns').promises;
+  const key   = process.env.STRIPE_SECRET_KEY;
+  const keySnippet = key ? key.slice(0, 14) + '...' : 'NOT SET';
+
+  // 1. DNS
+  let dnsResult;
+  try { dnsResult = await dns.lookup('api.stripe.com'); }
+  catch (e) { dnsResult = { error: e.message }; }
+
+  // 2. Raw HTTPS GET (no SDK)
+  let rawResult;
   try {
-    const bal = await getStripe().balance.retrieve();
-    res.json({ ok: true, key: keySnippet, livemode: bal.livemode });
-  } catch (err) {
-    res.json({ ok: false, key: keySnippet, error: err.message, type: err.type || err.constructor?.name });
-  }
+    rawResult = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.stripe.com', port: 443, path: '/v1/balance',
+        method: 'GET', timeout: 8000,
+        headers: { Authorization: 'Bearer ' + key }
+      }, r => { resolve({ status: r.statusCode }); r.resume(); });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+      req.end();
+    });
+  } catch (e) { rawResult = { error: e.message, code: e.code }; }
+
+  res.json({ key: keySnippet, dns: dnsResult, https: rawResult });
 });
 
 // Hardcoded Stripe price IDs (Status Stripe account)

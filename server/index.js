@@ -12,6 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, '../public');
 
+app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: process.env.APP_URL || '*', credentials: true }));
 app.use('/api/billing/webhook', require('./routes/billing').router);
