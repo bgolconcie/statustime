@@ -412,4 +412,27 @@ router.get('/users/:userId/activity-log', auth, async (req, res) => {
   }
 });
 
+
+// Update cost/price for a user
+router.patch('/users/:userId/billing', auth, async (req, res) => {
+  const { cost_type, cost_amount, price_type, price_amount, currency } = req.body;
+  try {
+    await db.query(
+      `UPDATE tracked_users SET
+        cost_type = COALESCE($1, cost_type),
+        cost_amount = $2,
+        price_type = COALESCE($3, price_type),
+        price_amount = $4,
+        currency = COALESCE($5, currency)
+       WHERE id = $6 AND org_id = $7`,
+      [cost_type, cost_amount ?? null, price_type, price_amount ?? null, currency || 'USD', req.params.userId, req.org.id]
+    );
+    const result = await db.query('SELECT cost_type,cost_amount,price_type,price_amount,currency FROM tracked_users WHERE id=$1', [req.params.userId]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;
