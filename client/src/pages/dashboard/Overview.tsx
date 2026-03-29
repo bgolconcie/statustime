@@ -10,7 +10,6 @@ import { StatusDot, StatusDotLoading } from '../../components/ui/StatusDot'
 import { HoursBar } from '../../components/ui/HoursBar'
 import { FilterGroup } from '../../components/ui/Button'
 import { minsToHours, shortTz } from '../../utils'
-import { useToast, Toast } from '../../components/ui/Toast'
 
 function useTzClock(users: User[]) {
   const [times, setTimes] = useState<Record<string,string>>({})
@@ -37,8 +36,7 @@ export function Overview() {
   const [presence, setPresence] = useState<Record<string,string>>({})
   const [presenceLoading, setPresenceLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
-  const [typeFilter, setTypeFilter] = useState('all')
-  const { toast, showToast } = useToast()
+  const [typeFilter, setTypeFilter] = useState('member')
   const navigate = useNavigate()
   const times = useTzClock(users)
 
@@ -69,8 +67,6 @@ export function Overview() {
     return statusOk && typeOk
   })
 
-  const onlineCount = Object.values(presence).filter(v => v === 'active').length
-
   return (
     <>
       <div style={{ marginBottom: '1.5rem' }}>
@@ -83,7 +79,7 @@ export function Overview() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:'1rem', marginBottom:'1.5rem' }}>
         <StatCard label="Today's total hours" value={stats ? minsToHours(stats.todayMinutes) : '--'} sub="across all users" />
         <StatCard label="This week" value={stats ? minsToHours(stats.weekMinutes) : '--'} sub="last 7 days" />
-        <StatCard label="Team size" value={stats?.totalUsers ?? '--'} sub="tracked users" />
+        <StatCard label="Team size" value={stats?.totalUsers ?? '--'} sub={users.length ? `${users.filter(u=>u.user_type==='member').length} members · ${users.filter(u=>u.user_type==='external').length} guests` : 'tracked users'} />
       </div>
 
       <Card>
@@ -95,17 +91,7 @@ export function Overview() {
             <FilterGroup value={typeFilter} onChange={setTypeFilter} options={[
               {label:'All',value:'all'},{label:'Members',value:'member'},{label:'Externals',value:'external'}
             ]} />
-            {presenceLoading
-              ? <span style={{fontSize:'0.72rem',color:'var(--muted)'}}>Fetching...</span>
-              : onlineCount > 0 && <span style={{fontSize:'0.72rem',color:'var(--muted)'}}>{onlineCount} online now</span>
-            }
-            <button onClick={() => {
-              api.users().then(u=>{setUsers(u);fetchPresence(u)}).catch(()=>{})
-              api.stats().then(setStats).catch(()=>{})
-              showToast('Refreshed!')
-            }} style={{padding:'0.35rem 0.85rem',borderRadius:6,fontSize:'0.775rem',fontWeight:600,cursor:'pointer',border:'1px solid var(--border)',background:'transparent',color:'var(--muted)'}}>
-              Refresh
-            </button>
+            {presenceLoading && <span style={{fontSize:'0.72rem',color:'var(--muted)'}}>Fetching...</span>}
           </div>
         } />
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -152,7 +138,6 @@ export function Overview() {
           </tbody>
         </table>
       </Card>
-      <Toast {...toast} />
     </>
   )
 }
