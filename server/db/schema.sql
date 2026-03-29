@@ -76,3 +76,13 @@ CREATE TABLE IF NOT EXISTS presence_snapshots (
   is_active   BOOLEAN NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_presence_snapshots_user_polled ON presence_snapshots(user_id, polled_at);
+
+-- Cost/price per user (safe migration)
+DO $$ BEGIN
+  ALTER TABLE tracked_users ADD COLUMN IF NOT EXISTS cost_type VARCHAR(10) DEFAULT 'hourly';
+  ALTER TABLE tracked_users ADD COLUMN IF NOT EXISTS cost_amount NUMERIC(10,2) DEFAULT NULL;
+  ALTER TABLE tracked_users ADD COLUMN IF NOT EXISTS price_type VARCHAR(10) DEFAULT 'hourly';
+  ALTER TABLE tracked_users ADD COLUMN IF NOT EXISTS price_amount NUMERIC(10,2) DEFAULT NULL;
+  ALTER TABLE tracked_users ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'USD';
+EXCEPTION WHEN others THEN NULL;
+END $$;
