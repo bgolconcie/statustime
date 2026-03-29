@@ -25,8 +25,9 @@ export default function App() {
           <Route path="leave" element={<Leave />} />
           <Route path="integrations" element={<Integrations />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="user/:id" element={<UserDetail />} />
         </Route>
-        <Route path="/user/:id" element={<PrivateRoute><UserDetail /></PrivateRoute>} />
+        <Route path="/user/:id" element={<Navigate to="/dashboard/user/:id" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
