@@ -6,9 +6,20 @@ const auth = require('../middleware/auth');
 // Lazily initialized — reads key at request time, not at module load
 let _stripe = null;
 function getStripe() {
-  if (!_stripe) _stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+  if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
   return _stripe;
 }
+
+// Debug: test Stripe connectivity (no auth required)
+router.get('/ping', async (req, res) => {
+  const keySnippet = process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.slice(0, 12) + '...' : 'NOT SET';
+  try {
+    const bal = await getStripe().balance.retrieve();
+    res.json({ ok: true, key: keySnippet, livemode: bal.livemode });
+  } catch (err) {
+    res.json({ ok: false, key: keySnippet, error: err.message, type: err.type || err.constructor?.name });
+  }
+});
 
 // Hardcoded Stripe price IDs (Status Stripe account)
 const priceIds = {
