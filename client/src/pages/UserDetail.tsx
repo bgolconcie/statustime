@@ -78,75 +78,21 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
 }
 
 function DayTimeline({ day }: { day: DayLog }) {
-  const [tooltip, setTooltip] = useState<{ hour: number; active: number; away: number; total: number; x: number } | null>(null)
-  const slots = Array.from({ length: 24 }, (_, h) => day.hours.find(d => d.hour === h) || { hour: h, active: 0, away: 0, total: 0 })
-  const fmtHour = (h: number | null) => {
-    if (h === null) return '--'
-    if (h === 0) return '12am'
-    if (h === 12) return '12pm'
-    return h < 12 ? `${h}am` : `${h-12}pm`
-  }
+  const dateObj = new Date(day.date + 'T12:00:00Z')
+  const dateLabel = dateObj.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' })
+  const awayPolls = day.total_polls - day.active_polls
   const fmtMins = (m: number) => {
     if (m < 60) return `${m}m`
     const h = Math.floor(m / 60), rem = m % 60
     return rem ? `${h}h ${rem}m` : `${h}h`
   }
-  const dateObj = new Date(day.date + 'T12:00:00Z')
-  const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.75rem 1.25rem', borderBottom:'1px solid rgba(0,0,0,0.06)', flexWrap:'wrap' }}>
-      <div style={{ minWidth:90, flexShrink:0 }}>
-        <div style={{ fontSize:'0.85rem', fontWeight:700, color:'var(--text)' }}>{dateLabel}</div>
-        <div style={{ fontSize:'0.72rem', color:'var(--muted)', marginTop:1 }}>{day.dow}</div>
-      </div>
-      <div style={{ flex:1, minWidth:200, position:'relative' }} onMouseLeave={() => setTooltip(null)}>
-        <div style={{ display:'flex', height:20, borderRadius:4, overflow:'hidden', gap:1, background:'rgba(0,0,0,0.04)' }}>
-          {slots.map(slot => {
-            const hasPoll = slot.total > 0
-            const pct = hasPoll ? slot.active / slot.total : 0
-            const bg = !hasPoll ? 'rgba(0,0,0,0.04)'
-              : pct > 0.5 ? `rgba(37,99,235,${0.3+pct*0.7})` : `rgba(148,163,184,${0.2+(1-pct)*0.3})`
-            return (
-              <div key={slot.hour}
-                onMouseEnter={e => { const r=(e.currentTarget as HTMLElement).getBoundingClientRect();const p=(e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();setTooltip({...slot,x:r.left-p.left+r.width/2}) }}
-                style={{ flex:1, background:bg, cursor:'default' }}
-                onMouseOver={e => { (e.currentTarget as HTMLElement).style.filter='brightness(1.3)' }}
-              />
-            )
-          })}
-        </div>
-        <div style={{ display:'flex', justifyContent:'space-between', marginTop:2 }}>
-          {[0,6,12,18,23].map(h => <div key={h} style={{ fontSize:'0.55rem', color:'var(--muted)' }}>{fmtHour(h)}</div>)}
-        </div>
-        {tooltip && (
-          <div style={{ position:'absolute', bottom:32, left:Math.max(0,Math.min(tooltip.x-50,200)), background:'#fff', border:'1px solid rgba(0,0,0,0.1)', borderRadius:6, padding:'0.35rem 0.6rem', fontSize:'0.72rem', pointerEvents:'none', zIndex:50, whiteSpace:'nowrap', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', lineHeight:1.6 }}>
-            <div style={{ fontWeight:600 }}>{fmtHour(tooltip.hour)}&ndash;{fmtHour(tooltip.hour+1>23?0:tooltip.hour+1)}</div>
-            {tooltip.total > 0 ? <>
-              <div style={{ color:'var(--accent)' }}>{tooltip.active} active / {tooltip.away} away</div>
-              <div style={{ color:'var(--muted)' }}>{Math.round(tooltip.active/tooltip.total*100)}% of {tooltip.total} polls</div>
-            </> : <div style={{ color:'var(--muted)' }}>No data</div>}
-          </div>
-        )}
-      </div>
-      <div style={{ display:'flex', gap:'1.5rem', flexShrink:0, fontSize:'0.78rem' }}>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontWeight:700, color:'var(--accent)' }}>{fmtMins(day.active_minutes)}</div>
-          <div style={{ color:'var(--muted)', fontSize:'0.68rem' }}>active</div>
-        </div>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontWeight:700, color:'var(--text)' }}>{day.pct.toFixed(0)}%</div>
-          <div style={{ color:'var(--muted)', fontSize:'0.68rem' }}>of polls</div>
-        </div>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontWeight:600, color:'var(--text)', fontSize:'0.75rem' }}>{fmtHour(day.first_active)}</div>
-          <div style={{ color:'var(--muted)', fontSize:'0.68rem' }}>first seen</div>
-        </div>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontWeight:600, color:'var(--text)', fontSize:'0.75rem' }}>{fmtHour(day.last_active)}</div>
-          <div style={{ color:'var(--muted)', fontSize:'0.68rem' }}>last seen</div>
-        </div>
-      </div>
-    </div>
+    <tr>
+      <td style={{ padding:'0.75rem 1.25rem', borderBottom:'1px solid var(--border)', fontSize:'0.875rem', fontWeight:500 }}>{dateLabel}</td>
+      <td style={{ padding:'0.75rem 1.25rem', borderBottom:'1px solid var(--border)', fontSize:'0.875rem', color:'#22c55e', fontWeight:600 }}>{day.active_polls} <span style={{ fontSize:'0.75rem', color:'var(--muted)', fontWeight:400 }}>({fmtMins(day.active_minutes)})</span></td>
+      <td style={{ padding:'0.75rem 1.25rem', borderBottom:'1px solid var(--border)', fontSize:'0.875rem', color:'#94a3b8' }}>{awayPolls}</td>
+      <td style={{ padding:'0.75rem 1.25rem', borderBottom:'1px solid var(--border)', fontSize:'0.875rem', color:'var(--muted)' }}>{day.total_polls}</td>
+    </tr>
   )
 }
 
@@ -319,18 +265,16 @@ export function UserDetail() {
             No activity data yet — polls started recently, check back soon.
           </div>
         ) : (
-          <div>
-            <div style={{ display:'flex', gap:'1rem', padding:'0.5rem 1.25rem', borderBottom:'1px solid rgba(0,0,0,0.06)' }}>
-              <div style={{ minWidth:90, fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', fontWeight:500 }}>Date</div>
-              <div style={{ flex:1, fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', fontWeight:500 }}>Timeline (24h)</div>
-              <div style={{ display:'flex', gap:'1.5rem', flexShrink:0 }}>
-                {['Active','% Polls','First','Last'].map(h => (
-                  <div key={h} style={{ textAlign:'center', minWidth:50, fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', fontWeight:500 }}>{h}</div>
-                ))}
-              </div>
-            </div>
-            {activityLog.map((day, i) => <DayTimeline key={i} day={day} />)}
-          </div>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <thead>
+              <tr>{['Date','Active','Away','Total polls'].map(h => (
+                <th key={h} style={{ fontSize:'0.7rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--muted)', padding:'0.75rem 1.25rem', textAlign:'left', borderBottom:'1px solid var(--border)', fontWeight:500 }}>{h}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {activityLog.map((day, i) => <DayTimeline key={i} day={day} />)}
+            </tbody>
+          </table>
         )}
       </Card>
     </div>
