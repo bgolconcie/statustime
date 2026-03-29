@@ -42,7 +42,7 @@ export function Login() {
     }}>
       <div style={{ width: '100%', maxWidth: 420 }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 800, fontSize: '1.75rem', color: 'var(--accent)' }}>
+          <div style={{ fontFamily: 'Inter,sans-serif', fontWeight: 800, fontSize: '1.75rem', color: 'var(--accent)' }}>
             Status<span style={{ color: 'var(--text)' }}>Time</span>
           </div>
           <p style={{ color: 'var(--muted)', marginTop: '0.5rem', fontSize: '0.9rem' }}>
