@@ -9,13 +9,11 @@ const { startPoller } = require('./jobs/poller');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const PUBLIC = path.join(__dirname, '../public');
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: process.env.APP_URL || '*', credentials: true }));
-
-// Stripe webhook needs raw body
 app.use('/api/billing/webhook', require('./routes/billing'));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/', rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
@@ -25,39 +23,30 @@ app.use('/api/slack', require('./routes/slack').router);
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/billing', require('./routes/billing'));
 
-// Static assets (JS/CSS chunks from Vite build)
-app.use(express.static(path.join(__dirname, '../public')));
+// Static assets (Vite-built JS/CSS chunks)
+app.use(express.static(PUBLIC, { index: false }));
 
-// Marketing landing page at root
+// Marketing landing page at root only
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/marketing.html'));
+  res.sendFile(path.join(PUBLIC, 'marketing.html'));
 });
 
-// React SPA for all app routes
-const spaRoutes = ['/dashboard', '/user', '/login'];
-spaRoutes.forEach(route => {
-  app.get(route + '*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/app.html'));
-  });
-});
-
-// Fallback: also serve SPA for any unmatched routes that aren't API or assets
+// React SPA for all app routes (index.html = Vite output)
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
-  res.sendFile(path.join(__dirname, '../public/app.html'));
+  res.sendFile(path.join(PUBLIC, 'index.html'));
 });
 
 async function start() {
   try {
     await migrate();
     app.listen(PORT, () => {
-      console.log('StatusTime running on port ' + PORT);
+      console.log('StatusTime on port ' + PORT);
       startPoller();
     });
   } catch (err) {
-    console.error('Failed to start:', err);
+    console.error('Failed:', err);
     process.exit(1);
   }
 }
-
 start();
