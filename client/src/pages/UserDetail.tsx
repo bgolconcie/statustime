@@ -26,9 +26,25 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
   const getCellBg = (level: number) => {
     if (level === 0) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
     const r = level / 12
-    return isDark
-      ? `rgba(${Math.round(20+r*36)},${Math.round(40+r*149)},${Math.round(80+r*168)},${(0.2+r*0.8).toFixed(2)})`
-      : `rgb(${Math.round(219-r*182)},${Math.round(234-r*135)},${Math.round(254-r*19)})`
+    let R, G, B
+    if (r < 0.33) {
+      const t = r / 0.33
+      R = Math.round(239 + (249 - 239) * t)
+      G = Math.round(68  + (115 -  68) * t)
+      B = Math.round(68  + ( 22 -  68) * t)
+    } else if (r < 0.67) {
+      const t = (r - 0.33) / 0.34
+      R = Math.round(249 + (234 - 249) * t)
+      G = Math.round(115 + (179 - 115) * t)
+      B = Math.round(22  + (  8 -  22) * t)
+    } else {
+      const t = (r - 0.67) / 0.33
+      R = Math.round(234 + ( 34 - 234) * t)
+      G = Math.round(179 + (197 - 179) * t)
+      B = Math.round(8   + ( 94 -   8) * t)
+    }
+    const alpha = isDark ? (0.3 + r * 0.7).toFixed(2) : '1'
+    return `rgba(${R},${G},${B},${alpha})`
   }
   const grid = Array.from({ length: 7 }, (_, dow) =>
     Array.from({ length: 24 }, (_, h) => data.find(d => d.dow === dow && d.hour === h) || { dow, hour: h, pct: 0, active: 0, total: 0 })
