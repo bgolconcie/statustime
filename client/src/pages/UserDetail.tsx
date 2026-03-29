@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api'
-import type { UserDetail as IUserDetail, DayHours, UserStats } from '../types'
+import type { User, UserDetail as IUserDetail, DayHours, UserStats } from '../types'
 import { Avatar } from '../components/ui/Avatar'
 import { Badge } from '../components/ui/Badge'
 import { StatusDot, StatusDotLoading } from '../components/ui/StatusDot'
 import { StatCard } from '../components/ui/StatCard'
 import { Card, CardHeader } from '../components/ui/Card'
-import { useLocalTime } from '../hooks/useLocalTime'
 import { minsToHours } from '../utils'
 
 interface HourSlot { dow: number; hour: number; pct: number; active: number; total: number }
@@ -160,12 +159,12 @@ export function UserDetail() {
   const [hourly, setHourly] = useState<HourSlot[]>([])
   const [activityLog, setActivityLog] = useState<DayLog[]>([])
   const [stats, setStats] = useState<UserStats | null>(null)
+  const [allUsers, setAllUsers] = useState<User[]>([])
   const [todayMins, setTodayMins] = useState(0)
   const [weekMins, setWeekMins] = useState(0)
   const [chartDays, setChartDays] = useState(5)
   const [heatmapDays, setHeatmapDays] = useState(7)
   const [logDays, setLogDays] = useState(7)
-  const { time, date } = useLocalTime(user?.timezone || '')
 
   const tz = user?.timezone || 'UTC'
 
@@ -177,6 +176,8 @@ export function UserDetail() {
     const d = await res.json()
     if (Array.isArray(d)) setActivityLog(d)
   }
+
+  useEffect(() => { api.users().then(setAllUsers).catch(() => {}) }, [])
 
   useEffect(() => {
     if (!id) return
@@ -221,17 +222,19 @@ export function UserDetail() {
 
   return (
     <div>
-      {/* Back button + user header */}
-      <div style={{ marginBottom:'1.5rem', display:'flex', alignItems:'center', gap:'1rem' }}>
-        <button onClick={() => navigate('/dashboard')} style={{ display:'inline-flex', alignItems:'center', gap:'0.4rem', color:'var(--muted)', fontSize:'0.875rem', padding:'0.35rem 0.75rem', borderRadius:6, border:'1px solid var(--border)', background:'var(--surface)', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-          Back
-        </button>
+      {/* User header */}
+      <div style={{ marginBottom:'1.5rem', display:'flex', alignItems:'center', gap:'1rem', flexWrap:'wrap' }}>
         <h1 style={{ fontFamily:'Inter,sans-serif', fontWeight:700, fontSize:'1.2rem', color:'var(--text)', margin:0 }}>
           {user?.display_name || 'Loading...'}
         </h1>
         {user && <Badge variant={user.user_type}>{user.user_type === 'external' ? 'External' : 'Member'}</Badge>}
         {presence !== null && <StatusDot status={presence} />}
+        {allUsers.length > 1 && (
+          <select value={id} onChange={e => navigate(`/dashboard/user/${e.target.value}`)}
+            style={{ marginLeft:'auto', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, color:'var(--text)', padding:'0.3rem 0.6rem', fontSize:'0.775rem', outline:'none', fontFamily:'Inter,sans-serif' }}>
+            {allUsers.map(u => <option key={u.id} value={u.id}>{u.display_name}</option>)}
+          </select>
+        )}
       </div>
 
       {/* Profile card */}
@@ -246,11 +249,6 @@ export function UserDetail() {
               <span style={{ fontSize:'0.8rem', color:'var(--muted)' }}>Joined: <strong style={{ color:'var(--text)' }}>{user.created_at?new Date(user.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'}):''}</strong></span>
             </>}
           </div>
-        </div>
-        <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:10, padding:'0.75rem 1rem', textAlign:'right', flexShrink:0 }}>
-          <div style={{ fontFamily:'Inter,sans-serif', fontSize:'1.3rem', fontWeight:700, fontVariantNumeric:'tabular-nums' }}>{time||'--:--'}</div>
-          <div style={{ fontSize:'0.72rem', color:'var(--muted)' }}>{user?.timezone?.split('/').pop()?.replace(/_/g,' ')}</div>
-          <div style={{ fontSize:'0.7rem', color:'var(--muted)' }}>{date}</div>
         </div>
       </div>
 

@@ -1,18 +1,20 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
-import type { Org } from '../../types'
+import type { Org, User } from '../../types'
 import { useTheme } from '../../hooks/useTheme'
 import { Toast, useToast } from '../ui/Toast'
 
 export function AppLayout() {
   const [org, setOrg] = useState<Org | null>(null)
+  const [users, setUsers] = useState<User[]>([])
   const { theme, toggle } = useTheme()
   const navigate = useNavigate()
   const { toast, showToast } = useToast()
 
   useEffect(() => {
     api.me().then(setOrg).catch(() => {})
+    api.users().then(setUsers).catch(() => {})
     if (window.location.hash === '#slack_connected') { showToast('Slack connected!', 'success'); history.replaceState(null,'','/dashboard') }
     if (window.location.hash === '#billing_success') { showToast('Subscription activated!', 'success'); history.replaceState(null,'','/dashboard') }
   }, [])
@@ -69,6 +71,26 @@ export function AppLayout() {
               {item.label}
             </NavLink>
           ))}
+
+          {users.length > 0 && (
+            <div style={{ marginTop: '1.25rem' }}>
+              <div style={{ padding: '0 1.25rem 0.4rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)' }}>
+                Users
+              </div>
+              {users.map(u => (
+                <NavLink key={u.id} to={`/dashboard/user/${u.id}`}
+                  style={({ isActive }) => ({
+                    display: 'block', padding: '0.45rem 1.25rem', fontSize: '0.82rem',
+                    color: isActive ? 'var(--accent)' : 'var(--muted)',
+                    background: isActive ? 'rgba(2,132,199,0.06)' : 'transparent',
+                    borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+                    transition: 'all 0.15s', textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  })}>
+                  {u.display_name}
+                </NavLink>
+              ))}
+            </div>
+          )}
         </nav>
 
         <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border)' }}>
