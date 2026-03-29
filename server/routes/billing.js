@@ -21,7 +21,6 @@ router.post('/checkout', auth, async (req, res) => {
   const billing = req.body?.billing === 'yearly' ? 'yearly' : 'monthly';
   const key     = billing === 'yearly' ? `${plan}_yearly` : plan;
   const priceId = priceIds[key];
-  if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ error: 'STRIPE_SECRET_KEY not set in Railway' });
   try {
     const { rows: [org] } = await db.query('SELECT * FROM organizations WHERE id = $1', [req.org.id]);
     const { rows: [{ count }] } = await db.query('SELECT COUNT(*) FROM tracked_users WHERE org_id=$1 AND is_active=true', [req.org.id]);
