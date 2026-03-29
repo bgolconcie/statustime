@@ -45,7 +45,7 @@ export function AppLayout() {
         boxShadow: 'var(--shadow)', overflowY: 'auto',
       }}>
         <div style={{
-          fontFamily: 'Syne,sans-serif', fontWeight: 800, fontSize: '1.2rem',
+          fontFamily: 'Inter,sans-serif', fontWeight: 800, fontSize: '1.2rem',
           color: 'var(--accent)', padding: '0 1.25rem 1.5rem',
           borderBottom: '1px solid var(--border)', marginBottom: '1rem'
         }}>
