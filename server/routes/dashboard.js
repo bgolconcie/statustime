@@ -341,4 +341,65 @@ router.get('/users/:userId/hourly', auth, async (req, res) => {
   }
 });
 
+
+// Activity log from presence_snapshots — per day summary + full view
+// Summary: [{date, dow, active, away, total, pct}]
+// Full:    [{date, dow, hour, active, away, total, pct}]
+router.get('/users/:userId/activity-log', auth, async (req, res) => {
+  const { days = 14, mode = 'summary' } = req.query;
+  const daysInt = parseInt(days);
+  try {
+    let result;
+    if (mode === 'full') {
+      result = await db.query(
+        `SELECT
+           (polled_at AT TIME ZONE 'UTC')::date AS date,
+           TO_CHAR(polled_at AT TIME ZONE 'UTC', 'Day') AS dow,
+           EXTRACT(HOUR FROM polled_at AT TIME ZONE 'UTC')::int AS hour,
+           COUNT(*) AS total,
+           COUNT(*) FILTER (WHERE is_active = true) AS active,
+           COUNT(*) FILTER (WHERE is_active = false) AS away
+         FROM presence_snapshots
+         WHERE user_id = $1
+           AND org_id = $2
+           AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
+         GROUP BY date, dow, hour
+         ORDER BY date DESC, hour ASC`,
+        [req.params.userId, req.org.id, daysInt]
+      );
+    } else {
+      result = await db.query(
+        `SELECT
+           (polled_at AT TIME ZONE 'UTC')::date AS date,
+           TO_CHAR(polled_at AT TIME ZONE 'UTC', 'FMDay') AS dow,
+           TO_CHAR(polled_at AT TIME ZONE 'UTC', 'FMMonth') AS month,
+           EXTRACT(DAY FROM polled_at AT TIME ZONE 'UTC')::int AS day_of_month,
+           COUNT(*) AS total,
+           COUNT(*) FILTER (WHERE is_active = true) AS active,
+           COUNT(*) FILTER (WHERE is_active = false) AS away
+         FROM presence_snapshots
+         WHERE user_id = $1
+           AND org_id = $2
+           AND polled_at >= NOW() - ($3::int * INTERVAL '1 day')
+         GROUP BY date, dow, month, day_of_month
+         ORDER BY date DESC`,
+        [req.params.userId, req.org.id, daysInt]
+      );
+    }
+    const rows = result.rows.map(r => ({
+      ...r,
+      total: parseInt(r.total),
+      active: parseInt(r.active),
+      away: parseInt(r.away),
+      pct: parseInt(r.total) > 0
+        ? Math.round((parseInt(r.active) / parseInt(r.total)) * 10000) / 100
+        : 0
+    }));
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;
