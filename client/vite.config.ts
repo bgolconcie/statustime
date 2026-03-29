@@ -1,8 +1,24 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  server: { proxy: { '/api': 'http://localhost:3000' } },
-  build: { outDir: '../public', emptyOutDir: true }
+  build: {
+    outDir: '../public',
+    emptyOutDir: false,
+    rollupOptions: {
+      input: resolve(__dirname, 'index.html'),
+      output: {
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
+    }
+  },
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3000'
+    }
+  }
 })
