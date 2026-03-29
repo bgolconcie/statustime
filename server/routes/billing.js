@@ -46,6 +46,7 @@ async function setupStripeProducts() {
     console.log('Stripe products ready — standard:', priceIds.standard, '| pro:', priceIds.pro);
   } catch (err) {
     console.error('Stripe setup error:', err.message);
+    throw err; // propagate so callers can surface the real error
   }
 }
 
@@ -56,12 +57,15 @@ router.post('/checkout', auth, async (req, res) => {
   const key     = billing === 'yearly' ? `${plan}_yearly` : plan;
   let priceId = priceIds[key];
   if (!priceId) {
-    await setupStripeProducts();
+    try {
+      await setupStripeProducts();
+    } catch (setupErr) {
+      return res.status(503).json({ error: `Stripe setup error: ${setupErr.message}` });
+    }
     priceId = priceIds[key];
   }
   if (!priceId) {
-    const keySet = !!process.env.STRIPE_SECRET_KEY;
-    return res.status(503).json({ error: `Billing not configured — STRIPE_SECRET_KEY ${keySet ? 'is set but Stripe setup failed' : 'is NOT set in Railway'}. priceIds: ${JSON.stringify(priceIds)}` });
+    return res.status(503).json({ error: 'Stripe setup succeeded but price IDs are still missing — check Railway logs' });
   }
   try {
     const { rows: [org] } = await db.query('SELECT * FROM organizations WHERE id = $1', [req.org.id]);
