@@ -29,16 +29,21 @@
     .marquee-track { display:flex; width:max-content; animation:marquee 55s linear infinite; }
     .marquee-track:hover { animation-play-state:paused; }
     .logo-wrap {
-      display:flex; align-items:center; justify-content:center;
-      width:120px; height:48px; flex-shrink:0; margin:0 20px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+      width:130px; flex-shrink:0; margin:0 16px;
     }
     .logo-wrap img {
-      height:24px; width:auto; max-width:80px;
-      filter:invert(0.65) brightness(0.7);
+      height:22px; width:auto; max-width:80px;
+      filter:grayscale(1) opacity(0.35);
       transition:filter .25s ease;
       object-fit:contain;
     }
-    .logo-wrap img:hover { filter:invert(0) brightness(1); }
+    .logo-wrap:hover img { filter:grayscale(0) opacity(1); }
+    .logo-name {
+      font-size:10px; font-weight:600; color:#94a3b8; letter-spacing:0.03em;
+      white-space:nowrap; transition:color .25s ease;
+    }
+    .logo-wrap:hover .logo-name { color:#334155; }
     .check-item::before {
       content: '';
       display: inline-block;
@@ -188,47 +193,47 @@
     <div class="pointer-events-none absolute inset-y-0 right-0 w-24 z-10" style="background:linear-gradient(to left,white,transparent)"></div>
     <div class="marquee-track">
       <!-- first set -->
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/stripe" alt="Stripe" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/shopify" alt="Shopify" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/notion" alt="Notion" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/figma" alt="Figma" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/linear" alt="Linear" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/vercel" alt="Vercel" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/github" alt="GitHub" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/atlassian" alt="Atlassian" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/hubspot" alt="HubSpot" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/intercom" alt="Intercom" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zapier" alt="Zapier" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/airtable" alt="Airtable" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/asana" alt="Asana" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mondodotcom" alt="Monday.com" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zendesk" alt="Zendesk" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/salesforce" alt="Salesforce" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/dropbox" alt="Dropbox" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mailchimp" alt="Mailchimp" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/twilio" alt="Twilio" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/clickup" alt="ClickUp" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/stripe" alt="Stripe" /><span class="logo-name">Stripe</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/shopify" alt="Shopify" /><span class="logo-name">Shopify</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/notion" alt="Notion" /><span class="logo-name">Notion</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/figma" alt="Figma" /><span class="logo-name">Figma</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/linear" alt="Linear" /><span class="logo-name">Linear</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/vercel" alt="Vercel" /><span class="logo-name">Vercel</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/github" alt="GitHub" /><span class="logo-name">GitHub</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/atlassian" alt="Atlassian" /><span class="logo-name">Atlassian</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/hubspot" alt="HubSpot" /><span class="logo-name">HubSpot</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/intercom" alt="Intercom" /><span class="logo-name">Intercom</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zapier" alt="Zapier" /><span class="logo-name">Zapier</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/airtable" alt="Airtable" /><span class="logo-name">Airtable</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/asana" alt="Asana" /><span class="logo-name">Asana</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mondaydotcom" alt="Monday.com" /><span class="logo-name">Monday.com</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zendesk" alt="Zendesk" /><span class="logo-name">Zendesk</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/salesforce" alt="Salesforce" /><span class="logo-name">Salesforce</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/dropbox" alt="Dropbox" /><span class="logo-name">Dropbox</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mailchimp" alt="Mailchimp" /><span class="logo-name">Mailchimp</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/twilio" alt="Twilio" /><span class="logo-name">Twilio</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/clickup" alt="ClickUp" /><span class="logo-name">ClickUp</span></div>
       <!-- duplicate for seamless loop -->
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/stripe" alt="Stripe" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/shopify" alt="Shopify" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/notion" alt="Notion" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/figma" alt="Figma" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/linear" alt="Linear" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/vercel" alt="Vercel" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/github" alt="GitHub" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/atlassian" alt="Atlassian" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/hubspot" alt="HubSpot" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/intercom" alt="Intercom" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zapier" alt="Zapier" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/airtable" alt="Airtable" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/asana" alt="Asana" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mondodotcom" alt="Monday.com" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zendesk" alt="Zendesk" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/salesforce" alt="Salesforce" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/dropbox" alt="Dropbox" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mailchimp" alt="Mailchimp" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/twilio" alt="Twilio" /></div>
-      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/clickup" alt="ClickUp" /></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/stripe" alt="Stripe" /><span class="logo-name">Stripe</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/shopify" alt="Shopify" /><span class="logo-name">Shopify</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/notion" alt="Notion" /><span class="logo-name">Notion</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/figma" alt="Figma" /><span class="logo-name">Figma</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/linear" alt="Linear" /><span class="logo-name">Linear</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/vercel" alt="Vercel" /><span class="logo-name">Vercel</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/github" alt="GitHub" /><span class="logo-name">GitHub</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/atlassian" alt="Atlassian" /><span class="logo-name">Atlassian</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/hubspot" alt="HubSpot" /><span class="logo-name">HubSpot</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/intercom" alt="Intercom" /><span class="logo-name">Intercom</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zapier" alt="Zapier" /><span class="logo-name">Zapier</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/airtable" alt="Airtable" /><span class="logo-name">Airtable</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/asana" alt="Asana" /><span class="logo-name">Asana</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mondaydotcom" alt="Monday.com" /><span class="logo-name">Monday.com</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/zendesk" alt="Zendesk" /><span class="logo-name">Zendesk</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/salesforce" alt="Salesforce" /><span class="logo-name">Salesforce</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/dropbox" alt="Dropbox" /><span class="logo-name">Dropbox</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/mailchimp" alt="Mailchimp" /><span class="logo-name">Mailchimp</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/twilio" alt="Twilio" /><span class="logo-name">Twilio</span></div>
+      <div class="logo-wrap"><img src="https://cdn.simpleicons.org/clickup" alt="ClickUp" /><span class="logo-name">ClickUp</span></div>
     </div>
   </div>
 </section>
@@ -379,6 +384,7 @@
           <span class="text-sm text-slate-400 mb-2 ml-1">per user<br><span id="period-standard">per month</span></span>
         </div>
         <div id="billing-note-standard" class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
+        <div id="yearly-note-standard" class="hidden text-xs text-slate-400 -mt-4 mb-6">billed <span class="font-semibold text-slate-500">$60/year</span> per user</div>
         <a href="/login" class="block text-center border-2 border-brand text-brand font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand hover:text-white transition-all mb-7">
           TRY FOR FREE
         </a>
@@ -404,6 +410,7 @@
           <span class="text-sm text-slate-400 mb-2 ml-1">per user<br><span id="period-pro">per month</span></span>
         </div>
         <div id="billing-note-pro" class="text-xs text-slate-400 mb-6">USD · billed monthly</div>
+        <div id="yearly-note-pro" class="hidden text-xs text-slate-400 -mt-4 mb-6">billed <span class="font-semibold text-slate-500">$90/year</span> per user</div>
         <a href="/login" class="block text-center bg-brand text-white font-bold py-2.5 rounded-full text-sm tracking-wide hover:bg-brand-dark transition-all mb-7 shadow-md">
           TRY FOR FREE
         </a>
@@ -429,15 +436,17 @@
     // Toggle button styles
     document.getElementById('btn-monthly').className = 'px-5 py-2 rounded-full text-sm font-semibold transition-all ' + (yearly ? 'text-slate-500 hover:text-slate-700' : 'bg-brand text-white shadow-sm');
     document.getElementById('btn-yearly').className   = 'px-5 py-2 rounded-full text-sm font-semibold transition-all ' + (yearly ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-700');
-    // Prices
-    document.getElementById('price-standard').textContent = yearly ? '60' : '6';
-    document.getElementById('price-pro').textContent      = yearly ? '90' : '9';
+    // Prices — yearly shows monthly equivalent
+    document.getElementById('price-standard').textContent = yearly ? '5' : '6';
+    document.getElementById('price-pro').textContent      = yearly ? '7.5' : '9';
     // Period labels
-    document.getElementById('period-standard').textContent = yearly ? 'per year' : 'per month';
-    document.getElementById('period-pro').textContent      = yearly ? 'per year' : 'per month';
-    // Billing notes
-    document.getElementById('billing-note-standard').textContent = yearly ? 'USD · billed yearly — save $12/user' : 'USD · billed monthly';
-    document.getElementById('billing-note-pro').textContent      = yearly ? 'USD · billed yearly — save $18/user' : 'USD · billed monthly';
+    document.getElementById('period-standard').textContent = 'per month';
+    document.getElementById('period-pro').textContent      = 'per month';
+    // Monthly billing note / yearly billed-annually note
+    document.getElementById('billing-note-standard').className = yearly ? 'hidden' : 'text-xs text-slate-400 mb-6';
+    document.getElementById('billing-note-pro').className      = yearly ? 'hidden' : 'text-xs text-slate-400 mb-6';
+    document.getElementById('yearly-note-standard').className  = yearly ? 'text-xs text-slate-400 -mt-4 mb-6' : 'hidden';
+    document.getElementById('yearly-note-pro').className       = yearly ? 'text-xs text-slate-400 -mt-4 mb-6' : 'hidden';
   }
 </script>
 

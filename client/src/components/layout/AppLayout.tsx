@@ -19,19 +19,21 @@ const PLANS = {
   },
 }
 
-function UpgradeModal({ onClose, onError }: { onClose: () => void; onError: () => void }) {
+function UpgradeModal({ onClose }: { onClose: () => void }) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly')
   const [selected, setSelected] = useState<'standard' | 'pro'>('pro')
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
   const checkout = async () => {
     setLoading(true)
+    setErrorMsg('')
     try {
       const { url } = await api.billingCheckout(selected, billing)
       window.location.href = url
-    } catch {
+    } catch (err) {
       setLoading(false)
-      onError()
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to connect to billing')
     }
   }
 
@@ -102,6 +104,13 @@ function UpgradeModal({ onClose, onError }: { onClose: () => void; onError: () =
               )
             })}
           </div>
+
+          {/* Error */}
+          {errorMsg && (
+            <div style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:8, padding:'0.6rem 0.85rem', fontSize:'0.78rem', color:'#dc2626', marginBottom:'0.75rem', wordBreak:'break-word' }}>
+              {errorMsg}
+            </div>
+          )}
 
           {/* CTA */}
           <button onClick={checkout} disabled={loading} style={{
@@ -261,7 +270,6 @@ export function AppLayout() {
       {showUpgrade && (
         <UpgradeModal
           onClose={() => setShowUpgrade(false)}
-          onError={() => { setShowUpgrade(false); showToast('Billing unavailable', 'error') }}
         />
       )}
     </div>

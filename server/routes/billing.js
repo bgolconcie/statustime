@@ -59,7 +59,10 @@ router.post('/checkout', auth, async (req, res) => {
     await setupStripeProducts();
     priceId = priceIds[key];
   }
-  if (!priceId) return res.status(503).json({ error: 'Billing not configured — check STRIPE_SECRET_KEY in Railway' });
+  if (!priceId) {
+    const keySet = !!process.env.STRIPE_SECRET_KEY;
+    return res.status(503).json({ error: `Billing not configured — STRIPE_SECRET_KEY ${keySet ? 'is set but Stripe setup failed' : 'is NOT set in Railway'}. priceIds: ${JSON.stringify(priceIds)}` });
+  }
   try {
     const { rows: [org] } = await db.query('SELECT * FROM organizations WHERE id = $1', [req.org.id]);
     const { rows: [{ count }] } = await db.query('SELECT COUNT(*) FROM tracked_users WHERE org_id=$1 AND is_active=true', [req.org.id]);
@@ -81,7 +84,7 @@ router.post('/checkout', auth, async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error('Stripe checkout error:', err);
-    res.status(500).json({ error: 'Failed to create checkout session' });
+    res.status(500).json({ error: err.message || 'Failed to create checkout session' });
   }
 });
 
