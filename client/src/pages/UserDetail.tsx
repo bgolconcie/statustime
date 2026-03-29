@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api'
-import type { HeatmapCell } from '../api'
 import type { UserDetail as IUserDetail, DayHours, Session, UserStats } from '../types'
 import { Avatar } from '../components/ui/Avatar'
 import { Badge } from '../components/ui/Badge'
@@ -13,37 +12,64 @@ import { useLocalTime } from '../hooks/useLocalTime'
 import { useTheme } from '../hooks/useTheme'
 import { minsToHours, formatDate } from '../utils'
 
-// ── Hourly Activity Heatmap ────────────────────────────────────────────────────
-// Rows = days (oldest top), Cols = hours 0-23
-// Cell color = % of that hour the user was active (active_mins / 60 * 100)
-function HourHeatmap({ cells, days, chartDays }: { cells: HeatmapCell[]; days: number; chartDays: number }) {
+interface HeatCell { date: string; hour: number; active_minutes: number }
+
+function HourHeatmap({ userId, days }: { userId: string; days: number }) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const [cells, setCells] = useState<HeatCell[]>([])
+  const [loading, setLoading] = useState(true)
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null)
 
-  // Build lookup: date -> hour -> pct
-  const lookup: Record<string, Record<number, number>> = {}
-  for (const c of cells) {
-    if (!lookup[c.date]) lookup[c.date] = {}
-    lookup[c.date][c.hour] = c.pct
-  }
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/dashboard/users/${userId}/heatmap?days=${days}`, {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('st_token') }
+    })
+      .then(r => r.json())
+      .then(data => { setCells(Array.isArray(data) ? data : []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [userId, days])
 
-  // Generate last N days (oldest first)
-  const dateList: string[] = []
-  for (let i = chartDays - 1; i >= 0; i--) {
+  // Build a map: date -> hour -> active_minutes
+  const map: Record<string, Record<number, number>> = {}
+  cells.forEach(c => {
+    if (!map[c.date]) map[c.date] = {}
+    map[c.date][c.hour] = c.active_minutes
+  })
+
+  // Build ordered list of last N days
+  const dayList: string[] = []
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date()
     d.setUTCHours(0, 0, 0, 0)
     d.setUTCDate(d.getUTCDate() - i)
-    dateList.push(d.toISOString().split('T')[0])
+    dayList.push(d.toISOString().split('T')[0])
   }
 
   const hours = Array.from({ length: 24 }, (_, i) => i)
 
-  const getColor = (pct: number) => {
-    if (!pct) return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
-    const r = pct / 100
-    return isDark
-      ? `rgba(${Math.round(30 + r * 26)},${Math.round(30 + r * 159)},${Math.round(60 + r * 188)},${(0.25 + r * 0.75).toFixed(2)})`
-      : `rgb(${Math.round(219 - r * 217)},${Math.round(234 - r * 102)},${Math.round(254 - r * 55)})`
+  const getColor = (pct: number): string => {
+    if (pct <= 0) return theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
+    const dark = theme === 'dark'
+    if (dark) {
+      const r = Math.round(30 + pct * 26)
+      const g = Math.round(30 + pct * 159)
+      const b = Math.round(60 + pct * 188)
+      const a = (0.25 + pct * 0.75).toFixed(2)
+      return `rgba(${r},${g},${b},${a})`
+    } else {
+      const r = Math.round(186 + pct * (2 - 186))
+      const g = Math.round(230 + pct * (132 - 230))
+      const b = Math.round(253 + pct * (199 - 253))
+      return `rgb(${r},${g},${b})`
+    }
+  }
+
+  const fmtHour = (h: number) => {
+    if (h === 0) return '12a'
+    if (h < 12) return h + 'a'
+    if (h === 12) return '12p'
+    return (h - 12) + 'p'
   }
 
   const fmtDate = (ds: string) => {
@@ -51,62 +77,74 @@ function HourHeatmap({ cells, days, chartDays }: { cells: HeatmapCell[]; days: n
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
   }
 
-  const fmtHour = (h: number) => {
-    if (h === 0) return '12a'
-    if (h === 12) return '12p'
-    return h < 12 ? h + 'a' : (h - 12) + 'p'
-  }
+  if (loading) return <div style={{ color: 'var(--muted)', fontSize: '0.85rem', padding: '1rem' }}>Loading heatmap...</div>
+  if (cells.length === 0) return <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>No activity data yet</div>
 
-  const CELL = 18
-  const GAP = 2
-  const LEFT_W = 52
+  const CELL_W = 18
+  const CELL_H = 14
+  const CELL_GAP = 2
+  const LABEL_W = 52
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      {/* Hour labels row */}
-      <div style={{ display: 'flex', marginLeft: LEFT_W, marginBottom: 4 }}>
+    <div style={{ position: 'relative', overflowX: 'auto' }}
+      onMouseLeave={() => setTooltip(null)}>
+      {tooltip && (
+        <div style={{
+          position: 'fixed', left: tooltip.x + 12, top: tooltip.y - 32,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: 6, padding: '4px 10px', fontSize: '0.75rem',
+          color: 'var(--text)', pointerEvents: 'none', zIndex: 999,
+          boxShadow: 'var(--shadow)', whiteSpace: 'nowrap'
+        }}>{tooltip.label}</div>
+      )}
+
+      {/* Hour axis labels */}
+      <div style={{ display: 'flex', marginLeft: LABEL_W, marginBottom: 4, gap: CELL_GAP }}>
         {hours.map(h => (
-          <div key={h} style={{ width: CELL, flexShrink: 0, marginRight: GAP, fontSize: '0.55rem',
-            color: 'var(--muted)', textAlign: 'center', overflow: 'hidden' }}>
+          <div key={h} style={{ width: CELL_W, fontSize: '0.55rem', color: 'var(--muted)', textAlign: 'center', flexShrink: 0 }}>
             {h % 3 === 0 ? fmtHour(h) : ''}
           </div>
         ))}
       </div>
+
       {/* Rows = days */}
-      {dateList.map(ds => (
-        <div key={ds} style={{ display: 'flex', alignItems: 'center', marginBottom: GAP }}>
+      {dayList.map(ds => (
+        <div key={ds} style={{ display: 'flex', alignItems: 'center', marginBottom: CELL_GAP }}>
           {/* Date label */}
-          <div style={{ width: LEFT_W, flexShrink: 0, fontSize: '0.6rem', color: 'var(--muted)',
-            textAlign: 'right', paddingRight: 6, whiteSpace: 'nowrap' }}>
+          <div style={{ width: LABEL_W, fontSize: '0.62rem', color: 'var(--muted)', flexShrink: 0, paddingRight: 6, textAlign: 'right' }}>
             {fmtDate(ds)}
           </div>
           {/* Hour cells */}
           {hours.map(h => {
-            const pct = lookup[ds]?.[h] ?? 0
+            const mins = map[ds]?.[h] ?? 0
+            const pct = Math.min(mins / 60, 1)
             return (
               <div key={h}
-                title={pct ? `${ds} ${fmtHour(h)}: ${pct}% active (${Math.round(pct * 0.6)}m)` : `${ds} ${fmtHour(h)}: no data`}
-                style={{ width: CELL, height: CELL, flexShrink: 0, marginRight: GAP,
-                  borderRadius: 3, background: getColor(pct),
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}` }}
+                onMouseMove={e => setTooltip({
+                  x: e.clientX, y: e.clientY,
+                  label: `${fmtDate(ds)} ${fmtHour(h)}-${fmtHour(h + 1 < 24 ? h + 1 : 0)}: ${mins}min active (${Math.round(pct * 100)}%)`
+                })}
+                style={{
+                  width: CELL_W, height: CELL_H, borderRadius: 2, flexShrink: 0,
+                  marginRight: CELL_GAP,
+                  background: getColor(pct),
+                  border: '1px solid var(--border)',
+                  cursor: mins > 0 ? 'default' : 'default'
+                }}
               />
             )
           })}
         </div>
       ))}
+
       {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem',
-        marginLeft: LEFT_W, fontSize: '0.68rem', color: 'var(--muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.75rem', marginLeft: LABEL_W, fontSize: '0.7rem', color: 'var(--muted)' }}>
         <span>0%</span>
-        {[0, 25, 50, 75, 100].map(p => (
-          <div key={p} style={{ width: 12, height: 12, borderRadius: 2,
-            background: getColor(p),
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}
-            title={p + '%'}
-          />
+        {[0, 0.25, 0.5, 0.75, 1].map(p => (
+          <div key={p} style={{ width: 12, height: 12, borderRadius: 2, background: getColor(p), border: '1px solid var(--border)' }} />
         ))}
         <span>100%</span>
-        <span style={{ marginLeft: 8 }}>% of hour active</span>
+        <span style={{ marginLeft: '0.5rem', opacity: 0.6 }}>hourly activity</span>
       </div>
     </div>
   )
@@ -117,7 +155,6 @@ export function UserDetail() {
   const [user, setUser] = useState<IUserDetail | null>(null)
   const [presence, setPresence] = useState<string | null>(null)
   const [hours, setHours] = useState<DayHours[]>([])
-  const [heatmap, setHeatmap] = useState<HeatmapCell[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
   const [stats, setStats] = useState<UserStats | null>(null)
   const [todayMins, setTodayMins] = useState(0)
@@ -141,19 +178,19 @@ export function UserDetail() {
   }, [id])
 
   useEffect(() => {
-    if (!id) return
-    api.userHours(id, chartDays).then(setHours).catch(() => {})
-    api.userHeatmap(id, chartDays).then(setHeatmap).catch(() => {})
+    if (id) api.userHours(id, chartDays).then(setHours).catch(() => {})
   }, [id, chartDays])
 
   useEffect(() => {
     if (id) api.userSessions(id, logDays).then(setSessions).catch(() => {})
   }, [id, logDays])
 
-  // Full N-day bar chart, zero-filling missing days
   const chartData = (() => {
     const hoursMap: Record<string, number> = {}
-    hours.forEach(h => { hoursMap[String(h.date).split('T')[0]] = h.total_minutes })
+    hours.forEach(h => {
+      const ds = String(h.date).split('T')[0]
+      hoursMap[ds] = h.total_minutes
+    })
     const result = []
     for (let i = chartDays - 1; i >= 0; i--) {
       const d = new Date()
@@ -213,6 +250,7 @@ export function UserDetail() {
             </div>
           </div>
         </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
           <StatCard label="Today" value={todayMins ? minsToHours(todayMins) : '--'} sub="hours active" color="var(--green)" />
           <StatCard label="This week" value={weekMins ? minsToHours(weekMins) : '--'} sub="last 7 days" color="var(--accent)" />
@@ -220,6 +258,7 @@ export function UserDetail() {
           <StatCard label="Avg / active day" value={stats?.avgPerActiveDay ? minsToHours(stats.avgPerActiveDay) : '--'} sub="active days only" color="var(--yellow)" />
           <StatCard label="Active days" value={stats?.activeDays ?? '--'} sub="in last 30 days" />
         </div>
+
         <Card>
           <CardHeader title="Daily Active Hours" right={
             <select value={chartDays} onChange={e => setChartDays(Number(e.target.value))} style={sel}>
@@ -242,17 +281,20 @@ export function UserDetail() {
             </ResponsiveContainer>
           </div>
         </Card>
+
         <Card>
           <CardHeader title="Activity Heatmap" right={
-            <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>% of each hour active</span>
+            <select value={chartDays} onChange={e => setChartDays(Number(e.target.value))} style={sel}>
+              <option value={5}>Last 5 days</option>
+              <option value={14}>Last 14 days</option>
+              <option value={30}>Last 30 days</option>
+            </select>
           } />
           <div style={{ padding: '1.5rem' }}>
-            {heatmap.length === 0
-              ? <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem', fontSize: '0.875rem' }}>No session data with timestamps yet</div>
-              : <HourHeatmap cells={heatmap} days={chartDays} chartDays={chartDays} />
-            }
+            {id && <HourHeatmap userId={id} days={chartDays} />}
           </div>
         </Card>
+
         <Card>
           <CardHeader title="Activity Log" right={
             <select value={logDays} onChange={e => setLogDays(Number(e.target.value))} style={sel}>
