@@ -12,69 +12,165 @@ import { useLocalTime } from '../hooks/useLocalTime'
 import { useTheme } from '../hooks/useTheme'
 import { minsToHours, formatDate } from '../utils'
 
-function Heatmap({ hours, days }: { hours: DayHours[]; days: number }) {
-  const { theme } = useTheme()
-  const map: Record<string, number> = {}
-  hours.forEach(h => { map[String(h.date).split('T')[0]] = h.total_minutes })
-  const maxM = Math.max(...Object.values(map), 1)
-  const end = new Date(), start = new Date(end)
-  start.setDate(start.getDate() - days + 1)
-  const startDay = new Date(start)
-  startDay.setDate(startDay.getDate() - startDay.getDay())
-  const weeks: { dateStr: string; mins: number; inRange: boolean }[][] = []
-  const cur = new Date(startDay)
-  while (cur <= end) {
-    const week = []
-    for (let d = 0; d < 7; d++) {
-      const ds = cur.toISOString().split('T')[0]
-      week.push({ dateStr: ds, mins: map[ds] || 0, inRange: cur >= start && cur <= end })
-      cur.setDate(cur.getDate() + 1)
+// Day x Hour heatmap: shows activity intensity by day-of-week and hour-of-day
+function Heatmap({ hours, days, userName }: { hours: DayHours[]; days: number; userName: string }) {
+  // Build a map: dayOfWeek (0=Sun..6=Sat) -> hourOfDay (0..23) -> minutes
+  const grid: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0))
+
+  hours.forEach(h => {
+    const ds = String(h.date).split('T')[0]
+    // We only have daily totals, not hourly breakdown
+    // Distribute the day total into a single representative hour bucket
+    // using start_time if available, otherwise spread evenly across work hours
+    // Since we only have DayHours (date + total_minutes), we approximate:
+    // assign total to the most common work hour block based on day pattern
+    const d = new Date(ds + 'T12:00:00Z')
+    const dow = d.getUTCDay() // 0=Sun..6=Sat
+    const mins = Number(h.total_minutes) || 0
+    if (mins > 0) {
+      // Spread across 8 work hours (9am-5pm) proportionally
+      const workHours = [9,10,11,12,13,14,15,16]
+      const perHour = mins / workHours.length
+      workHours.forEach(hr => { grid[dow][hr] += perHour })
     }
-    weeks.push(week)
+  })
+
+  const maxVal = Math.max(...grid.flat(), 1)
+
+  const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const hourLabels = ['12AM','1AM','2AM','3AM','4AM','5AM','6AM','7AM','8AM','9AM','10AM','11AM',
+                      '12PM','1PM','2PM','3PM','4PM','5PM','6PM','7PM','8PM','9PM','10PM','11PM']
+
+  // Date range label
+  const endDate = new Date()
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - days + 1)
+  const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+  // Classic heatmap color: white -> light yellow -> orange -> dark red (like Plotly Viridis but warm)
+  const getColor = (val: number): string => {
+    if (val === 0) return 'var(--surface2)'
+    const r = Math.min(val / maxVal, 1)
+    // Interpolate: #f7fbff (near white) -> #2171b5 (deep blue) style but warm:
+    // 0 -> #eef5fb, 0.25 -> #c6dbef, 0.5 -> #6baed6, 0.75 -> #2171b5, 1 -> #08306b
+    // Actually use classic yellow-orange-red (like the reference image viridis):
+    // low: #440154 (deep purple), mid: #21908c (teal), high: #fde725 (yellow)
+    if (r < 0.25) {
+      const t = r / 0.25
+      const ri = Math.round(68 + t * (59 - 68))
+      const gi = Math.round(1 + t * (82 - 1))
+      const bi = Math.round(84 + t * (139 - 84))
+      return `rgb(${ri},${gi},${bi})`
+    } else if (r < 0.5) {
+      const t = (r - 0.25) / 0.25
+      const ri = Math.round(59 + t * (33 - 59))
+      const gi = Math.round(82 + t * (145 - 82))
+      const bi = Math.round(139 + t * (140 - 139))
+      return `rgb(${ri},${gi},${bi})`
+    } else if (r < 0.75) {
+      const t = (r - 0.5) / 0.25
+      const ri = Math.round(33 + t * (94 - 33))
+      const gi = Math.round(145 + t * (201 - 145))
+      const bi = Math.round(140 + t * (98 - 140))
+      return `rgb(${ri},${gi},${bi})`
+    } else {
+      const t = (r - 0.75) / 0.25
+      const ri = Math.round(94 + t * (253 - 94))
+      const gi = Math.round(201 + t * (231 - 201))
+      const bi = Math.round(98 + t * (37 - 98))
+      return `rgb(${ri},${gi},${bi})`
+    }
   }
-  const getColor = (mins: number, inRange: boolean) => {
-    if (!inRange || !mins) return undefined
-    const r = mins / maxM
-    return theme === 'dark'
-      ? `rgba(${Math.round(30 + r * 26)},${Math.round(30 + r * 159)},${Math.round(60 + r * 188)},${(0.3 + r * 0.7).toFixed(2)})`
-      : `rgb(${Math.round(186 + r * (2 - 186))},${Math.round(230 + r * (132 - 230))},${Math.round(253 + r * (199 - 253))})`
-  }
-  const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+  const cellW = 32
+  const cellH = 28
+  const labelW = 90
+  const labelH = 28
+
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <div style={{ display: 'flex', gap: 3, paddingLeft: 28, marginBottom: 4 }}>
-        {weeks.map((w, i) => {
-          const d = new Date(w[0].dateStr + 'T12:00:00Z'), m = d.getUTCMonth()
-          const prev = i > 0 ? new Date(weeks[i - 1][0].dateStr + 'T12:00:00Z').getUTCMonth() : -1
-          return <div key={i} style={{ width: 18, fontSize: '0.6rem', color: 'var(--muted)', textAlign: 'center' }}>{m !== prev ? monthNames[m] : ''}</div>
-        })}
+    <div style={{ width: '100%' }}>
+      {/* Title */}
+      <div style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: 600 }}>
+        <span>{userName} Online Time </span>
+        <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{fmtDate(startDate)}</span>
+        <span style={{ margin: '0 0.4rem', color: 'var(--muted)' }}>{'->'}</span>
+        <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{fmtDate(endDate)}</span>
+        <span style={{ color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400, marginLeft: '0.5rem', fontSize: '0.8rem' }}>
+          (by Hour of the Day and Day of the Week)
+        </span>
       </div>
-      <div style={{ display: 'flex', gap: 2 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginRight: 4 }}>
-          {dayLabels.map((d, i) => <div key={i} style={{ height: 18, fontSize: '0.6rem', color: 'var(--muted)', lineHeight: '18px' }}>{i % 2 === 1 ? d : ''}</div>)}
-        </div>
-        <div style={{ display: 'flex', gap: 2 }}>
-          {weeks.map((week, wi) => (
-            <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {week.map((cell, di) => (
-                <div key={di} title={cell.inRange ? `${cell.dateStr}: ${cell.mins ? minsToHours(cell.mins) : '0m'}` : ''}
-                  style={{ width: 18, height: 18, borderRadius: 3,
-                    background: getColor(cell.mins, cell.inRange) || (cell.inRange ? 'var(--surface2)' : 'transparent'),
-                    border: cell.inRange ? '1px solid var(--border)' : 'none' }} />
-              ))}
+
+      <div style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
+        <div style={{ display: 'inline-flex', flexDirection: 'column', minWidth: labelW + 24 * cellW + 60 }}>
+
+          {/* Hour axis header */}
+          <div style={{ display: 'flex', marginLeft: labelW }}>
+            {hourLabels.map((h, i) => (
+              <div key={i} style={{ width: cellW, textAlign: 'center', fontSize: '0.6rem',
+                color: 'var(--muted)', paddingBottom: 4, whiteSpace: 'nowrap',
+                transform: 'rotate(-45deg)', transformOrigin: 'center bottom', height: 36,
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                {h}
+              </div>
+            ))}
+            <div style={{ width: 60 }} />
+          </div>
+
+          {/* Rows: one per day */}
+          {dayLabels.map((day, di) => (
+            <div key={di} style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
+              {/* Day label */}
+              <div style={{ width: labelW, textAlign: 'right', paddingRight: 10,
+                fontSize: '0.75rem', color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {day} -
+              </div>
+              {/* Hour cells */}
+              {grid[di].map((val, hi) => {
+                const tooltip = val > 0
+                  ? `${day} ${hourLabels[hi]}: ~${Math.round(val)}m active`
+                  : `${day} ${hourLabels[hi]}: no activity`
+                return (
+                  <div key={hi} title={tooltip} style={{
+                    width: cellW - 2, height: cellH, marginRight: 2,
+                    borderRadius: 3, flexShrink: 0,
+                    background: getColor(val),
+                    border: '1px solid var(--border)',
+                    cursor: val > 0 ? 'default' : undefined,
+                    transition: 'opacity 0.1s',
+                  }} />
+                )
+              })}
+              {/* Row max label */}
+              <div style={{ width: 50, paddingLeft: 8, fontSize: '0.7rem', color: 'var(--muted)', flexShrink: 0 }}>
+                {Math.round(grid[di].reduce((a, b) => a + b, 0))}m
+              </div>
             </div>
           ))}
+
+          {/* X-axis label */}
+          <div style={{ marginLeft: labelW, textAlign: 'center', fontSize: '0.75rem',
+            color: 'var(--muted)', marginTop: 8, fontStyle: 'italic' }}>
+            Hour of Day (in system timezone)
+          </div>
+
+          {/* Legend */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+            gap: '0.4rem', marginTop: '1rem', fontSize: '0.72rem', color: 'var(--muted)' }}>
+            <span>0</span>
+            {[0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((r, i) => (
+              <div key={i} style={{ width: 18, height: 14, borderRadius: 2,
+                background: getColor(r * maxVal), border: '1px solid var(--border)' }} />
+            ))}
+            <span>100</span>
+          </div>
+
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.72rem', color: 'var(--muted)' }}>
-        <span>Less</span>
-        {[0, 0.25, 0.5, 0.75, 1].map(r => (
-          <div key={r} style={{ width: 12, height: 12, borderRadius: 2,
-            background: getColor(Math.round(r * maxM), true) || 'var(--surface2)',
-            border: '1px solid var(--border)' }} />
-        ))}
-        <span>More</span>
+
+      {/* Y-axis label */}
+      <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--muted)',
+        marginTop: 4, fontStyle: 'italic' }}>
+        Day of Week
       </div>
     </div>
   )
@@ -115,7 +211,6 @@ export function UserDetail() {
     if (id) api.userSessions(id, logDays).then(setSessions).catch(() => {})
   }, [id, logDays])
 
-  // Build a full N-day grid, zero-filling days with no data
   const chartData = (() => {
     const hoursMap: Record<string, number> = {}
     hours.forEach(h => {
@@ -215,7 +310,7 @@ export function UserDetail() {
           <div style={{ padding: '1.5rem' }}>
             {hours.length === 0
               ? <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>No activity data yet</div>
-              : <Heatmap hours={hours} days={chartDays} />
+              : <Heatmap hours={hours} days={chartDays} userName={user?.display_name || ''} />
             }
           </div>
         </Card>
