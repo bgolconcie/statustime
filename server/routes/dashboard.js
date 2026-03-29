@@ -57,7 +57,7 @@ router.get('/users/:userId/heatmap', auth, async (req, res) => {
        FROM time_sessions
        WHERE user_id=$1 AND org_id=$2
          AND date >= CURRENT_DATE - ($3::int - 1)
-         AND started_at IS NOT NULL AND ended_at IS NOT NULL
+         AND start_time IS NOT NULL AND end_time IS NOT NULL
          AND duration_minutes > 0
        ORDER BY date, start_time`,
       [req.params.userId, req.org.id, parseInt(days)]
@@ -302,7 +302,7 @@ router.get('/users/:userId/hourly', auth, async (req, res) => {
   const daysInt = parseInt(days);
   try {
     const result = await db.query(
-      `SELECT started_at as start_time, ended_at as end_time FROM time_sessions
+      `SELECT start_time, end_time FROM time_sessions
        WHERE user_id=$1 AND org_id=$2
          AND date >= CURRENT_DATE - ($3::int - 1)
          AND start_time IS NOT NULL AND end_time IS NOT NULL
