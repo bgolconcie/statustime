@@ -135,7 +135,7 @@ export function UserDetail() {
   const [weekMins, setWeekMins] = useState(0)
   const [chartDays, setChartDays] = useState(5)
   const [heatmapDays, setHeatmapDays] = useState(30)
-  const [logDays, setLogDays] = useState(14)
+  const [logDays, setLogDays] = useState(7)
   const [tzMode, setTzMode] = useState<TzMode>('UTC')
   const { theme } = useTheme()
   const { time, date } = useLocalTime(user?.timezone || '')
