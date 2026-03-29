@@ -54,8 +54,12 @@ router.post('/checkout', auth, async (req, res) => {
   const plan    = req.body?.plan === 'standard' ? 'standard' : 'pro';
   const billing = req.body?.billing === 'yearly' ? 'yearly' : 'monthly';
   const key     = billing === 'yearly' ? `${plan}_yearly` : plan;
-  const priceId = priceIds[key];
-  if (!priceId) return res.status(503).json({ error: 'Billing not configured yet — try again in a moment' });
+  let priceId = priceIds[key];
+  if (!priceId) {
+    await setupStripeProducts();
+    priceId = priceIds[key];
+  }
+  if (!priceId) return res.status(503).json({ error: 'Billing not configured — check STRIPE_SECRET_KEY in Railway' });
   try {
     const { rows: [org] } = await db.query('SELECT * FROM organizations WHERE id = $1', [req.org.id]);
     const { rows: [{ count }] } = await db.query('SELECT COUNT(*) FROM tracked_users WHERE org_id=$1 AND is_active=true', [req.org.id]);

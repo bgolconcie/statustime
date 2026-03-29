@@ -2,7 +2,6 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
 import type { Org, User } from '../../types'
-import { useTheme } from '../../hooks/useTheme'
 import { Toast, useToast } from '../ui/Toast'
 
 export function AppLayout() {
@@ -10,7 +9,6 @@ export function AppLayout() {
   const [users, setUsers] = useState<User[]>([])
   const [showPlans, setShowPlans] = useState(false)
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly')
-  const { theme, toggle } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const onUserPage = location.pathname.startsWith('/dashboard/user/')
@@ -108,27 +106,7 @@ export function AppLayout() {
             </div>
           </>}
 
-          <button onClick={toggle} style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            marginTop: '0.75rem', padding: '0.4rem 0.6rem', width: '100%',
-            background: 'var(--surface2)', border: '1px solid var(--border)',
-            borderRadius: 8, cursor: 'pointer', fontSize: '0.75rem', color: 'var(--muted)',
-            justifyContent: 'center',
-          }}>
-            <span style={{
-              width: 32, height: 18, background: theme === 'dark' ? 'var(--accent)' : 'var(--border)',
-              borderRadius: 100, position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-            }}>
-              <span style={{
-                position: 'absolute', top: 2, left: theme === 'dark' ? 16 : 2,
-                width: 14, height: 14, background: '#fff', borderRadius: '50%',
-                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-              }} />
-            </span>
-            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-          </button>
-
-          {org?.subscription_status === 'active' ? (
+{org?.subscription_status === 'active' ? (
             <button onClick={() => api.billingPortal().then(d => { window.location.href = d.url }).catch(() => showToast('Billing unavailable','error'))}
               style={{ display:'block', marginTop:'0.75rem', background:'var(--accent)', color:'var(--bg)', padding:'0.5rem', borderRadius:6, fontSize:'0.8rem', fontWeight:700, cursor:'pointer', border:'none', width:'100%' }}>
               Manage billing
