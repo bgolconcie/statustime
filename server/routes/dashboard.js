@@ -259,4 +259,40 @@ router.patch('/leave/:id', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
+
+// Hourly heatmap: active_minutes per (date, hour) slot
+router.get('/users/:userId/heatmap', auth, async (req, res) => {
+  const { days = 14 } = req.query;
+  try {
+    const result = await db.query(
+      `SELECT
+          date::text,
+          h.hour,
+          SUM(
+            GREATEST(0, EXTRACT(EPOCH FROM (
+              LEAST(end_time AT TIME ZONE 'UTC', (date::timestamp + ((h.hour + 1) || ' hours')::interval))
+              - GREATEST(start_time AT TIME ZONE 'UTC', (date::timestamp + (h.hour || ' hours')::interval))
+            )) / 60)
+          )::int AS active_minutes
+        FROM time_sessions
+        CROSS JOIN generate_series(0, 23) AS h(hour)
+        WHERE user_id = $1
+          AND org_id = $2
+          AND date >= CURRENT_DATE - ($3::int - 1)
+          AND start_time IS NOT NULL
+          AND end_time IS NOT NULL
+          AND end_time > start_time
+          AND start_time AT TIME ZONE 'UTC' < (date::timestamp + ((h.hour + 1) || ' hours')::interval)
+          AND end_time   AT TIME ZONE 'UTC' > (date::timestamp + (h.hour || ' hours')::interval)
+        GROUP BY date, h.hour
+        ORDER BY date ASC, h.hour ASC`,
+      [req.params.userId, req.org.id, parseInt(days)]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('heatmap error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;
