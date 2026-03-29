@@ -20,7 +20,7 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? `${h}a` : `${h-12}p`)
   const getCellBg = (pct: number, hasPolls: boolean) => {
-    if (!hasPolls) return 'rgba(0,0,0,0.05)'
+    if (!hasPolls) return 'rgb(226,232,240)'
     if (pct < 25)  return 'rgb(203,213,225)'
     if (pct < 40)  return 'rgb(239,68,68)'
     if (pct < 70)  return 'rgb(249,115,22)'
@@ -31,6 +31,7 @@ function HourlyHeatmap({ data, days }: { data: HourSlot[]; days: number }) {
   )
   const W = 36
   const LEGEND = [
+    { label: '0%',      bg: 'rgb(226,232,240)' },
     { label: '< 25%',   bg: 'rgb(203,213,225)' },
     { label: '25–40%',  bg: 'rgb(239,68,68)'   },
     { label: '40–70%',  bg: 'rgb(249,115,22)'  },
