@@ -66,3 +66,13 @@ DO $$ BEGIN
   ALTER TABLE tracked_users ADD COLUMN IF NOT EXISTS timezone VARCHAR(100) DEFAULT 'UTC';
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
+
+-- Presence snapshots: one row per poll per user, used for hourly heatmap
+CREATE TABLE IF NOT EXISTS presence_snapshots (
+  id          BIGSERIAL PRIMARY KEY,
+  org_id      UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id     UUID REFERENCES tracked_users(id) ON DELETE CASCADE,
+  polled_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  is_active   BOOLEAN NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_presence_snapshots_user_polled ON presence_snapshots(user_id, polled_at);
