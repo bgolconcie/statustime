@@ -81,9 +81,9 @@ export function Overview() {
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:'1rem', marginBottom:'1.5rem' }}>
-        <StatCard label="Today's total hours" value={stats ? minsToHours(stats.todayMinutes) : '--'} sub="across all users" color="var(--green)" />
-        <StatCard label="This week" value={stats ? minsToHours(stats.weekMinutes) : '--'} sub="last 7 days" color="var(--accent)" />
-        <StatCard label="Team size" value={stats?.totalUsers ?? '--'} sub="tracked users" color="var(--accent2)" />
+        <StatCard label="Today's total hours" value={stats ? minsToHours(stats.todayMinutes) : '--'} sub="across all users" />
+        <StatCard label="This week" value={stats ? minsToHours(stats.weekMinutes) : '--'} sub="last 7 days" />
+        <StatCard label="Team size" value={stats?.totalUsers ?? '--'} sub="tracked users" />
       </div>
 
       <Card>

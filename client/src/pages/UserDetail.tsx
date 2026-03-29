@@ -267,10 +267,10 @@ export function UserDetail() {
 
       {/* Stat cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:'1rem', marginBottom:'1.5rem' }}>
-        <StatCard label="Today" value={todayMins?minsToHours(todayMins):'--'} sub="hours active" color="var(--green)" />
-        <StatCard label="This week" value={weekMins?minsToHours(weekMins):'--'} sub="last 7 days" color="var(--accent)" />
-        <StatCard label="This month" value={stats?.totalMinutes?minsToHours(stats.totalMinutes):'--'} sub="last 30 days" color="var(--accent2)" />
-        <StatCard label="Avg / active day" value={stats?.avgPerActiveDay?minsToHours(stats.avgPerActiveDay):'--'} sub="active days only" color="var(--yellow)" />
+        <StatCard label="Today" value={todayMins?minsToHours(todayMins):'--'} sub="hours active" />
+        <StatCard label="This week" value={weekMins?minsToHours(weekMins):'--'} sub="last 7 days" />
+        <StatCard label="This month" value={stats?.totalMinutes?minsToHours(stats.totalMinutes):'--'} sub="last 30 days" />
+        <StatCard label="Avg / active day" value={stats?.avgPerActiveDay?minsToHours(stats.avgPerActiveDay):'--'} sub="active days only" />
         <StatCard label="Active days" value={stats?.activeDays??'--'} sub="in last 30 days" />
       </div>
 
