@@ -18,6 +18,11 @@ async function pollSlackStatuses() {
           try {
             const presence = await client.users.getPresence({ user: user.platform_user_id });
             const isActive = presence.presence === 'active';
+              // Write presence snapshot for heatmap
+              await db.query(
+                'INSERT INTO presence_snapshots (org_id, user_id, polled_at, is_active) VALUES ($1,$2,NOW(),$3)',
+                [integration.org_id, user.id, isActive]
+              );
             const key = user.id;
             const now = new Date();
             const today = now.toISOString().split('T')[0];
