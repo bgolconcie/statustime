@@ -4,6 +4,7 @@ export interface Org {
   subscription_status: 'trial' | 'active' | 'past_due' | 'cancelled'
   trial_ends_at: string
   plan: 'trial' | 'standard' | 'pro'
+  plan_seats: number
 }
 
 export interface User {
@@ -98,6 +99,7 @@ export interface Stats {
   totalUsers: number
   todayMinutes: number
   weekMinutes: number
+  trackedSeats: number
 }
 
 export interface TimesheetDay { date: string; hours: number }

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { api } from '../../api'
-import type { User, Stats } from '../../types'
+import type { User, Stats, Org } from '../../types'
 import { StatCard } from '../../components/ui/StatCard'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Avatar } from '../../components/ui/Avatar'
@@ -37,15 +37,42 @@ export function Overview() {
   const [presenceLoading, setPresenceLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('member')
+  const [seatPopup, setSeatPopup] = useState<{ user: User; need: number } | null>(null)
+  const [addingSeats, setAddingSeats] = useState(false)
+  const [seatError, setSeatError] = useState('')
   const navigate = useNavigate()
+  const { org, planSeats } = useOutletContext<{ org: Org | null; planSeats: number; trackedCount: number }>()
+
+  const trackedCount = users.filter(u => u.tracking_enabled !== false).length
 
   const toggleTracking = async (u: User, e: React.MouseEvent) => {
     e.stopPropagation()
     const next = !u.tracking_enabled
+    // Enabling: check seat limit for active subscriptions
+    if (next && org?.subscription_status === 'active' && planSeats > 0 && trackedCount >= planSeats) {
+      setSeatPopup({ user: u, need: trackedCount - planSeats + 1 })
+      return
+    }
     setUsers(prev => prev.map(x => x.id === u.id ? { ...x, tracking_enabled: next } : x))
     await api.toggleTracking(u.id, next).catch(() =>
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, tracking_enabled: !next } : x))
     )
+  }
+
+  const addSeatsAndEnable = async () => {
+    if (!seatPopup) return
+    setAddingSeats(true)
+    setSeatError('')
+    try {
+      await api.addSeats(seatPopup.need)
+      setUsers(prev => prev.map(x => x.id === seatPopup.user.id ? { ...x, tracking_enabled: true } : x))
+      await api.toggleTracking(seatPopup.user.id, true)
+      setSeatPopup(null)
+    } catch (err) {
+      setSeatError(err instanceof Error ? err.message : 'Failed to add seats')
+    } finally {
+      setAddingSeats(false)
+    }
   }
   const times = useTzClock(users)
 
@@ -78,6 +105,28 @@ export function Overview() {
 
   return (
     <>
+      {seatPopup && (
+        <div onClick={() => { setSeatPopup(null); setSeatError('') }} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:420, padding:'1.75rem', boxShadow:'0 24px 64px rgba(0,0,0,0.18)' }}>
+            <div style={{ fontWeight:800, fontSize:'1rem', marginBottom:'0.6rem' }}>Seat limit reached</div>
+            <p style={{ fontSize:'0.875rem', color:'var(--muted)', marginBottom:'1.25rem', lineHeight:1.6 }}>
+              You're using <strong>{trackedCount}/{planSeats}</strong> seats. To track <strong>{seatPopup.user.display_name}</strong> you need to add <strong>{seatPopup.need} seat{seatPopup.need > 1 ? 's' : ''}</strong> to your plan.
+            </p>
+            <p style={{ fontSize:'0.8rem', color:'var(--muted)', marginBottom:'1.25rem' }}>
+              This will immediately charge a prorated amount for the current billing period.
+            </p>
+            {seatError && <div style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:8, padding:'0.5rem 0.75rem', fontSize:'0.78rem', color:'#dc2626', marginBottom:'1rem' }}>{seatError}</div>}
+            <div style={{ display:'flex', gap:'0.75rem' }}>
+              <button onClick={addSeatsAndEnable} disabled={addingSeats} style={{ flex:1, background:'var(--accent)', color:'#fff', border:'none', borderRadius:8, padding:'0.75rem', fontWeight:700, fontSize:'0.875rem', cursor:'pointer', opacity: addingSeats ? 0.7 : 1 }}>
+                {addingSeats ? 'Adding...' : `Add ${seatPopup.need} seat${seatPopup.need > 1 ? 's' : ''} & enable`}
+              </button>
+              <button onClick={() => { setSeatPopup(null); setSeatError('') }} style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'0.75rem 1rem', fontWeight:600, fontSize:'0.875rem', cursor:'pointer', color:'var(--muted)' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontFamily:'Inter,sans-serif', fontSize:'1.6rem', fontWeight:800, letterSpacing:'-0.5px' }}>Overview</h1>
         <p style={{ color:'var(--muted)', fontSize:'0.875rem', marginTop:'0.25rem' }}>

@@ -216,12 +216,13 @@ router.get('/integrations', auth, async (req, res) => {
 
 router.get('/stats', auth, async (req, res) => {
   try {
-    const [u,t,w] = await Promise.all([
+    const [u,t,w,s] = await Promise.all([
       db.query('SELECT COUNT(*) FROM tracked_users WHERE org_id=$1 AND is_active=true',[req.org.id]),
       db.query('SELECT COALESCE(SUM(duration_minutes),0) as total FROM time_sessions WHERE org_id=$1 AND date=CURRENT_DATE',[req.org.id]),
       db.query('SELECT COALESCE(SUM(duration_minutes),0) as total FROM time_sessions WHERE org_id=$1 AND date>=CURRENT_DATE-6',[req.org.id]),
+      db.query('SELECT COUNT(*) FROM tracked_users WHERE org_id=$1 AND is_active=true AND tracking_enabled=true',[req.org.id]),
     ]);
-    res.json({ totalUsers:parseInt(u.rows[0].count), todayMinutes:parseInt(t.rows[0].total), weekMinutes:parseInt(w.rows[0].total) });
+    res.json({ totalUsers:parseInt(u.rows[0].count), todayMinutes:parseInt(t.rows[0].total), weekMinutes:parseInt(w.rows[0].total), trackedSeats:parseInt(s.rows[0].count) });
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -426,7 +427,7 @@ router.get('/reports/invoice', auth, async (req, res) => {
   try {
     const users = await db.query(
       `SELECT id, display_name, price_type, price_amount, currency, project_name
-       FROM tracked_users WHERE org_id=$1 AND is_active=true AND price_amount > 0`,
+       FROM tracked_users WHERE org_id=$1 AND is_active=true AND tracking_enabled=true AND price_amount > 0`,
       [req.org.id]
     );
     if (!users.rows.length) return res.json({ from, to, lines: [], total: 0 });
@@ -491,7 +492,7 @@ router.get('/reports/timesheet', auth, async (req, res) => {
   try {
     const users = await db.query(
       `SELECT id, display_name, project_name, timezone
-       FROM tracked_users WHERE org_id=$1 AND is_active=true
+       FROM tracked_users WHERE org_id=$1 AND is_active=true AND tracking_enabled=true
        ORDER BY project_name NULLS LAST, display_name`,
       [req.org.id]
     );

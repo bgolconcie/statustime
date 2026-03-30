@@ -153,6 +153,10 @@ export function AppLayout() {
     ? (org.plan === 'standard' ? 'Standard' : 'Pro')
     : 'Free'
 
+  const trackedCount = users.filter(u => u.tracking_enabled !== false).length
+  const planSeats = org?.plan_seats || 0
+  const overLimit = org?.subscription_status === 'active' && planSeats > 0 && trackedCount > planSeats
+
   const navItems = [
     { to: '/dashboard', label: 'Overview', icon: 'grid', end: true },
     { to: '/dashboard/team', label: 'Team Hours', icon: 'users' },
@@ -234,6 +238,15 @@ export function AppLayout() {
                 }}>
                   {planLabel}
                 </span>
+                {org.subscription_status === 'active' && planSeats > 0 && (
+                  <span style={{
+                    fontSize: '0.68rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 100,
+                    background: overLimit ? 'rgba(220,38,38,0.1)' : 'rgba(0,0,0,0.05)',
+                    color: overLimit ? '#dc2626' : 'var(--muted)',
+                  }}>
+                    {trackedCount}/{planSeats}
+                  </span>
+                )}
                 {org.subscription_status !== 'active' && (
                   <span style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>{trialDays}d left</span>
                 )}
@@ -262,7 +275,7 @@ export function AppLayout() {
       </aside>
 
       <main style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
-        <Outlet />
+        <Outlet context={{ org, planSeats, trackedCount }} />
       </main>
 
       <Toast message={toast.message} type={toast.type} visible={toast.visible} />

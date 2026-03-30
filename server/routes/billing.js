@@ -115,9 +115,10 @@ router.post('/webhook', require('express').raw({ type: 'application/json' }), as
     const orgId = obj.metadata?.org_id;
     const plan  = obj.metadata?.plan || 'pro';
     if (orgId) {
+      const qty = obj.amount_subtotal > 0 ? (obj.line_items?.data?.[0]?.quantity || 1) : 1;
       await db.query(
-        'UPDATE organizations SET subscription_status=$1, stripe_subscription_id=$2, plan=$3 WHERE id=$4',
-        ['active', obj.subscription, plan, orgId]
+        'UPDATE organizations SET subscription_status=$1, stripe_subscription_id=$2, plan=$3, plan_seats=$4 WHERE id=$5',
+        ['active', obj.subscription, plan, qty, orgId]
       );
     }
   }
@@ -140,6 +141,28 @@ router.post('/webhook', require('express').raw({ type: 'application/json' }), as
   }
 
   res.json({ received: true });
+});
+
+// Add seats to existing subscription (immediate proration charge)
+router.post('/seats/add', auth, async (req, res) => {
+  const { seats } = req.body;
+  if (!seats || seats < 1) return res.status(400).json({ error: 'seats must be >= 1' });
+  try {
+    const { rows: [org] } = await db.query('SELECT * FROM organizations WHERE id=$1', [req.org.id]);
+    if (!org.stripe_subscription_id) return res.status(400).json({ error: 'No active subscription' });
+    const subscription = await getStripe().subscriptions.retrieve(org.stripe_subscription_id);
+    const item = subscription.items.data[0];
+    const newQty = (item.quantity || 1) + parseInt(seats);
+    await getStripe().subscriptions.update(org.stripe_subscription_id, {
+      items: [{ id: item.id, quantity: newQty }],
+      proration_behavior: 'always_invoice',
+    });
+    await db.query('UPDATE organizations SET plan_seats=$1 WHERE id=$2', [newQty, org.id]);
+    res.json({ plan_seats: newQty });
+  } catch (err) {
+    console.error('Add seats error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = { router, setupStripeProducts };

@@ -44,4 +44,5 @@ export const api = {
   timesheet: (from: string, to: string) => req<Timesheet>(`/api/dashboard/reports/timesheet?from=${from}&to=${to}`),
   billingCheckout: (plan: 'standard' | 'pro', billing: 'monthly' | 'yearly' = 'monthly') => req<{ url: string }>('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ plan, billing }) }),
   billingPortal: () => req<{ url: string }>('/api/billing/portal', { method: 'POST' }),
+  addSeats: (seats: number) => req<{ plan_seats: number }>('/api/billing/seats/add', { method: 'POST', body: JSON.stringify({ seats }) }),
 }

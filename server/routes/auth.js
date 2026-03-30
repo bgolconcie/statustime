@@ -41,7 +41,7 @@ router.post('/login', async (req, res) => {
 
 router.get('/me', require('../middleware/auth'), async (req, res) => {
   try {
-    const result = await db.query('SELECT id, name, email, subscription_status, trial_ends_at, stripe_subscription_id, plan FROM organizations WHERE id = $1', [req.org.id]);
+    const result = await db.query('SELECT id, name, email, subscription_status, trial_ends_at, stripe_subscription_id, plan, plan_seats FROM organizations WHERE id = $1', [req.org.id]);
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
