@@ -21,6 +21,7 @@ export interface User {
   price_type: string
   price_amount: number | null
   currency: string
+  tracking_enabled: boolean
 }
 
 export interface UserDetail extends User {

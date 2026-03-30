@@ -8,7 +8,7 @@ router.get('/users', auth, async (req, res) => {
   try {
     const result = await db.query(
       `SELECT tu.id, tu.platform_user_id, tu.display_name, tu.email, tu.avatar_url, tu.user_type, tu.timezone,
-        tu.project_name, tu.price_type, tu.price_amount, tu.currency,
+        tu.project_name, tu.price_type, tu.price_amount, tu.currency, tu.tracking_enabled,
         i.platform, i.team_name,
         COALESCE(today.minutes,0) as today_minutes,
         COALESCE(week.minutes,0) as week_minutes
@@ -568,6 +568,21 @@ router.patch('/users/:userId/billing', auth, async (req, res) => {
     );
     const result = await db.query('SELECT cost_type,cost_amount,price_type,price_amount,currency,project_name FROM tracked_users WHERE id=$1', [req.params.userId]);
     res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Toggle tracking on/off for a user
+router.patch('/users/:userId/tracking', auth, async (req, res) => {
+  const { tracking_enabled } = req.body;
+  try {
+    await db.query(
+      'UPDATE tracked_users SET tracking_enabled=$1 WHERE id=$2 AND org_id=$3',
+      [!!tracking_enabled, req.params.userId, req.org.id]
+    );
+    res.json({ tracking_enabled: !!tracking_enabled });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

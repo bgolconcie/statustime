@@ -38,6 +38,8 @@ export const api = {
   slackSync: () => req<{ success: boolean; synced: number; breakdown: Record<string, number> }>('/api/slack/sync', { method: 'POST' }),
   updateUserBilling: (id: string, data: { cost_type?: string; cost_amount?: number | null; price_type: string; price_amount: number | null; currency: string; project_name?: string | null }) =>
     req(`/api/dashboard/users/${id}/billing`, { method: 'PATCH', body: JSON.stringify(data) }),
+  toggleTracking: (id: string, tracking_enabled: boolean) =>
+    req(`/api/dashboard/users/${id}/tracking`, { method: 'PATCH', body: JSON.stringify({ tracking_enabled }) }),
   invoice: (from: string, to: string) => req<Invoice>(`/api/dashboard/reports/invoice?from=${from}&to=${to}`),
   timesheet: (from: string, to: string) => req<Timesheet>(`/api/dashboard/reports/timesheet?from=${from}&to=${to}`),
   billingCheckout: (plan: 'standard' | 'pro', billing: 'monthly' | 'yearly' = 'monthly') => req<{ url: string }>('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ plan, billing }) }),

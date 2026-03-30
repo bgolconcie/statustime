@@ -38,6 +38,15 @@ export function Overview() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('member')
   const navigate = useNavigate()
+
+  const toggleTracking = async (u: User, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const next = !u.tracking_enabled
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, tracking_enabled: next } : x))
+    await api.toggleTracking(u.id, next).catch(() =>
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, tracking_enabled: !next } : x))
+    )
+  }
   const times = useTzClock(users)
 
   useEffect(() => {
@@ -96,14 +105,14 @@ export function Overview() {
         } />
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
-            <tr>{['Member','Status','Today','This Week'].map(h => (
+            <tr>{['Member','Status','Today','This Week','Tracked'].map(h => (
               <th key={h} style={{fontSize:'0.7rem',textTransform:'uppercase',letterSpacing:'0.05em',color:'var(--muted)',padding:'0.75rem 1.25rem',textAlign:'left',borderBottom:'1px solid var(--border)',fontWeight:500}}>{h}</th>
             ))}</tr>
           </thead>
           <tbody>
             {filtered.map(u => (
               <tr key={u.id} onClick={() => navigate(`/dashboard/user/${u.id}`)}
-                style={{ cursor:'pointer', transition:'background 0.1s' }}
+                style={{ cursor:'pointer', transition:'background 0.1s', opacity: u.tracking_enabled === false ? 0.45 : 1 }}
                 onMouseEnter={e => (e.currentTarget.style.background='var(--surface2)')}
                 onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
                 <td style={{ padding:'0.85rem 1.25rem', borderBottom:'1px solid var(--border)', fontSize:'0.875rem' }}>
@@ -127,13 +136,27 @@ export function Overview() {
                 <td style={{ padding:'0.85rem 1.25rem', borderBottom:'1px solid var(--border)' }}>
                   <HoursBar minutes={u.week_minutes} max={maxWeek} color="var(--accent2)" />
                 </td>
+                <td style={{ padding:'0.85rem 1.25rem', borderBottom:'1px solid var(--border)' }} onClick={e => toggleTracking(u, e)}>
+                  <div style={{
+                    width:36, height:20, borderRadius:10, cursor:'pointer', transition:'background 0.2s',
+                    background: u.tracking_enabled !== false ? 'var(--green)' : 'var(--border)',
+                    position:'relative', flexShrink:0,
+                  }}>
+                    <div style={{
+                      position:'absolute', top:2, transition:'left 0.2s',
+                      left: u.tracking_enabled !== false ? 18 : 2,
+                      width:16, height:16, borderRadius:'50%', background:'#fff',
+                      boxShadow:'0 1px 3px rgba(0,0,0,0.2)',
+                    }} />
+                  </div>
+                </td>
               </tr>
             ))}
             {filtered.length === 0 && users.length > 0 && (
-              <tr><td colSpan={4} style={{ textAlign:'center', color:'var(--muted)', padding:'2rem' }}>No users match this filter</td></tr>
+              <tr><td colSpan={5} style={{ textAlign:'center', color:'var(--muted)', padding:'2rem' }}>No users match this filter</td></tr>
             )}
             {users.length === 0 && (
-              <tr><td colSpan={4} style={{ textAlign:'center', color:'var(--muted)', padding:'3rem' }}>Loading...</td></tr>
+              <tr><td colSpan={5} style={{ textAlign:'center', color:'var(--muted)', padding:'3rem' }}>Loading...</td></tr>
             )}
           </tbody>
         </table>
