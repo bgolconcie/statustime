@@ -45,4 +45,9 @@ export const api = {
   billingCheckout: (plan: 'standard' | 'pro', billing: 'monthly' | 'yearly' = 'monthly') => req<{ url: string }>('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ plan, billing }) }),
   billingPortal: () => req<{ url: string }>('/api/billing/portal', { method: 'POST' }),
   addSeats: (seats: number) => req<{ plan_seats: number }>('/api/billing/seats/add', { method: 'POST', body: JSON.stringify({ seats }) }),
+  // Instagram
+  instagramInstall: () => req<{ url: string }>('/api/instagram/install'),
+  instagramPosts: (limit = 10) => req<{ username: string; posts: any[] }>(`/api/instagram/posts?limit=${limit}`),
+  instagramReply: (commentId: string, message: string) => req<{ success: boolean; reply_id: string }>(`/api/instagram/comments/${commentId}/reply`, { method: 'POST', body: JSON.stringify({ message }) }),
+  instagramHideComment: (commentId: string) => req<{ success: boolean }>(`/api/instagram/comments/${commentId}`, { method: 'DELETE' }),
 }
