@@ -7,6 +7,7 @@ import { Leave } from './pages/dashboard/Leave'
 import { Integrations } from './pages/dashboard/Integrations'
 import { Reports } from './pages/dashboard/Reports'
 import { UserDetail } from './pages/UserDetail'
+import { InstagramComments } from './pages/dashboard/InstagramComments'
 import { useTheme } from './hooks/useTheme'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="leave" element={<Leave />} />
           <Route path="integrations" element={<Integrations />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="instagram-comments" element={<InstagramComments />} />
           <Route path="user/:id" element={<UserDetail />} />
         </Route>
         <Route path="/user/:id" element={<Navigate to="/dashboard/user/:id" replace />} />
