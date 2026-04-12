@@ -22,6 +22,7 @@ app.use('/api/', rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/slack', require('./routes/slack').router);
+app.use('/api/instagram', require('./routes/instagram'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/billing', require('./routes/billing').router);
 
