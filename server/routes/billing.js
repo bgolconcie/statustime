@@ -10,6 +10,23 @@ function getStripe() {
   return _stripe;
 }
 
+// Founder orgs are exempt from any Stripe-driven plan/seat/status mutation.
+// They keep whatever plan/seats are set in DB regardless of webhook activity.
+const FOUNDER_EMAILS = (process.env.FOUNDER_EMAILS || 'bgol@benigo.com')
+  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+async function isFounderOrgById(orgId) {
+  if (!orgId) return false;
+  const { rows } = await db.query('SELECT email FROM organizations WHERE id=$1', [orgId]);
+  return rows.length > 0 && FOUNDER_EMAILS.includes((rows[0].email || '').toLowerCase());
+}
+
+async function isFounderOrgBySub(subId) {
+  if (!subId) return false;
+  const { rows } = await db.query('SELECT email FROM organizations WHERE stripe_subscription_id=$1', [subId]);
+  return rows.length > 0 && FOUNDER_EMAILS.includes((rows[0].email || '').toLowerCase());
+}
+
 // Debug: raw connectivity test
 router.get('/ping', async (req, res) => {
   const https = require('https');
@@ -114,7 +131,7 @@ router.post('/webhook', require('express').raw({ type: 'application/json' }), as
   if (event.type === 'checkout.session.completed') {
     const orgId = obj.metadata?.org_id;
     const plan  = obj.metadata?.plan || 'pro';
-    if (orgId) {
+    if (orgId && !(await isFounderOrgById(orgId))) {
       const qty = obj.amount_subtotal > 0 ? (obj.line_items?.data?.[0]?.quantity || 1) : 1;
       await db.query(
         'UPDATE organizations SET subscription_status=$1, stripe_subscription_id=$2, plan=$3, plan_seats=$4 WHERE id=$5',
@@ -124,20 +141,24 @@ router.post('/webhook', require('express').raw({ type: 'application/json' }), as
   }
 
   if (event.type === 'customer.subscription.updated') {
-    const status = obj.status === 'active' ? 'active' : 'past_due';
-    const activePriceId = obj.items?.data[0]?.price?.id;
-    const plan = (activePriceId === priceIds.standard || activePriceId === priceIds.standard_yearly) ? 'standard'
-               : (activePriceId === priceIds.pro      || activePriceId === priceIds.pro_yearly)      ? 'pro'
-               : null;
-    if (plan) {
-      await db.query('UPDATE organizations SET subscription_status=$1, plan=$2 WHERE stripe_subscription_id=$3', [status, plan, obj.id]);
-    } else {
-      await db.query('UPDATE organizations SET subscription_status=$1 WHERE stripe_subscription_id=$2', [status, obj.id]);
+    if (!(await isFounderOrgBySub(obj.id))) {
+      const status = obj.status === 'active' ? 'active' : 'past_due';
+      const activePriceId = obj.items?.data[0]?.price?.id;
+      const plan = (activePriceId === priceIds.standard || activePriceId === priceIds.standard_yearly) ? 'standard'
+                 : (activePriceId === priceIds.pro      || activePriceId === priceIds.pro_yearly)      ? 'pro'
+                 : null;
+      if (plan) {
+        await db.query('UPDATE organizations SET subscription_status=$1, plan=$2 WHERE stripe_subscription_id=$3', [status, plan, obj.id]);
+      } else {
+        await db.query('UPDATE organizations SET subscription_status=$1 WHERE stripe_subscription_id=$2', [status, obj.id]);
+      }
     }
   }
 
   if (event.type === 'customer.subscription.deleted') {
-    await db.query('UPDATE organizations SET subscription_status=$1, plan=$2 WHERE stripe_subscription_id=$3', ['cancelled', 'trial', obj.id]);
+    if (!(await isFounderOrgBySub(obj.id))) {
+      await db.query('UPDATE organizations SET subscription_status=$1, plan=$2 WHERE stripe_subscription_id=$3', ['cancelled', 'trial', obj.id]);
+    }
   }
 
   res.json({ received: true });
