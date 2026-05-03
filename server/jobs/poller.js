@@ -33,8 +33,8 @@ async function pollSlackStatuses() {
                 const session = activeSessions.get(key);
                 const mins = Math.round((now - session.startedAt) / 60000);
                 if (mins >= 1) {
-                  await db.query(`INSERT INTO time_sessions (user_id,org_id,started_at,ended_at,duration_minutes,date)
-                    VALUES ($1,$2,$3,$4,$5,$6)`,
+                  await db.query(`INSERT INTO time_sessions (user_id,org_id,started_at,ended_at,duration_minutes,date,status_at_start)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7)`,
                     [user.id, session.orgId, session.startedAt, now, mins, session.date, 'active']);
                 }
                 activeSessions.delete(key);
@@ -56,8 +56,8 @@ async function flushActiveSessions() {
     const mins = Math.round((now - session.startedAt) / 60000);
     if (mins >= 1) {
       try {
-        await db.query(`INSERT INTO time_sessions (user_id,org_id,started_at,ended_at,duration_minutes,date)
-          VALUES ($1,$2,$3,$4,$5,$6)`,
+        await db.query(`INSERT INTO time_sessions (user_id,org_id,started_at,ended_at,duration_minutes,date,status_at_start)
+          VALUES ($1,$2,$3,$4,$5,$6,$7)`,
           [key, session.orgId, session.startedAt, now, mins, session.date, 'active']);
       } catch (err) { console.error('Flush error:', err.message); }
     }

@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 
@@ -13,7 +13,9 @@ export function Login() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  if (localStorage.getItem('st_token')) { navigate('/dashboard'); return null }
+  useEffect(() => {
+    if (localStorage.getItem('st_token')) navigate('/dashboard', { replace: true })
+  }, [])
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
