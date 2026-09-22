@@ -1,18 +1,19 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
 // Local-only persistence until there is a backend
-const LISTINGS_KEY = 'sellfree.listings'
+// v2: categories/conditions stored as ids, listings carry their currency
+const LISTINGS_KEY = 'sellfree.listings.v2'
 const AGE_KEY = 'sellfree.age'
 
 const SEED = [
-  { id: 's1', title: 'Wooden stacking blocks', category: 'Toys & Games', condition: 'Good', price: 12, ageGroups: ['baby', 'kids'], description: '30 blocks, natural wood.', mine: false },
-  { id: 's2', title: 'Kids bike 16"', category: 'Sports', condition: 'Like new', price: 60, ageGroups: ['kids'], description: 'Training wheels included.', mine: false },
-  { id: 's3', title: 'Harry Potter box set', category: 'Books', condition: 'Good', price: 35, ageGroups: ['kids', 'teens', 'adults'], description: 'All 7 books, paperback.', mine: false },
-  { id: 's4', title: 'Gaming headset', category: 'Electronics', condition: 'Like new', price: 40, ageGroups: ['teens', 'adults'], description: 'Wired, USB + 3.5mm.', mine: false },
-  { id: 's5', title: 'Office chair', category: 'Furniture', condition: 'Fair', price: 0, ageGroups: ['adults', 'seniors'], description: 'Free, pick up only.', mine: false },
-  { id: 's6', title: 'Baby clothes bundle 6–12m', category: 'Clothing', condition: 'Good', price: 20, ageGroups: ['baby'], description: '15 pieces, mostly cotton.', mine: false },
-  { id: 's7', title: 'Large-print crossword books', category: 'Books', condition: 'New', price: 8, ageGroups: ['seniors'], description: 'Set of 3, unused.', mine: false },
-]
+  { id: 's1', title: { en: 'Wooden stacking blocks', he: 'קוביות עץ להרכבה' }, description: { en: '30 blocks, natural wood.', he: '30 קוביות, עץ טבעי.' }, category: 'toys', condition: 'good', price: 12, ageGroups: ['baby', 'kids'] },
+  { id: 's2', title: { en: 'Kids bike 16"', he: 'אופני ילדים 16 אינץ\'' }, description: { en: 'Training wheels included.', he: 'כולל גלגלי עזר.' }, category: 'sports', condition: 'likeNew', price: 60, ageGroups: ['kids'] },
+  { id: 's3', title: { en: 'Harry Potter box set', he: 'סדרת הארי פוטר' }, description: { en: 'All 7 books, paperback.', he: 'כל 7 הספרים, כריכה רכה.' }, category: 'books', condition: 'good', price: 35, ageGroups: ['kids', 'teens', 'adults'] },
+  { id: 's4', title: { en: 'Gaming headset', he: 'אוזניות גיימינג' }, description: { en: 'Wired, USB + 3.5mm.', he: 'חוטיות, USB ו-3.5 מ"מ.' }, category: 'electronics', condition: 'likeNew', price: 40, ageGroups: ['teens', 'adults'] },
+  { id: 's5', title: { en: 'Office chair', he: 'כיסא משרדי' }, description: { en: 'Free, pick up only.', he: 'בחינם, איסוף עצמי בלבד.' }, category: 'furniture', condition: 'fair', price: 0, ageGroups: ['adults', 'seniors'] },
+  { id: 's6', title: { en: 'Baby clothes bundle 6–12m', he: 'חבילת בגדי תינוקות 6–12 חודשים' }, description: { en: '15 pieces, mostly cotton.', he: '15 פריטים, רובם כותנה.' }, category: 'clothing', condition: 'good', price: 20, ageGroups: ['baby'] },
+  { id: 's7', title: { en: 'Large-print crossword books', he: 'חוברות תשבצים באותיות גדולות' }, description: { en: 'Set of 3, unused.', he: 'סט של 3, לא בשימוש.' }, category: 'books', condition: 'new', price: 8, ageGroups: ['seniors'] },
+].map((l) => ({ ...l, currency: 'USD', mine: false }))
 
 function load(key, fallback) {
   try {

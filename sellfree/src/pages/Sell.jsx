@@ -11,11 +11,13 @@ import { AGE_GROUPS, CATEGORIES, CONDITIONS } from '@/lib/catalog'
 import { fileToThumbnail } from '@/lib/image'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 
 const EMPTY = { title: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null }
 
 export default function Sell() {
   const { addListing, listings } = useStore()
+  const { t, ageRange, currency, currencySymbol } = useI18n()
   const navigate = useNavigate()
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState('')
@@ -38,9 +40,9 @@ export default function Sell() {
 
   const submit = (addAnother) => (e) => {
     e.preventDefault()
-    if (!form.title.trim()) return setError('Add a title for your item.')
-    if (!form.ageGroups.length) return setError('Pick at least one age group.')
-    addListing({ ...form, title: form.title.trim(), price: Math.max(0, Number(form.price) || 0) })
+    if (!form.title.trim()) return setError(t('sell.errorTitle'))
+    if (!form.ageGroups.length) return setError(t('sell.errorAges'))
+    addListing({ ...form, title: form.title.trim(), price: Math.max(0, Number(form.price) || 0), currency })
     setError('')
     if (addAnother) setForm(EMPTY)
     else navigate('/my-listings')
@@ -51,9 +53,9 @@ export default function Sell() {
       <form onSubmit={submit(false)}>
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Sell an item</CardTitle>
+            <CardTitle className="text-xl">{t('sell.title')}</CardTitle>
             <CardDescription>
-              List as many items as you want — there's no limit. You have {myCount} listed so far.
+              {t('sell.subtitle', { count: myCount })}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-5">
@@ -68,68 +70,72 @@ export default function Sell() {
               ) : (
                 <>
                   <ImagePlus className="size-6" />
-                  Add a photo
+                  {t('sell.photo')}
                 </>
               )}
               <input type="file" accept="image/*" className="sr-only" onChange={onImage} />
             </label>
 
             <div className="grid gap-2">
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" placeholder="What are you selling?" value={form.title} onChange={set('title')} />
+              <Label htmlFor="title">{t('sell.titleLabel')}</Label>
+              <Input id="title" placeholder={t('sell.titlePlaceholder')} value={form.title} onChange={set('title')} />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" placeholder="Size, brand, anything a buyer should know" value={form.description} onChange={set('description')} />
+              <Label htmlFor="description">{t('sell.description')}</Label>
+              <Textarea id="description" placeholder={t('sell.descriptionPlaceholder')} value={form.description} onChange={set('description')} />
             </div>
 
             <div className="grid gap-5 sm:grid-cols-3">
               <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">{t('sell.category')}</Label>
                 <NativeSelect id="category" value={form.category} onChange={set('category')}>
                   {CATEGORIES.map((c) => (
-                    <option key={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {t(`category.${c}`)}
+                    </option>
                   ))}
                 </NativeSelect>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="condition">Condition</Label>
+                <Label htmlFor="condition">{t('sell.condition')}</Label>
                 <NativeSelect id="condition" value={form.condition} onChange={set('condition')}>
                   {CONDITIONS.map((c) => (
-                    <option key={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {t(`condition.${c}`)}
+                    </option>
                   ))}
                 </NativeSelect>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="price">Price ($)</Label>
-                <Input id="price" type="number" min={0} placeholder="0 = free" value={form.price} onChange={set('price')} />
+                <Label htmlFor="price">{t('sell.price', { currency: currencySymbol })}</Label>
+                <Input id="price" type="number" min={0} placeholder={t('sell.pricePlaceholder')} value={form.price} onChange={set('price')} />
               </div>
             </div>
 
             <div className="grid gap-2">
-              <Label>Suitable for ages</Label>
+              <Label>{t('sell.ages')}</Label>
               <div className="flex flex-wrap gap-2">
                 {AGE_GROUPS.map((g) => {
                   const active = form.ageGroups.includes(g.id)
                   return (
                     <Button key={g.id} type="button" size="sm" variant={active ? 'default' : 'outline'} onClick={() => toggleAge(g.id)}>
                       {active && <Check />}
-                      {g.label} <span className="opacity-70">{g.range}</span>
+                      {t(`ageGroup.${g.id}`)} <span className="opacity-70">{ageRange(g.id)}</span>
                     </Button>
                   )
                 })}
               </div>
-              <p className="text-xs text-muted-foreground">Buyers shopping for these ages will see your item first.</p>
+              <p className="text-xs text-muted-foreground">{t('sell.agesHint')}</p>
             </div>
 
             {error && <p className="text-sm font-medium text-red-600">{error}</p>}
           </CardContent>
           <CardFooter className="justify-end gap-2">
             <Button type="button" variant="outline" onClick={submit(true)}>
-              Publish & add another
+              {t('sell.publishAnother')}
             </Button>
-            <Button type="submit">Publish</Button>
+            <Button type="submit">{t('sell.publish')}</Button>
           </CardFooter>
         </Card>
       </form>

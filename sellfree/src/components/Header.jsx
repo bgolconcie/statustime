@@ -1,8 +1,11 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Plus, ShoppingBag } from 'lucide-react'
+import { Globe, Plus, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n'
 
 export default function Header() {
+  const { t, lang, setLang } = useI18n()
+
   return (
     <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
@@ -11,13 +14,17 @@ export default function Header() {
           SellFree
         </Link>
         <nav className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setLang(lang === 'he' ? 'en' : 'he')}>
+            <Globe />
+            {t('lang.switch')}
+          </Button>
           <Button variant="ghost" size="sm" asChild>
-            <NavLink to="/my-listings">My listings</NavLink>
+            <NavLink to="/my-listings">{t('nav.myListings')}</NavLink>
           </Button>
           <Button size="sm" asChild>
             <NavLink to="/sell">
               <Plus />
-              Sell an item
+              {t('nav.sell')}
             </NavLink>
           </Button>
         </nav>
