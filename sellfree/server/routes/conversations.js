@@ -23,6 +23,7 @@ function toSummary(row, me) {
     listing: {
       id: row.listing_id,
       title: row.title,
+      category: row.category,
       image: row.image,
       i18n: row.i18n ? JSON.parse(row.i18n) : null,
       price: row.price,
@@ -36,7 +37,7 @@ function toSummary(row, me) {
 }
 
 const SUMMARY = `
-  SELECT c.*, l.title, l.image, l.i18n, l.price, l.currency, l.status,
+  SELECT c.*, l.title, l.image, l.i18n, l.category, l.price, l.currency, l.status,
     CASE WHEN c.buyer_id = $me THEN s.name ELSE b.name END AS other_name,
     lm.body AS last_body, lm.sender_id AS last_sender, lm.created_at AS last_at,
     ${UNREAD} AS unread

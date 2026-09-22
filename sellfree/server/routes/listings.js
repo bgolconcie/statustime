@@ -21,6 +21,8 @@ export function toListing(row) {
     description: row.description,
     category: row.category,
     condition: row.condition,
+    brand: row.brand,
+    model: row.model,
     price: row.price,
     currency: row.currency,
     ageGroups: JSON.parse(row.age_groups),
@@ -34,6 +36,8 @@ export function toListing(row) {
 function parseListing(body) {
   const title = String(body.title ?? '').trim()
   const description = String(body.description ?? '').trim()
+  const brand = String(body.brand ?? '').trim()
+  const model = String(body.model ?? '').trim()
   const price = Number(body.price)
   const ageGroups = Array.isArray(body.ageGroups) ? [...new Set(body.ageGroups)] : []
   const image = body.image ?? null
@@ -41,6 +45,8 @@ function parseListing(body) {
   const valid =
     title && title.length <= 120 &&
     description.length <= 2000 &&
+    brand && brand.length <= 40 &&
+    model.length <= 80 &&
     CATEGORIES.includes(body.category) &&
     CONDITIONS.includes(body.condition) &&
     Number.isFinite(price) && price >= 0 && price <= 1_000_000 &&
@@ -49,7 +55,7 @@ function parseListing(body) {
     (image === null || (typeof image === 'string' && image.startsWith('data:image/') && image.length <= MAX_IMAGE_LENGTH))
 
   if (!valid) return null
-  return { title, description, category: body.category, condition: body.condition, price, currency: body.currency, ageGroups, image }
+  return { title, description, brand, model, category: body.category, condition: body.condition, price, currency: body.currency, ageGroups, image }
 }
 
 function ownListing(req, res) {
@@ -83,8 +89,8 @@ router.post('/', requireAuth, (req, res) => {
   if (!data) return res.status(400).json({ error: 'invalid_input' })
   const id = db
     .prepare(`
-      INSERT INTO listings (seller_id, title, description, category, condition, price, currency, age_groups, image, created_at)
-      VALUES ($seller, $title, $description, $category, $condition, $price, $currency, $ageGroups, $image, $createdAt)
+      INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, image, created_at)
+      VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, $currency, $ageGroups, $image, $createdAt)
     `)
     .run({ ...data, seller: req.user.id, ageGroups: JSON.stringify(data.ageGroups), createdAt: Date.now() }).lastInsertRowid
   res.status(201).json({ listing: toListing(db.prepare(`${SELECT} WHERE l.id = ?`).get(id)) })

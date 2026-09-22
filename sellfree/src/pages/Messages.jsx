@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useParams } from 'react-router-dom'
-import { ArrowLeft, ImageIcon, MessageCircle, SendHorizontal } from 'lucide-react'
+import { ArrowLeft, MessageCircle, SendHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import CategoryIcon from '@/components/CategoryIcon'
 import { api } from '@/lib/api'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -15,7 +16,7 @@ const LIST_POLL_MS = 10_000
 function Thumb({ listing, className }) {
   return (
     <div className={cn('flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted', className)}>
-      {listing.image ? <img src={listing.image} alt="" className="size-full object-cover" /> : <ImageIcon className="size-4 text-muted-foreground/50" />}
+      {listing.image ? <img src={listing.image} alt="" className="size-full object-cover" /> : <CategoryIcon category={listing.category} className="size-4 text-muted-foreground/50" />}
     </div>
   )
 }

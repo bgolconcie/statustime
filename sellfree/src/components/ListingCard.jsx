@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
-import { ImageIcon, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import CategoryIcon from '@/components/CategoryIcon'
 import { AGE_GROUPS } from '@/lib/catalog'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -30,7 +31,7 @@ export default function ListingCard({ item, matched, action }) {
           {item.image ? (
             <img src={item.image} alt={title} className={cn('size-full object-cover transition-transform group-hover:scale-[1.02]', sold && 'opacity-50')} />
           ) : (
-            <ImageIcon className="size-8 text-muted-foreground/50" />
+            <CategoryIcon category={item.category} className="size-10 text-muted-foreground/40" />
           )}
           {matched && (
             <Badge className="absolute start-3 top-3">
@@ -50,6 +51,11 @@ export default function ListingCard({ item, matched, action }) {
             <Badge variant="outline">{t(`condition.${item.condition}`)}</Badge>
           </div>
           <CardTitle dir="auto" className="pt-2 text-start group-hover:underline">{title}</CardTitle>
+          {(item.brand || item.model) && (
+            <p dir="auto" className="text-start text-sm font-medium text-muted-foreground">
+              {[item.brand, item.model].filter(Boolean).join(' · ')}
+            </p>
+          )}
           {description && <CardDescription dir="auto" className="line-clamp-2 text-start">{description}</CardDescription>}
           <p className="text-xs text-muted-foreground">
             <AgeGroupsText ageGroups={item.ageGroups} />

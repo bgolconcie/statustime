@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
 import bcrypt from 'bcryptjs'
+import { CATEGORIES } from '../src/lib/catalog.js'
 
 export const DATA_DIR = process.env.DATA_DIR ?? path.join(import.meta.dirname, 'data')
 fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -27,6 +28,8 @@ db.exec(`
     description TEXT NOT NULL DEFAULT '',
     category    TEXT NOT NULL,
     condition   TEXT NOT NULL,
+    brand       TEXT NOT NULL DEFAULT '',
+    model       TEXT NOT NULL DEFAULT '',
     price       REAL NOT NULL,
     currency    TEXT NOT NULL,
     age_groups  TEXT NOT NULL,            -- JSON array of age group ids
@@ -73,36 +76,55 @@ export function transaction(fn) {
   }
 }
 
+// v2: the marketplace is limited to phones, computers and TVs
+function migrate() {
+  if (db.prepare('PRAGMA user_version').get().user_version >= 2) return
+  const columns = db.prepare('PRAGMA table_info(listings)').all().map((c) => c.name)
+  if (!columns.includes('brand')) db.exec("ALTER TABLE listings ADD COLUMN brand TEXT NOT NULL DEFAULT ''")
+  if (!columns.includes('model')) db.exec("ALTER TABLE listings ADD COLUMN model TEXT NOT NULL DEFAULT ''")
+  db.prepare(`DELETE FROM listings WHERE category NOT IN (${CATEGORIES.map(() => '?').join(', ')})`).run(...CATEGORIES)
+  db.exec('PRAGMA user_version = 2')
+}
+
 // Demo data so a fresh install has something to browse and chat about
 function seed() {
-  if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n > 0) return
-
   const now = Date.now()
-  const hash = bcrypt.hashSync('demo1234', 10)
-  const addUser = db.prepare('INSERT INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)')
-  const dana = addUser.run('Dana', 'dana@sellfree.test', hash, now).lastInsertRowid
-  const yossi = addUser.run('Yossi', 'yossi@sellfree.test', hash, now).lastInsertRowid
+  if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n === 0) {
+    const hash = bcrypt.hashSync('demo1234', 10)
+    const addUser = db.prepare('INSERT INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)')
+    addUser.run('Dana', 'dana@sellfree.test', hash, now)
+    addUser.run('Yossi', 'yossi@sellfree.test', hash, now)
+  }
+  if (db.prepare('SELECT COUNT(*) AS n FROM listings').get().n > 0) return
+
+  const userId = (email) => db.prepare('SELECT id FROM users WHERE email = ?').get(email)?.id
+  const dana = userId('dana@sellfree.test')
+  const yossi = userId('yossi@sellfree.test')
+  if (!dana || !yossi) return
 
   const addListing = db.prepare(`
-    INSERT INTO listings (seller_id, title, description, category, condition, price, currency, age_groups, i18n, created_at)
-    VALUES ($seller, $title, $description, $category, $condition, $price, 'ILS', $ages, $i18n, $createdAt)
+    INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, i18n, created_at)
+    VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, 'ILS', $ages, $i18n, $createdAt)
   `)
   const items = [
-    [dana, ['Wooden stacking blocks', 'קוביות עץ להרכבה'], ['30 blocks, natural wood.', '30 קוביות, עץ טבעי.'], 'toys', 'good', 45, ['baby', 'kids']],
-    [dana, ['Kids bike 16"', 'אופני ילדים 16 אינץ\''], ['Training wheels included.', 'כולל גלגלי עזר.'], 'sports', 'likeNew', 220, ['kids']],
-    [dana, ['Baby clothes bundle 6–12m', 'חבילת בגדי תינוקות 6–12 חודשים'], ['15 pieces, mostly cotton.', '15 פריטים, רובם כותנה.'], 'clothing', 'good', 70, ['baby']],
-    [yossi, ['Harry Potter box set', 'סדרת הארי פוטר'], ['All 7 books, paperback.', 'כל 7 הספרים, כריכה רכה.'], 'books', 'good', 120, ['kids', 'teens', 'adults']],
-    [yossi, ['Gaming headset', 'אוזניות גיימינג'], ['Wired, USB + 3.5mm.', 'חוטיות, USB ו-3.5 מ"מ.'], 'electronics', 'likeNew', 150, ['teens', 'adults']],
-    [yossi, ['Office chair', 'כיסא משרדי'], ['Free, pick up only.', 'בחינם, איסוף עצמי בלבד.'], 'furniture', 'fair', 0, ['adults', 'seniors']],
-    [yossi, ['Large-print crossword books', 'חוברות תשבצים באותיות גדולות'], ['Set of 3, unused.', 'סט של 3, לא בשימוש.'], 'books', 'new', 30, ['seniors']],
+    [dana, 'phones', 'Apple', 'iPhone 13', ['iPhone 13, 128GB, blue', 'iPhone 13, 128GB, כחול'], ['Battery 87%, always used with a case.', 'סוללה 87%, תמיד היה עם כיסוי.'], 'likeNew', 1900, ['teens', 'adults']],
+    [dana, 'phones', 'Samsung', 'Galaxy A14', ['Samsung Galaxy A14 — great first phone', 'Samsung Galaxy A14 — טלפון ראשון מעולה'], ['Simple and durable, parental controls set up.', 'פשוט ועמיד, מוגדרות הגבלות הורים.'], 'good', 450, ['kids', 'teens']],
+    [dana, 'computers', 'Lenovo', 'IdeaPad 3', ['Lenovo IdeaPad 3 laptop, 15.6"', 'מחשב נייד Lenovo IdeaPad 3, 15.6 אינץ\''], ['Ryzen 5, 8GB RAM, 256GB SSD. Good for school.', 'Ryzen 5, 8GB RAM, 256GB SSD. מתאים ללימודים.'], 'good', 1300, ['kids', 'teens', 'adults']],
+    [yossi, 'computers', 'Apple', 'MacBook Air M1', ['MacBook Air M1, 2020', 'MacBook Air M1, 2020'], ['8GB / 256GB, 180 battery cycles, charger included.', '8GB / 256GB, 180 מחזורי סוללה, כולל מטען.'], 'likeNew', 2800, ['teens', 'adults']],
+    [yossi, 'tvs', 'LG', '55UQ7500', ['LG 55" 4K smart TV', 'טלוויזיה חכמה LG 55 אינץ\' 4K'], ['With remote and wall mount. Pick up in Tel Aviv.', 'כולל שלט ומתקן תלייה. איסוף מתל אביב.'], 'good', 1500, ['adults', 'seniors']],
+    [yossi, 'tvs', 'Samsung', 'UE32T4300', ['Samsung 32" TV', 'טלוויזיה Samsung 32 אינץ\''], ['Simple, big buttons on the remote.', 'פשוטה, שלט עם כפתורים גדולים.'], 'good', 400, ['kids', 'adults', 'seniors']],
+    [yossi, 'phones', 'Nokia', '105', ['Nokia 105 — basic phone, large keys', 'Nokia 105 — טלפון בסיסי עם מקשים גדולים'], ['Long battery life, easy to use.', 'סוללה שמחזיקה הרבה, קל לשימוש.'], 'new', 120, ['seniors']],
+    [dana, 'phones', 'Xiaomi', 'Redmi Note 10', ['Xiaomi Redmi Note 10, cracked screen', 'Xiaomi Redmi Note 10, מסך סדוק'], ['Works, but the screen is cracked. For parts or repair.', 'עובד, אבל המסך סדוק. לחלקים או לתיקון.'], 'forParts', 150, ['adults']],
   ]
-  const ids = items.map(([seller, [en, he], [dEn, dHe], category, condition, price, ages], i) =>
+  const ids = items.map(([seller, category, brand, model, [en, he], [dEn, dHe], condition, price, ages], i) =>
     addListing.run({
       seller,
       title: he,
       description: dHe,
       category,
       condition,
+      brand,
+      model,
       price,
       ages: JSON.stringify(ages),
       i18n: JSON.stringify({ title: { en, he }, description: { en: dEn, he: dHe } }),
@@ -110,14 +132,17 @@ function seed() {
     }).lastInsertRowid
   )
 
-  // Yossi asks Dana about the blocks
+  // Yossi asks Dana about the iPhone
   const convo = db
     .prepare('INSERT INTO conversations (listing_id, buyer_id, seller_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
     .run(ids[0], yossi, dana, now, now).lastInsertRowid
   const addMessage = db.prepare('INSERT INTO messages (conversation_id, sender_id, body, created_at) VALUES (?, ?, ?, ?)')
-  addMessage.run(convo, yossi, 'היי, הקוביות עדיין זמינות?', now - 120_000)
-  const last = addMessage.run(convo, dana, 'כן! אפשר לאסוף מחר בערב.', now - 60_000).lastInsertRowid
+  addMessage.run(convo, yossi, 'היי, האייפון עדיין זמין? מה מצב הסוללה?', now - 120_000)
+  const last = addMessage.run(convo, dana, 'כן! הסוללה 87%, אפשר לבוא לראות מחר.', now - 60_000).lastInsertRowid
   db.prepare('UPDATE conversations SET buyer_read_id = ?, seller_read_id = ? WHERE id = ?').run(last - 1, last, convo)
 }
 
-transaction(seed)
+transaction(() => {
+  migrate()
+  seed()
+})

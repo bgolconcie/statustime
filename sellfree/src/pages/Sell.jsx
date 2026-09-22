@@ -7,13 +7,14 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { AGE_GROUPS, CATEGORIES, CONDITIONS } from '@/lib/catalog'
+import { AGE_GROUPS, BRANDS, CATEGORIES, CONDITIONS } from '@/lib/catalog'
 import { fileToThumbnail } from '@/lib/image'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import CategoryIcon from '@/components/CategoryIcon'
 import { useI18n } from '@/i18n'
 
-const EMPTY = { title: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null }
+const EMPTY = { title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null }
 
 export default function Sell() {
   const { t, ageRange, errorText, currency, currencySymbol } = useI18n()
@@ -47,6 +48,7 @@ export default function Sell() {
   const submit = (addAnother) => async (e) => {
     e.preventDefault()
     if (!form.title.trim()) return setError(t('sell.errorTitle'))
+    if (!form.brand.trim()) return setError(t('sell.errorBrand'))
     if (!form.ageGroups.length) return setError(t('sell.errorAges'))
     setSaving(true)
     try {
@@ -95,26 +97,52 @@ export default function Sell() {
             </label>
 
             <div className="grid gap-2">
+              <Label>{t('sell.category')}</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, category: c }))}
+                    className={cn(
+                      'flex flex-col items-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors hover:bg-muted/50',
+                      form.category === c && 'border-primary bg-muted ring-1 ring-primary'
+                    )}
+                  >
+                    <CategoryIcon category={c} className="size-5" />
+                    {t(`category.${c}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="title">{t('sell.titleLabel')}</Label>
-              <Input id="title" placeholder={t('sell.titlePlaceholder')} value={form.title} onChange={set('title')} />
+              <Input id="title" dir="auto" placeholder={t('sell.titlePlaceholder')} value={form.title} onChange={set('title')} />
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="brand">{t('sell.brand')}</Label>
+                <Input id="brand" list="brand-options" dir="auto" placeholder={t('sell.brandPlaceholder')} value={form.brand} onChange={set('brand')} />
+                <datalist id="brand-options">
+                  {BRANDS[form.category].map((b) => (
+                    <option key={b} value={b} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="model">{t('sell.model')}</Label>
+                <Input id="model" dir="auto" placeholder={t('sell.modelPlaceholder')} value={form.model} onChange={set('model')} />
+              </div>
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="description">{t('sell.description')}</Label>
-              <Textarea id="description" placeholder={t('sell.descriptionPlaceholder')} value={form.description} onChange={set('description')} />
+              <Textarea id="description" dir="auto" placeholder={t('sell.descriptionPlaceholder')} value={form.description} onChange={set('description')} />
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-3">
-              <div className="grid gap-2">
-                <Label htmlFor="category">{t('sell.category')}</Label>
-                <NativeSelect id="category" value={form.category} onChange={set('category')}>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {t(`category.${c}`)}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
+            <div className="grid gap-5 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="condition">{t('sell.condition')}</Label>
                 <NativeSelect id="condition" value={form.condition} onChange={set('condition')}>

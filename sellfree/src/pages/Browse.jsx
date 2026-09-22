@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import PageState from '@/components/PageState'
 import ListingCard from '@/components/ListingCard'
+import CategoryIcon from '@/components/CategoryIcon'
 import { CATEGORIES, ageGroupFor } from '@/lib/catalog'
 import { api } from '@/lib/api'
 import { useI18n } from '@/i18n'
@@ -91,7 +92,7 @@ export default function Browse() {
       .filter(
         (l) =>
           (category === 'All' || l.category === category) &&
-          (!q || listingText(l, 'title').toLowerCase().includes(q) || listingText(l, 'description').toLowerCase().includes(q)) &&
+          (!q || [listingText(l, 'title'), listingText(l, 'description'), l.brand, l.model].some((s) => s?.toLowerCase().includes(q))) &&
           (!group || !onlyMatched || l.matched)
       )
       .sort((a, b) => Number(b.matched) - Number(a.matched))
@@ -114,6 +115,7 @@ export default function Browse() {
         <div className="flex flex-wrap gap-2">
           {['All', ...CATEGORIES].map((c) => (
             <Button key={c} size="sm" variant={c === category ? 'default' : 'outline'} onClick={() => setCategory(c)}>
+              {c !== 'All' && <CategoryIcon category={c} />}
               {c === 'All' ? t('filter.all') : t(`category.${c}`)}
             </Button>
           ))}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ImageIcon, MessageCircle, UserRound } from 'lucide-react'
+import { ArrowLeft, MessageCircle, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { AgeGroupsText } from '@/components/ListingCard'
 import PageState from '@/components/PageState'
+import CategoryIcon from '@/components/CategoryIcon'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useI18n } from '@/i18n'
@@ -68,7 +69,7 @@ export default function ListingDetail() {
           {listing.image ? (
             <img src={listing.image} alt={title} className="size-full object-cover" />
           ) : (
-            <ImageIcon className="size-10 text-muted-foreground/50" />
+            <CategoryIcon category={listing.category} className="size-14 text-muted-foreground/40" />
           )}
         </div>
         <CardContent className="flex flex-col gap-5 py-6">
@@ -81,6 +82,22 @@ export default function ListingDetail() {
             <h1 dir="auto" className="text-start text-2xl font-bold tracking-tight">{title}</h1>
             <p className="text-2xl font-semibold">{formatPrice(listing.price, listing.currency)}</p>
           </div>
+          {(listing.brand || listing.model) && (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+              {listing.brand && (
+                <>
+                  <dt className="text-muted-foreground">{t('listing.brand')}</dt>
+                  <dd dir="auto" className="text-start font-medium">{listing.brand}</dd>
+                </>
+              )}
+              {listing.model && (
+                <>
+                  <dt className="text-muted-foreground">{t('listing.model')}</dt>
+                  <dd dir="auto" className="text-start font-medium">{listing.model}</dd>
+                </>
+              )}
+            </dl>
+          )}
           {description && <p dir="auto" className="whitespace-pre-line text-start text-muted-foreground">{description}</p>}
           <p className="text-sm text-muted-foreground">
             <AgeGroupsText ageGroups={listing.ageGroups} />

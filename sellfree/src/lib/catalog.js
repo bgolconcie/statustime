@@ -1,6 +1,14 @@
-export const CATEGORIES = ['clothing', 'toys', 'books', 'electronics', 'furniture', 'sports', 'other']
+// SellFree is only for second-hand phones, computers and TVs
+export const CATEGORIES = ['phones', 'computers', 'tvs']
 
-export const CONDITIONS = ['new', 'likeNew', 'good', 'fair']
+export const CONDITIONS = ['new', 'likeNew', 'good', 'fair', 'forParts']
+
+// Suggestions only; sellers can type any brand
+export const BRANDS = {
+  phones: ['Apple', 'Samsung', 'Xiaomi', 'Google', 'OnePlus', 'Motorola', 'Nokia'],
+  computers: ['Apple', 'Lenovo', 'HP', 'Dell', 'Asus', 'Acer', 'Microsoft', 'MSI'],
+  tvs: ['Samsung', 'LG', 'Sony', 'TCL', 'Hisense', 'Philips', 'Xiaomi'],
+}
 
 export const AGE_GROUPS = [
   { id: 'baby', min: 0, max: 2 },

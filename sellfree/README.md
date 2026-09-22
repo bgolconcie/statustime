@@ -1,6 +1,6 @@
 # SellFree
 
-A second-hand marketplace: people list things they no longer need (no limit on how many) and chat with buyers.
+A second-hand marketplace for phones, computers and TVs: people list devices (no limit on how many) and chat with buyers.
 Items are tagged with age groups so shoppers see what fits the age they're shopping for.
 The UI picks Hebrew (RTL) or English from the browser language, with a manual switch.
 
