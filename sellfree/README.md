@@ -1,14 +1,31 @@
 # SellFree
 
-Standalone React + Vite app (plain JS) using Tailwind CSS v4, shadcn/ui components and Inter.
+A second-hand marketplace: people list things they no longer need (no limit on how many) and chat with buyers.
+Items are tagged with age groups so shoppers see what fits the age they're shopping for.
+The UI picks Hebrew (RTL) or English from the browser language, with a manual switch.
+
+## Run locally
+
+Requires Node.js 22.13+ (uses the built-in `node:sqlite`).
 
 ```bash
 cd sellfree
 npm install
-npm run dev     # http://localhost:5173
-npm run build   # outputs to sellfree/dist
+npm run dev     # API on :3001 + Vite on http://localhost:5173
 ```
 
-- shadcn/ui is configured via `components.json` (JS, no TSX) — add components with `npx shadcn@latest add <name>`.
-- UI primitives live in `src/components/ui`, placeholder data in `src/data/listings.js`.
-- Independent from the StatusTime app: not part of the Docker image or Railway deploy.
+Production-style: `npm run build && npm start` → http://localhost:3001
+
+Demo accounts (created on first run): `dana@sellfree.test` / `yossi@sellfree.test`, password `demo1234`.
+
+## Structure
+
+- `server/` — Express API + SQLite (`server/data/sellfree.db`, created automatically, git-ignored)
+  - `routes/auth.js` — register / login / me (JWT)
+  - `routes/listings.js` — browse, create (unlimited), mark sold, delete, start a conversation
+  - `routes/conversations.js` — conversation list, messages, unread counts
+- `src/` — React (JS) client with Tailwind v4 + shadcn/ui, Inter font
+  - `pages/` — Browse, ListingDetail, Sell, MyListings, Messages, Login
+  - `i18n/` — English/Hebrew strings and language detection
+
+Env vars (optional): `PORT`, `JWT_SECRET` (otherwise a random secret is stored in `server/data/`), `DATA_DIR`.

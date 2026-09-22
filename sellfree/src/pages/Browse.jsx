@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import PageState from '@/components/PageState'
 import ListingCard from '@/components/ListingCard'
 import { CATEGORIES, ageGroupFor } from '@/lib/catalog'
-import { useStore } from '@/lib/store'
+import { api } from '@/lib/api'
 import { useI18n } from '@/i18n'
 
 function AgePanel({ age, setAge, group, onlyMatched, setOnlyMatched }) {
@@ -47,26 +48,54 @@ function AgePanel({ age, setAge, group, onlyMatched, setOnlyMatched }) {
   )
 }
 
+const AGE_KEY = 'sellfree.age'
+
+function useSavedAge() {
+  const [age, setAge] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(AGE_KEY)) ?? ''
+    } catch {
+      return ''
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem(AGE_KEY, JSON.stringify(age))
+    } catch {
+      // Age just won't be remembered
+    }
+  }, [age])
+  return [age, setAge]
+}
+
 export default function Browse() {
-  const { listings, age, setAge } = useStore()
-  const { t, localize } = useI18n()
+  const { t, listingText, errorText } = useI18n()
+  const [listings, setListings] = useState(null)
+  const [error, setError] = useState(null)
+  const [age, setAge] = useSavedAge()
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('All')
   const [onlyMatched, setOnlyMatched] = useState(true)
   const group = ageGroupFor(age)
 
+  useEffect(() => {
+    api('/listings')
+      .then((d) => setListings(d.listings))
+      .catch(setError)
+  }, [])
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return listings
+    return (listings ?? [])
       .map((l) => ({ ...l, matched: !!group && l.ageGroups.includes(group.id) }))
       .filter(
         (l) =>
           (category === 'All' || l.category === category) &&
-          (!q || localize(l.title).toLowerCase().includes(q) || localize(l.description).toLowerCase().includes(q)) &&
+          (!q || listingText(l, 'title').toLowerCase().includes(q) || listingText(l, 'description').toLowerCase().includes(q)) &&
           (!group || !onlyMatched || l.matched)
       )
       .sort((a, b) => Number(b.matched) - Number(a.matched))
-  }, [listings, query, category, group, onlyMatched, localize])
+  }, [listings, query, category, group, onlyMatched, listingText])
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
@@ -91,16 +120,18 @@ export default function Browse() {
         </div>
       </div>
 
-      {results.length ? (
+      {error ? (
+        <PageState>{errorText(error)}</PageState>
+      ) : !listings ? (
+        <PageState>{t('common.loading')}</PageState>
+      ) : results.length ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {results.map((item) => (
-            <ListingCard key={item.id} item={item} matched={item.matched} action={<Button size="sm">{t('card.contact')}</Button>} />
+            <ListingCard key={item.id} item={item} matched={item.matched} />
           ))}
         </div>
       ) : (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">{t('browse.empty')}</CardContent>
-        </Card>
+        <PageState>{t('browse.empty')}</PageState>
       )}
     </main>
   )

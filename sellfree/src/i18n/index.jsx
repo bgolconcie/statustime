@@ -45,8 +45,23 @@ export function I18nProvider({ children }) {
   // Isolate ranges like "3–12" so RTL text doesn't reorder the numbers
   const ageRange = (id) => `\u2068${t(`ageRange.${id}`)}\u2069`
 
+  const errorText = (err) => {
+    const key = `error.${err?.code ?? err}`
+    return key in translations.en ? t(key) : t('error.generic')
+  }
+
+  // Today: time only; otherwise a short date
+  const formatTime = (ms) => {
+    const date = new Date(ms)
+    const today = date.toDateString() === new Date().toDateString()
+    return new Intl.DateTimeFormat(locale, today ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short' }).format(date)
+  }
+
   // Listing content can be a plain string (user-written) or { en, he } (seed data)
   const localize = (value) => (typeof value === 'string' ? value : value?.[lang] ?? value?.en ?? '')
+
+  // Seed listings carry both languages in i18n; user listings are shown as written
+  const listingText = (listing, field) => localize(listing.i18n?.[field] ?? listing[field])
 
   const formatPrice = (price, priceCurrency = currency) =>
     price === 0
@@ -58,7 +73,7 @@ export function I18nProvider({ children }) {
     .find((p) => p.type === 'currency').value
 
   return (
-    <I18nContext.Provider value={{ lang, setLang, dir, currency, currencySymbol, t, ageRange, localize, formatPrice }}>
+    <I18nContext.Provider value={{ lang, setLang, dir, currency, currencySymbol, t, ageRange, errorText, formatTime, localize, listingText, formatPrice }}>
       {children}
     </I18nContext.Provider>
   )

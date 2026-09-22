@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ImagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,19 +9,25 @@ import { NativeSelect } from '@/components/ui/native-select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { AGE_GROUPS, CATEGORIES, CONDITIONS } from '@/lib/catalog'
 import { fileToThumbnail } from '@/lib/image'
-import { useStore } from '@/lib/store'
+import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
 
 const EMPTY = { title: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null }
 
 export default function Sell() {
-  const { addListing, listings } = useStore()
-  const { t, ageRange, currency, currencySymbol } = useI18n()
+  const { t, ageRange, errorText, currency, currencySymbol } = useI18n()
   const navigate = useNavigate()
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState('')
-  const myCount = listings.filter((l) => l.mine).length
+  const [saving, setSaving] = useState(false)
+  const [myCount, setMyCount] = useState(0)
+
+  useEffect(() => {
+    api('/listings?mine=1')
+      .then((d) => setMyCount(d.listings.length))
+      .catch(() => {})
+  }, [])
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -38,14 +44,26 @@ export default function Sell() {
     setForm((f) => ({ ...f, image }))
   }
 
-  const submit = (addAnother) => (e) => {
+  const submit = (addAnother) => async (e) => {
     e.preventDefault()
     if (!form.title.trim()) return setError(t('sell.errorTitle'))
     if (!form.ageGroups.length) return setError(t('sell.errorAges'))
-    addListing({ ...form, title: form.title.trim(), price: Math.max(0, Number(form.price) || 0), currency })
-    setError('')
-    if (addAnother) setForm(EMPTY)
-    else navigate('/my-listings')
+    setSaving(true)
+    try {
+      await api('/listings', {
+        method: 'POST',
+        body: { ...form, title: form.title.trim(), price: Math.max(0, Number(form.price) || 0), currency },
+      })
+      setError('')
+      if (!addAnother) return navigate('/my-listings')
+      setForm(EMPTY)
+      setMyCount((n) => n + 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (err) {
+      setError(errorText(err))
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -132,10 +150,12 @@ export default function Sell() {
             {error && <p className="text-sm font-medium text-red-600">{error}</p>}
           </CardContent>
           <CardFooter className="justify-end gap-2">
-            <Button type="button" variant="outline" onClick={submit(true)}>
+            <Button type="button" variant="outline" disabled={saving} onClick={submit(true)}>
               {t('sell.publishAnother')}
             </Button>
-            <Button type="submit">{t('sell.publish')}</Button>
+            <Button type="submit" disabled={saving}>
+              {t('sell.publish')}
+            </Button>
           </CardFooter>
         </Card>
       </form>
