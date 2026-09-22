@@ -248,7 +248,8 @@ export default function Sell() {
                   <AppraisalPanel
                     state={appraisal}
                     onRetry={runAppraisal}
-                    onUsePrice={(value) => setForm((f) => ({ ...f, price: String(value) }))}
+                    // The estimate is in shekels; only offer it when the seller prices in shekels
+                    onUsePrice={currency === 'ILS' ? (value) => setForm((f) => ({ ...f, price: String(value) })) : null}
                   />
                 )}
               </div>

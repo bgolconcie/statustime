@@ -126,7 +126,7 @@ export function AppraisalPanel({ state, onRetry, onUsePrice }) {
           <Estimate
             valuation={state.appraisal.valuation}
             action={
-              state.appraisal.valuation && (
+              state.appraisal.valuation && onUsePrice && (
                 <Button type="button" size="sm" onClick={() => onUsePrice(state.appraisal.valuation.value)}>
                   {t('appraisal.usePrice', { price: formatPrice(state.appraisal.valuation.value, 'ILS') })}
                 </Button>
