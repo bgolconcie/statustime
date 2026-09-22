@@ -5,6 +5,7 @@ import './db.js'
 import authRoutes from './routes/auth.js'
 import listingRoutes from './routes/listings.js'
 import conversationRoutes from './routes/conversations.js'
+import appraisalRoutes from './routes/appraisals.js'
 
 const app = express()
 app.use(express.json({ limit: '15mb' }))
@@ -12,6 +13,7 @@ app.use(express.json({ limit: '15mb' }))
 app.use('/api/auth', authRoutes)
 app.use('/api/listings', listingRoutes)
 app.use('/api/conversations', conversationRoutes)
+app.use('/api/appraisals', appraisalRoutes)
 app.use('/api', (req, res) => res.status(404).json({ error: 'not_found' }))
 
 app.use((err, req, res, next) => {

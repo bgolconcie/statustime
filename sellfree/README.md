@@ -28,4 +28,18 @@ Demo accounts (created on first run): `dana@sellfree.test` / `yossi@sellfree.tes
   - `pages/` — Browse, ListingDetail, Sell, MyListings, Messages, Login
   - `i18n/` — English/Hebrew strings and language detection
 
-Env vars (optional): `PORT`, `JWT_SECRET` (otherwise a random secret is stored in `server/data/`), `DATA_DIR`.
+## Phone price check
+
+Phone listings require 5 screenshots (model & storage, purchase date, screen & body photo, battery health,
+parts/diagnostics). When all 5 are uploaded, the server sends them to Claude (`server/appraisal.js`), which
+reads the facts (model, storage, purchase date, battery %, condition, genuine parts, carrier lock, launch price).
+`src/lib/valuation.js` turns those facts into an estimated value in ₪; the factors there are starting points
+to calibrate against real sales. Sellers get the estimate and auto-filled fields; buyers see it on the listing.
+
+This needs Claude API credentials on the server: set `ANTHROPIC_API_KEY` (or log in with `ant auth login`).
+Without them the app still works — the price check just reports that it's unavailable.
+Each seller is limited to 20 price checks per day.
+
+## Env vars
+
+`PORT`, `ANTHROPIC_API_KEY`, `JWT_SECRET` (otherwise a random secret is stored in `server/data/`), `DATA_DIR`.

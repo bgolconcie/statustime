@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import bcrypt from 'bcryptjs'
 import { CATEGORIES, PHONE_PROOFS } from '../src/lib/catalog.js'
+import { estimatePhoneValue } from '../src/lib/valuation.js'
 
 export const DATA_DIR = process.env.DATA_DIR ?? path.join(import.meta.dirname, 'data')
 fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -34,6 +35,7 @@ db.exec(`
     currency    TEXT NOT NULL,
     age_groups  TEXT NOT NULL,            -- JSON array of age group ids
     image       TEXT,                     -- data URL thumbnail
+    appraisal   TEXT,                     -- JSON { facts, valuation } read from the phone's screenshots
     i18n        TEXT,                     -- optional JSON { title: { en, he }, description: { en, he } }
     status      TEXT NOT NULL DEFAULT 'available',
     created_at  INTEGER NOT NULL
@@ -45,6 +47,16 @@ db.exec(`
     kind       TEXT NOT NULL,
     image      TEXT NOT NULL,             -- data URL
     PRIMARY KEY (listing_id, kind)
+  );
+
+  -- Claude's reading of a seller's screenshots, reusable when the listing is published
+  CREATE TABLE IF NOT EXISTS appraisals (
+    id          INTEGER PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    proofs_hash TEXT NOT NULL,
+    facts       TEXT NOT NULL,
+    valuation   TEXT,
+    created_at  INTEGER NOT NULL
   );
 
   -- One conversation per buyer per listing
@@ -84,14 +96,22 @@ export function transaction(fn) {
   }
 }
 
-// v2: the marketplace is limited to phones, computers and TVs
+function addColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name)
+  if (!columns.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+}
+
 function migrate() {
-  if (db.prepare('PRAGMA user_version').get().user_version >= 2) return
-  const columns = db.prepare('PRAGMA table_info(listings)').all().map((c) => c.name)
-  if (!columns.includes('brand')) db.exec("ALTER TABLE listings ADD COLUMN brand TEXT NOT NULL DEFAULT ''")
-  if (!columns.includes('model')) db.exec("ALTER TABLE listings ADD COLUMN model TEXT NOT NULL DEFAULT ''")
-  db.prepare(`DELETE FROM listings WHERE category NOT IN (${CATEGORIES.map(() => '?').join(', ')})`).run(...CATEGORIES)
-  db.exec('PRAGMA user_version = 2')
+  const version = db.prepare('PRAGMA user_version').get().user_version
+  // v2: the marketplace is limited to phones, computers and TVs
+  if (version < 2) {
+    addColumn('listings', 'brand', "TEXT NOT NULL DEFAULT ''")
+    addColumn('listings', 'model', "TEXT NOT NULL DEFAULT ''")
+    db.prepare(`DELETE FROM listings WHERE category NOT IN (${CATEGORIES.map(() => '?').join(', ')})`).run(...CATEGORIES)
+  }
+  // v3: phone listings carry a screenshot appraisal
+  if (version < 3) addColumn('listings', 'appraisal', 'TEXT')
+  db.exec('PRAGMA user_version = 3')
 }
 
 // Simple stand-in "screenshots" for demo phones
@@ -109,6 +129,10 @@ function mockScreenshot(title, rows) {
     `<rect width="390" height="700" fill="#f2f2f7"/>` +
     `<text x="24" y="80" font-size="30" font-weight="700" fill="#111">${esc(title)}</text>${lines}</svg>`
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+}
+
+function demoAppraisal(facts) {
+  return JSON.stringify({ facts, valuation: estimatePhoneValue(facts) })
 }
 
 function demoProofs(brand, model, storage, purchased, battery) {
@@ -168,16 +192,28 @@ function seed() {
   )
 
   const addProof = db.prepare('INSERT INTO listing_proofs (listing_id, kind, image) VALUES (?, ?, ?)')
+  const setAppraisal = db.prepare('UPDATE listings SET appraisal = ? WHERE id = ?')
+  // [item index, storage GB, purchase YYYY-MM, battery %, screen, launch price ILS, release year]
   const phoneProofs = [
-    [0, '128 GB', 'Mar 2022', '87%'],
-    [1, '64 GB', 'Jan 2024', '94%'],
-    [6, '4 MB', 'Aug 2025', '100%'],
-    [7, '128 GB', 'Jun 2021', '79%'],
+    [0, 128, '2022-03', 87, 'lightScratches', 3700, 2021],
+    [1, 64, '2024-01', 94, 'flawless', 900, 2023],
+    [6, null, '2025-08', 100, 'flawless', 130, 2019],
+    [7, 128, '2021-06', 79, 'cracked', 1100, 2021],
   ]
-  for (const [index, storage, purchased, battery] of phoneProofs) {
+  for (const [index, storageGb, purchaseDate, batteryHealthPct, screenCondition, launchPriceIls, releaseYear] of phoneProofs) {
     const [, , brand, model] = items[index]
-    const proofs = demoProofs(brand, model, storage, purchased, battery)
+    const [year, month] = purchaseDate.split('-')
+    const monthName = new Date(Number(year), Number(month) - 1).toLocaleString('en', { month: 'short' })
+    const proofs = demoProofs(brand, model, storageGb ? `${storageGb} GB` : '—', `${monthName} ${year}`, `${batteryHealthPct}%`)
     for (const kind of PHONE_PROOFS) addProof.run(ids[index], kind, proofs[kind])
+    setAppraisal.run(
+      demoAppraisal({
+        brand, model, storageGb, purchaseDate, releaseYear, batteryHealthPct, screenCondition,
+        bodyCondition: 'lightWear', nonGenuineParts: [], diagnosticsPassed: true, networkLocked: false,
+        launchPriceIls, confidence: 'high', issues: [],
+      }),
+      ids[index]
+    )
   }
 
   // Yossi asks Dana about the iPhone

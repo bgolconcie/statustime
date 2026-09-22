@@ -8,6 +8,7 @@ import { AgeGroupsText } from '@/components/ListingCard'
 import PageState from '@/components/PageState'
 import CategoryIcon from '@/components/CategoryIcon'
 import ProofGallery from '@/components/ProofGallery'
+import { AppraisalSummary } from '@/components/Appraisal'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useI18n } from '@/i18n'
@@ -88,18 +89,23 @@ export default function ListingDetail() {
               {listing.brand && (
                 <>
                   <dt className="text-muted-foreground">{t('listing.brand')}</dt>
-                  <dd dir="auto" className="text-start font-medium">{listing.brand}</dd>
+                  <dd className="font-medium">
+                    <bdi>{listing.brand}</bdi>
+                  </dd>
                 </>
               )}
               {listing.model && (
                 <>
                   <dt className="text-muted-foreground">{t('listing.model')}</dt>
-                  <dd dir="auto" className="text-start font-medium">{listing.model}</dd>
+                  <dd className="font-medium">
+                    <bdi>{listing.model}</bdi>
+                  </dd>
                 </>
               )}
             </dl>
           )}
           {description && <p dir="auto" className="whitespace-pre-line text-start text-muted-foreground">{description}</p>}
+          {listing.appraisal && <AppraisalSummary listing={listing} />}
           {listing.category === 'phones' && (
             <div className="grid gap-2">
               <p className="flex items-center gap-1.5 text-sm font-medium">

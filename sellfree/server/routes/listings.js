@@ -1,14 +1,12 @@
 import { Router } from 'express'
 import { db, transaction } from '../db.js'
 import { requireAuth } from '../auth.js'
+import { isUpload } from '../images.js'
+import { appraisalForListing } from './appraisals.js'
 import { AGE_GROUPS, CATEGORIES, CONDITIONS, PHONE_PROOFS } from '../../src/lib/catalog.js'
 
 const router = Router()
 const CURRENCIES = ['ILS', 'USD']
-const MAX_IMAGE_LENGTH = 2_000_000
-// Uploads are re-encoded by the client; only accept raster formats
-const isUpload = (image) =>
-  typeof image === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(image) && image.length <= MAX_IMAGE_LENGTH
 
 const SELECT = `
   SELECT l.*, u.name AS seller_name,
@@ -34,6 +32,7 @@ export function toListing(row) {
     i18n: row.i18n ? JSON.parse(row.i18n) : null,
     status: row.status,
     proofCount: row.proof_count,
+    appraisal: row.appraisal ? JSON.parse(row.appraisal) : null,
     createdAt: row.created_at,
   }
 }
@@ -99,13 +98,21 @@ router.post('/', requireAuth, (req, res) => {
   const proofs = data.category === 'phones' ? PHONE_PROOFS.map((kind) => [kind, req.body.proofs?.[kind]]) : []
   if (!proofs.every(([, image]) => isUpload(image))) return res.status(400).json({ error: 'missing_proofs' })
 
+  const appraisal = data.category === 'phones' ? appraisalForListing(req.body.appraisalId, req.user.id, req.body.proofs) : null
+
   const id = transaction(() => {
     const listingId = db
       .prepare(`
-        INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, image, created_at)
-        VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, $currency, $ageGroups, $image, $createdAt)
+        INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, image, appraisal, created_at)
+        VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, $currency, $ageGroups, $image, $appraisal, $createdAt)
       `)
-      .run({ ...data, seller: req.user.id, ageGroups: JSON.stringify(data.ageGroups), createdAt: Date.now() }).lastInsertRowid
+      .run({
+        ...data,
+        seller: req.user.id,
+        ageGroups: JSON.stringify(data.ageGroups),
+        appraisal: appraisal && JSON.stringify(appraisal),
+        createdAt: Date.now(),
+      }).lastInsertRowid
     const addProof = db.prepare('INSERT INTO listing_proofs (listing_id, kind, image) VALUES (?, ?, ?)')
     for (const [kind, image] of proofs) addProof.run(listingId, kind, image)
     return listingId

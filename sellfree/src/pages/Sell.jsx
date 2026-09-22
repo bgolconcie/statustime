@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ImagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,23 +13,82 @@ import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import CategoryIcon from '@/components/CategoryIcon'
 import ProofUpload from '@/components/ProofUpload'
+import { AppraisalPanel } from '@/components/Appraisal'
 import { useI18n } from '@/i18n'
+
+function suggestCondition(facts) {
+  if (facts.diagnosticsPassed === false) return 'forParts'
+  const worst = [facts.screenCondition, facts.bodyCondition]
+  if (worst.some((c) => c === 'cracked' || c === 'damaged')) return 'fair'
+  if (worst.some((c) => c === 'deepScratches' || c === 'heavyWear')) return 'good'
+  if (worst.every((c) => c === 'flawless')) return 'likeNew'
+  if (worst.includes('unknown')) return null
+  return 'good'
+}
 
 const EMPTY = { title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null, proofs: {} }
 
 export default function Sell() {
-  const { t, ageRange, errorText, currency, currencySymbol } = useI18n()
+  const { t, lang, ageRange, errorText, currency, currencySymbol } = useI18n()
   const navigate = useNavigate()
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [myCount, setMyCount] = useState(0)
+  const [appraisal, setAppraisal] = useState({ status: 'idle' })
+  const appraisalRun = useRef(0)
 
   useEffect(() => {
     api('/listings?mine=1')
       .then((d) => setMyCount(d.listings.length))
       .catch(() => {})
   }, [])
+
+  const isPhone = form.category === 'phones'
+  const proofsComplete = isPhone && PHONE_PROOFS.every((k) => form.proofs[k])
+
+  // Fill in what the screenshots told us, without overwriting what the seller typed
+  const applyAppraisal = useCallback(
+    ({ facts, valuation }) =>
+      setForm((f) => ({
+        ...f,
+        brand: f.brand || facts.brand || '',
+        model: f.model || facts.model || '',
+        title: f.title || [facts.brand, facts.model, facts.storageGb && `${facts.storageGb}GB`].filter(Boolean).join(' '),
+        condition: suggestCondition(facts) ?? f.condition,
+        price: f.price === '' && valuation && currency === 'ILS' ? String(valuation.value) : f.price,
+      })),
+    [currency]
+  )
+
+  // Read the screenshots once all 5 are in; a newer run supersedes older ones.
+  // Brand and model are only hints, so typing them doesn't trigger a new read.
+  const hints = useRef({})
+  hints.current = { brand: form.brand, model: form.model }
+  const runAppraisal = useCallback(async () => {
+    const run = ++appraisalRun.current
+    setAppraisal({ status: 'loading' })
+    try {
+      const { appraisal: result } = await api('/appraisals', {
+        method: 'POST',
+        body: { proofs: form.proofs, ...hints.current, lang },
+      })
+      if (run !== appraisalRun.current) return
+      setAppraisal({ status: 'done', appraisal: result })
+      applyAppraisal(result)
+    } catch (err) {
+      if (run === appraisalRun.current) setAppraisal({ status: 'error', error: err })
+    }
+  }, [form.proofs, lang, applyAppraisal])
+
+  useEffect(() => {
+    if (proofsComplete) {
+      runAppraisal()
+    } else {
+      appraisalRun.current++
+      setAppraisal({ status: 'idle' })
+    }
+  }, [proofsComplete, runAppraisal])
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -51,13 +110,19 @@ export default function Sell() {
     if (!form.title.trim()) return setError(t('sell.errorTitle'))
     if (!form.brand.trim()) return setError(t('sell.errorBrand'))
     if (!form.ageGroups.length) return setError(t('sell.errorAges'))
-    const isPhone = form.category === 'phones'
-    if (isPhone && !PHONE_PROOFS.every((k) => form.proofs[k])) return setError(t('proofs.missing'))
+    if (isPhone && !proofsComplete) return setError(t('proofs.missing'))
     setSaving(true)
     try {
       await api('/listings', {
         method: 'POST',
-        body: { ...form, title: form.title.trim(), price: Math.max(0, Number(form.price) || 0), currency, proofs: isPhone ? form.proofs : {} },
+        body: {
+          ...form,
+          title: form.title.trim(),
+          price: Math.max(0, Number(form.price) || 0),
+          currency,
+          proofs: isPhone ? form.proofs : {},
+          appraisalId: isPhone && appraisal.status === 'done' ? appraisal.appraisal.id : null,
+        },
       })
       setError('')
       if (!addAnother) return navigate('/my-listings')
@@ -179,6 +244,13 @@ export default function Sell() {
                     }}
                   />
                 ))}
+                {appraisal.status !== 'idle' && (
+                  <AppraisalPanel
+                    state={appraisal}
+                    onRetry={runAppraisal}
+                    onUsePrice={(value) => setForm((f) => ({ ...f, price: String(value) }))}
+                  />
+                )}
               </div>
             )}
 
