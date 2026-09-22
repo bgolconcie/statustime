@@ -13,7 +13,7 @@ function Header() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2 font-semibold">
           <ShoppingBag className="size-5" />
-          Marketplace
+          SellFree
         </Link>
         <nav className="flex items-center gap-2">
           <Button variant="ghost" size="sm">Sell</Button>
