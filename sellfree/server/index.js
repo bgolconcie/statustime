@@ -7,7 +7,7 @@ import listingRoutes from './routes/listings.js'
 import conversationRoutes from './routes/conversations.js'
 
 const app = express()
-app.use(express.json({ limit: '3mb' }))
+app.use(express.json({ limit: '15mb' }))
 
 app.use('/api/auth', authRoutes)
 app.use('/api/listings', listingRoutes)

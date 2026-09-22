@@ -7,14 +7,15 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { AGE_GROUPS, BRANDS, CATEGORIES, CONDITIONS } from '@/lib/catalog'
+import { AGE_GROUPS, BRANDS, CATEGORIES, CONDITIONS, PHONE_PROOFS } from '@/lib/catalog'
 import { fileToThumbnail } from '@/lib/image'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import CategoryIcon from '@/components/CategoryIcon'
+import ProofUpload from '@/components/ProofUpload'
 import { useI18n } from '@/i18n'
 
-const EMPTY = { title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null }
+const EMPTY = { title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null, proofs: {} }
 
 export default function Sell() {
   const { t, ageRange, errorText, currency, currencySymbol } = useI18n()
@@ -50,11 +51,13 @@ export default function Sell() {
     if (!form.title.trim()) return setError(t('sell.errorTitle'))
     if (!form.brand.trim()) return setError(t('sell.errorBrand'))
     if (!form.ageGroups.length) return setError(t('sell.errorAges'))
+    const isPhone = form.category === 'phones'
+    if (isPhone && !PHONE_PROOFS.every((k) => form.proofs[k])) return setError(t('proofs.missing'))
     setSaving(true)
     try {
       await api('/listings', {
         method: 'POST',
-        body: { ...form, title: form.title.trim(), price: Math.max(0, Number(form.price) || 0), currency },
+        body: { ...form, title: form.title.trim(), price: Math.max(0, Number(form.price) || 0), currency, proofs: isPhone ? form.proofs : {} },
       })
       setError('')
       if (!addAnother) return navigate('/my-listings')
@@ -158,6 +161,26 @@ export default function Sell() {
                 <Input id="price" type="number" min={0} placeholder={t('sell.pricePlaceholder')} value={form.price} onChange={set('price')} />
               </div>
             </div>
+
+            {form.category === 'phones' && (
+              <div className="grid gap-3 rounded-lg bg-muted/40 p-4">
+                <div className="space-y-1">
+                  <Label>{t('proofs.title')}</Label>
+                  <p className="text-xs text-muted-foreground">{t('proofs.subtitle')}</p>
+                </div>
+                {PHONE_PROOFS.map((kind) => (
+                  <ProofUpload
+                    key={kind}
+                    kind={kind}
+                    image={form.proofs[kind]}
+                    onChange={(image) => {
+                      setForm((f) => ({ ...f, proofs: { ...f.proofs, [kind]: image } }))
+                      setError('')
+                    }}
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label>{t('sell.ages')}</Label>

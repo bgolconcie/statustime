@@ -3,6 +3,9 @@ export const CATEGORIES = ['phones', 'computers', 'tvs']
 
 export const CONDITIONS = ['new', 'likeNew', 'good', 'fair', 'forParts']
 
+// Screenshots a phone seller must attach so buyers can judge the price
+export const PHONE_PROOFS = ['modelStorage', 'purchaseDate', 'condition', 'battery', 'diagnostics']
+
 // Suggestions only; sellers can type any brand
 export const BRANDS = {
   phones: ['Apple', 'Samsung', 'Xiaomi', 'Google', 'OnePlus', 'Motorola', 'Nokia'],

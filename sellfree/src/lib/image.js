@@ -1,4 +1,4 @@
-// Downscale uploads so many listings fit in local storage
+// Downscale uploads to keep request and database size small
 export function fileToThumbnail(file, maxSize = 640) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)

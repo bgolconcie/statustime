@@ -1,14 +1,18 @@
 import { Router } from 'express'
-import { db } from '../db.js'
+import { db, transaction } from '../db.js'
 import { requireAuth } from '../auth.js'
-import { AGE_GROUPS, CATEGORIES, CONDITIONS } from '../../src/lib/catalog.js'
+import { AGE_GROUPS, CATEGORIES, CONDITIONS, PHONE_PROOFS } from '../../src/lib/catalog.js'
 
 const router = Router()
 const CURRENCIES = ['ILS', 'USD']
 const MAX_IMAGE_LENGTH = 2_000_000
+// Uploads are re-encoded by the client; only accept raster formats
+const isUpload = (image) =>
+  typeof image === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(image) && image.length <= MAX_IMAGE_LENGTH
 
 const SELECT = `
-  SELECT l.*, u.name AS seller_name
+  SELECT l.*, u.name AS seller_name,
+    (SELECT COUNT(*) FROM listing_proofs p WHERE p.listing_id = l.id) AS proof_count
   FROM listings l JOIN users u ON u.id = l.seller_id
 `
 
@@ -29,6 +33,7 @@ export function toListing(row) {
     image: row.image,
     i18n: row.i18n ? JSON.parse(row.i18n) : null,
     status: row.status,
+    proofCount: row.proof_count,
     createdAt: row.created_at,
   }
 }
@@ -52,7 +57,7 @@ function parseListing(body) {
     Number.isFinite(price) && price >= 0 && price <= 1_000_000 &&
     CURRENCIES.includes(body.currency) &&
     ageGroups.length > 0 && ageGroups.every((g) => AGE_GROUPS.some((a) => a.id === g)) &&
-    (image === null || (typeof image === 'string' && image.startsWith('data:image/') && image.length <= MAX_IMAGE_LENGTH))
+    (image === null || isUpload(image))
 
   if (!valid) return null
   return { title, description, brand, model, category: body.category, condition: body.condition, price, currency: body.currency, ageGroups, image }
@@ -80,19 +85,31 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const row = db.prepare(`${SELECT} WHERE l.id = ?`).get(req.params.id)
   if (!row) return res.status(404).json({ error: 'not_found' })
-  res.json({ listing: toListing(row) })
+  const proofs = db.prepare('SELECT kind, image FROM listing_proofs WHERE listing_id = ?').all(row.id)
+  const order = (p) => PHONE_PROOFS.indexOf(p.kind)
+  res.json({ listing: { ...toListing(row), proofs: proofs.sort((a, b) => order(a) - order(b)) } })
 })
 
 // No cap on how many listings a seller can create
 router.post('/', requireAuth, (req, res) => {
   const data = parseListing(req.body)
   if (!data) return res.status(400).json({ error: 'invalid_input' })
-  const id = db
-    .prepare(`
-      INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, image, created_at)
-      VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, $currency, $ageGroups, $image, $createdAt)
-    `)
-    .run({ ...data, seller: req.user.id, ageGroups: JSON.stringify(data.ageGroups), createdAt: Date.now() }).lastInsertRowid
+
+  // Phones must come with all required screenshots
+  const proofs = data.category === 'phones' ? PHONE_PROOFS.map((kind) => [kind, req.body.proofs?.[kind]]) : []
+  if (!proofs.every(([, image]) => isUpload(image))) return res.status(400).json({ error: 'missing_proofs' })
+
+  const id = transaction(() => {
+    const listingId = db
+      .prepare(`
+        INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, image, created_at)
+        VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, $currency, $ageGroups, $image, $createdAt)
+      `)
+      .run({ ...data, seller: req.user.id, ageGroups: JSON.stringify(data.ageGroups), createdAt: Date.now() }).lastInsertRowid
+    const addProof = db.prepare('INSERT INTO listing_proofs (listing_id, kind, image) VALUES (?, ?, ?)')
+    for (const [kind, image] of proofs) addProof.run(listingId, kind, image)
+    return listingId
+  })
   res.status(201).json({ listing: toListing(db.prepare(`${SELECT} WHERE l.id = ?`).get(id)) })
 })
 

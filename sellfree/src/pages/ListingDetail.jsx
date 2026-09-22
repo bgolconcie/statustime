@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, MessageCircle, UserRound } from 'lucide-react'
+import { ArrowLeft, MessageCircle, ShieldCheck, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { AgeGroupsText } from '@/components/ListingCard'
 import PageState from '@/components/PageState'
 import CategoryIcon from '@/components/CategoryIcon'
+import ProofGallery from '@/components/ProofGallery'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useI18n } from '@/i18n'
@@ -99,6 +100,19 @@ export default function ListingDetail() {
             </dl>
           )}
           {description && <p dir="auto" className="whitespace-pre-line text-start text-muted-foreground">{description}</p>}
+          {listing.category === 'phones' && (
+            <div className="grid gap-2">
+              <p className="flex items-center gap-1.5 text-sm font-medium">
+                <ShieldCheck className="size-4" />
+                {t('proofs.detailTitle')}
+              </p>
+              {listing.proofs.length ? (
+                <ProofGallery proofs={listing.proofs} />
+              ) : (
+                <p className="text-sm text-muted-foreground">{t('proofs.none')}</p>
+              )}
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
             <AgeGroupsText ageGroups={listing.ageGroups} />
           </p>

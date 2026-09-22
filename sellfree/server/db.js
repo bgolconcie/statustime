@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
 import bcrypt from 'bcryptjs'
-import { CATEGORIES } from '../src/lib/catalog.js'
+import { CATEGORIES, PHONE_PROOFS } from '../src/lib/catalog.js'
 
 export const DATA_DIR = process.env.DATA_DIR ?? path.join(import.meta.dirname, 'data')
 fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -37,6 +37,14 @@ db.exec(`
     i18n        TEXT,                     -- optional JSON { title: { en, he }, description: { en, he } }
     status      TEXT NOT NULL DEFAULT 'available',
     created_at  INTEGER NOT NULL
+  );
+
+  -- Required screenshots for phone listings, one per kind
+  CREATE TABLE IF NOT EXISTS listing_proofs (
+    listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL,
+    image      TEXT NOT NULL,             -- data URL
+    PRIMARY KEY (listing_id, kind)
   );
 
   -- One conversation per buyer per listing
@@ -86,6 +94,33 @@ function migrate() {
   db.exec('PRAGMA user_version = 2')
 }
 
+// Simple stand-in "screenshots" for demo phones
+function mockScreenshot(title, rows) {
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  const lines = rows
+    .map(([label, value], i) => {
+      const y = 150 + i * 56
+      return `<rect x="16" y="${y - 32}" width="358" height="52" fill="#fff"/>` +
+        `<text x="32" y="${y}" font-size="17" fill="#111">${esc(label)}</text>` +
+        `<text x="358" y="${y}" font-size="17" fill="#8a8a8e" text-anchor="end">${esc(value)}</text>`
+    })
+    .join('')
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="390" height="700" font-family="Inter, Arial, sans-serif">` +
+    `<rect width="390" height="700" fill="#f2f2f7"/>` +
+    `<text x="24" y="80" font-size="30" font-weight="700" fill="#111">${esc(title)}</text>${lines}</svg>`
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+}
+
+function demoProofs(brand, model, storage, purchased, battery) {
+  return {
+    modelStorage: mockScreenshot('About', [['Model Name', `${brand} ${model}`], ['Capacity', storage], ['Network', 'No SIM restrictions']]),
+    purchaseDate: mockScreenshot('Warranty', [['Purchase Date', purchased], ['Limited Warranty', 'Expired']]),
+    condition: mockScreenshot('Condition', [['Screen', 'No scratches'], ['Back', 'Minor wear'], ['Case', 'Always used']]),
+    battery: mockScreenshot('Battery Health', [['Maximum Capacity', battery], ['Peak Performance', 'Normal']]),
+    diagnostics: mockScreenshot('Diagnostics', [['Display', 'Genuine'], ['Battery', 'Genuine'], ['Camera', 'Genuine'], ['All tests', 'Passed']]),
+  }
+}
+
 // Demo data so a fresh install has something to browse and chat about
 function seed() {
   const now = Date.now()
@@ -131,6 +166,19 @@ function seed() {
       createdAt: now - i * 3_600_000,
     }).lastInsertRowid
   )
+
+  const addProof = db.prepare('INSERT INTO listing_proofs (listing_id, kind, image) VALUES (?, ?, ?)')
+  const phoneProofs = [
+    [0, '128 GB', 'Mar 2022', '87%'],
+    [1, '64 GB', 'Jan 2024', '94%'],
+    [6, '4 MB', 'Aug 2025', '100%'],
+    [7, '128 GB', 'Jun 2021', '79%'],
+  ]
+  for (const [index, storage, purchased, battery] of phoneProofs) {
+    const [, , brand, model] = items[index]
+    const proofs = demoProofs(brand, model, storage, purchased, battery)
+    for (const kind of PHONE_PROOFS) addProof.run(ids[index], kind, proofs[kind])
+  }
 
   // Yossi asks Dana about the iPhone
   const convo = db
