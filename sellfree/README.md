@@ -18,6 +18,12 @@ Production-style: `npm run build && npm start` → http://localhost:3001
 
 Demo accounts (created on first run): `dana@sellfree.test` / `yossi@sellfree.test`, password `demo1234`.
 
+## Shareable demo
+
+`npm run build:demo` builds the real client against an in-browser stand-in for the server (`src/demo/api.js`)
+and inlines it into one page, `dist-demo/sellfree-demo.html`. Data stays in the viewer's browser, the other side
+of a chat replies automatically, and the price check is simulated rather than read by Claude.
+
 ## Structure
 
 - `server/` — Express API + SQLite (`server/data/sellfree.db`, created automatically, git-ignored)
