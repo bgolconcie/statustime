@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import GoogleButton from '@/components/GoogleButton'
 import { useAuth } from '@/lib/auth'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -21,6 +22,18 @@ export default function Login() {
   if (user) return <Navigate to={from} replace />
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const signInWithGoogle = async (credential) => {
+    setBusy(true)
+    setError('')
+    try {
+      await authenticate('google', { credential })
+      navigate(from, { replace: true })
+    } catch (err) {
+      setError(errorText(err))
+      setBusy(false)
+    }
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -62,6 +75,7 @@ export default function Login() {
             <CardDescription>{t('auth.subtitle')}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
+            <GoogleButton onCredential={signInWithGoogle} />
             {mode === 'register' && (
               <div className="grid gap-2">
                 <Label htmlFor="name">{t('auth.name')}</Label>

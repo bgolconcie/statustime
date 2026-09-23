@@ -12,6 +12,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^@\/lib\/api$/, replacement: path.join(src, 'demo/api.js') },
+      { find: /^@\/components\/GoogleButton$/, replacement: path.join(src, 'demo/GoogleButton.jsx') },
       { find: '@', replacement: src },
     ],
   },

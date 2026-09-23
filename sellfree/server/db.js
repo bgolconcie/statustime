@@ -19,7 +19,8 @@ db.exec(`
     id            INTEGER PRIMARY KEY,
     name          TEXT NOT NULL,
     email         TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT NOT NULL,          -- '' for accounts that only sign in with Google
+    google_sub    TEXT,                   -- Google account id, once signed in with Google
     created_at    INTEGER NOT NULL
   );
 
@@ -114,7 +115,10 @@ function migrate() {
   if (version < 3) addColumn('listings', 'appraisal', 'TEXT')
   // v4: the condition photo was replaced by a network-lock screenshot
   if (version < 4) db.exec("DELETE FROM listing_proofs WHERE kind = 'condition'")
-  db.exec('PRAGMA user_version = 4')
+  // v5: sign in with Google
+  if (version < 5) addColumn('users', 'google_sub', 'TEXT')
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)')
+  db.exec('PRAGMA user_version = 5')
 }
 
 // Demo data so a fresh install has something to browse and chat about

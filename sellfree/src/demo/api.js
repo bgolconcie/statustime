@@ -272,10 +272,21 @@ const routes = [
   }],
   ['POST', /^\/auth\/login$/, (_, body) => {
     const user = db.users.find((u) => u.email === String(body.email ?? '').trim().toLowerCase())
-    if (!user || user.password !== body.password) fail('invalid_credentials', 401)
+    if (!user || !user.password || user.password !== body.password) fail('invalid_credentials', 401)
     return { token: `demo-${user.id}`, user: publicUser(user) }
   }],
   ['GET', /^\/auth\/me$/, () => ({ user: publicUser(requireUser()) })],
+  ['GET', /^\/auth\/config$/, () => ({ googleClientId: 'demo' })],
+  // Simulated Google sign-in: one stand-in Gmail account per browser
+  ['POST', /^\/auth\/google$/, () => {
+    const email = 'gmail.demo@example.com'
+    let user = db.users.find((u) => u.email === email)
+    if (!user) {
+      user = { id: nextId(), name: lang() === 'he' ? 'משתמש Gmail' : 'Gmail user', email, password: null }
+      db.users.push(user)
+    }
+    return { token: `demo-${user.id}`, user: publicUser(user) }
+  }],
 
   ['GET', /^\/listings\?mine=1$/, () => {
     const me = requireUser()

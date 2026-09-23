@@ -47,6 +47,14 @@ This needs Claude API credentials on the server: set `ANTHROPIC_API_KEY` (or log
 Without them the app still works — the price check just reports that it's unavailable.
 Each seller is limited to 20 price checks per day.
 
+## Sign in with Google
+
+Set `GOOGLE_CLIENT_ID` to show "Continue with Google" on the sign-in page. Create it in Google Cloud Console →
+APIs & Services → Credentials → OAuth client ID (type "Web application"), and add the app's address
+(e.g. `http://localhost:5173` and the production URL) under "Authorized JavaScript origins".
+The server verifies Google's ID token, creates the account on first sign-in, and links it to an existing
+account with the same (Google-verified) email. Without the variable the button is simply hidden.
+
 ## Env vars
 
-`PORT`, `ANTHROPIC_API_KEY`, `JWT_SECRET` (otherwise a random secret is stored in `server/data/`), `DATA_DIR`.
+`PORT`, `ANTHROPIC_API_KEY`, `GOOGLE_CLIENT_ID`, `JWT_SECRET` (otherwise a random secret is stored in `server/data/`), `DATA_DIR`.
