@@ -1,14 +1,18 @@
-// SellFree is only for second-hand phones, computers and TVs
-export const CATEGORIES = ['phones', 'computers', 'tvs']
+// SellFree is only for second-hand phones, tablets, computers and TVs
+export const CATEGORIES = ['phones', 'tablets', 'computers', 'tvs']
 
 export const CONDITIONS = ['new', 'likeNew', 'good', 'fair', 'forParts']
 
-// Screenshots of the phone's own data a seller must attach so buyers can judge the price
+// Screenshots of the device's own data a seller must attach so buyers can judge the price
 export const PHONE_PROOFS = ['modelStorage', 'purchaseDate', 'network', 'battery', 'diagnostics']
+
+// Phones and tablets (iPad etc.) need those screenshots and get a price check
+export const needsProofs = (category) => category === 'phones' || category === 'tablets'
 
 // Suggestions only; sellers can type any brand
 export const BRANDS = {
   phones: ['Apple', 'Samsung', 'Xiaomi', 'Google', 'OnePlus', 'Motorola', 'Nokia'],
+  tablets: ['Apple', 'Samsung', 'Lenovo', 'Xiaomi', 'Huawei', 'Microsoft'],
   computers: ['Apple', 'Lenovo', 'HP', 'Dell', 'Asus', 'Acer', 'Microsoft', 'MSI'],
   tvs: ['Samsung', 'LG', 'Sony', 'TCL', 'Hisense', 'Philips', 'Xiaomi'],
 }

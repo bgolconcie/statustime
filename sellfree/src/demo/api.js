@@ -1,11 +1,11 @@
 // In-browser stand-in for the SellFree server, used by the shareable demo build.
 // Same routes and response shapes as server/routes/*; data lives in this browser only.
-import { AGE_GROUPS, CATEGORIES, CONDITIONS, PHONE_PROOFS } from '@/lib/catalog'
+import { AGE_GROUPS, CATEGORIES, CONDITIONS, PHONE_PROOFS, needsProofs } from '@/lib/catalog'
 import { DEMO_CONVERSATION, DEMO_LISTINGS, DEMO_PASSWORD, DEMO_USERS } from '@/lib/demoData'
 import { estimatePhoneValue } from '@/lib/valuation'
 
 const TOKEN_KEY = 'sellfree.token'
-const DB_KEY = 'sellfree.demo.db.v1'
+const DB_KEY = 'sellfree.demo.db.v2'
 
 export function getToken() {
   try {
@@ -238,13 +238,14 @@ function parseListing(body) {
   const valid =
     title && brand && CATEGORIES.includes(body.category) && CONDITIONS.includes(body.condition) &&
     Number.isFinite(price) && price >= 0 && ageGroups.length > 0 && ageGroups.every((g) => AGE_GROUPS.some((a) => a.id === g))
-  if (!valid) fail('invalid_input')
+  // A photo of the item is required
+  if (!valid || typeof body.image !== 'string' || !body.image.startsWith('data:image/')) fail('invalid_input')
   return {
     title, brand,
     model: String(body.model ?? '').trim(),
     description: String(body.description ?? '').trim(),
     category: body.category, condition: body.condition, price, currency: body.currency, ageGroups,
-    image: body.image ?? null,
+    image: body.image,
   }
 }
 
@@ -302,7 +303,7 @@ const routes = [
   ['POST', /^\/listings$/, (_, body) => {
     const me = requireUser()
     const data = parseListing(body)
-    const isPhone = data.category === 'phones'
+    const isPhone = needsProofs(data.category)
     const proofs = isPhone ? PHONE_PROOFS.map((kind) => ({ kind, image: body.proofs?.[kind] })) : []
     if (!proofs.every((p) => typeof p.image === 'string' && p.image.startsWith('data:image/'))) fail('missing_proofs')
     const read = isPhone && db.appraisals.find((a) => a.id === body.appraisalId && a.userId === me.id && a.fingerprint === fingerprint(body.proofs))

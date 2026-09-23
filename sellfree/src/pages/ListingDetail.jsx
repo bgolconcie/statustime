@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { AgeGroupsText } from '@/components/ListingCard'
+import { needsProofs } from '@/lib/catalog'
 import PageState from '@/components/PageState'
 import CategoryIcon from '@/components/CategoryIcon'
 import ProofGallery from '@/components/ProofGallery'
@@ -106,7 +107,7 @@ export default function ListingDetail() {
           )}
           {description && <p dir="auto" className="whitespace-pre-line text-start text-muted-foreground">{description}</p>}
           {listing.appraisal && <AppraisalSummary listing={listing} />}
-          {listing.category === 'phones' && (
+          {needsProofs(listing.category) && (
             <div className="grid gap-2">
               <p className="flex items-center gap-1.5 text-sm font-medium">
                 <ShieldCheck className="size-4" />

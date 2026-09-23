@@ -32,7 +32,9 @@ function demoProofs({ brand, model }, { storageGb, purchaseDate, batteryHealthPc
     modelStorage: mockScreenshot('About', [['Model Name', `${brand} ${model}`], ['Capacity', storageGb ? `${storageGb} GB` : '—'], ['Network', 'No SIM restrictions']]),
     purchaseDate: mockScreenshot('Warranty', [['Purchase Date', purchased], ['Limited Warranty', 'Expired']]),
     network: mockScreenshot('About', [['Carrier Lock', 'No SIM restrictions'], ['IMEI', '35 •••••• •••••• 0']]),
-    battery: mockScreenshot('Battery Health', [['Maximum Capacity', `${batteryHealthPct}%`], ['Peak Performance', 'Normal']]),
+    battery: batteryHealthPct == null
+      ? mockScreenshot('Battery', [['Battery Usage', 'Last 24 Hours'], ['Low Power Mode', 'Off']])
+      : mockScreenshot('Battery Health', [['Maximum Capacity', `${batteryHealthPct}%`], ['Peak Performance', 'Normal']]),
     diagnostics: mockScreenshot('Diagnostics', [['Display', 'Genuine'], ['Battery', 'Genuine'], ['Camera', 'Genuine'], ['All tests', 'Passed']]),
   }
   return PHONE_PROOFS.map((kind) => ({ kind, image: shots[kind] }))
@@ -64,6 +66,10 @@ export const DEMO_LISTINGS = [
   phone(
     listing('dana', 'phones', 'Samsung', 'Galaxy A14', ['Samsung Galaxy A14 — great first phone', 'Samsung Galaxy A14 — טלפון ראשון מעולה'], ['Simple and durable, parental controls set up.', 'פשוט ועמיד, מוגדרות הגבלות הורים.'], 'good', 450, ['kids', 'teens']),
     { storageGb: 64, purchaseDate: '2024-01', batteryHealthPct: 94, launchPriceIls: 900, releaseYear: 2023 }
+  ),
+  phone(
+    listing('yossi', 'tablets', 'Apple', 'iPad (9th generation)', ['iPad 9th gen, 64GB, Wi‑Fi', 'אייפד דור 9, 64GB, Wi‑Fi'], ['With a keyboard case. Great for school.', 'כולל כיסוי עם מקלדת. מעולה ללימודים.'], 'good', 900, ['kids', 'teens', 'adults']),
+    { storageGb: 64, purchaseDate: '2022-11', batteryHealthPct: null, launchPriceIls: 1600, releaseYear: 2021 }
   ),
   listing('dana', 'computers', 'Lenovo', 'IdeaPad 3', ['Lenovo IdeaPad 3 laptop, 15.6"', 'מחשב נייד Lenovo IdeaPad 3, 15.6 אינץ\''], ['Ryzen 5, 8GB RAM, 256GB SSD. Good for school.', 'Ryzen 5, 8GB RAM, 256GB SSD. מתאים ללימודים.'], 'good', 1300, ['kids', 'teens', 'adults']),
   listing('yossi', 'computers', 'Apple', 'MacBook Air M1', ['MacBook Air M1, 2020', 'MacBook Air M1, 2020'], ['8GB / 256GB, 180 battery cycles, charger included.', '8GB / 256GB, 180 מחזורי סוללה, כולל מטען.'], 'likeNew', 2800, ['teens', 'adults']),

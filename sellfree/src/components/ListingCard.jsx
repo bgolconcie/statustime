@@ -3,7 +3,7 @@ import { ShieldCheck, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import CategoryIcon from '@/components/CategoryIcon'
-import { AGE_GROUPS } from '@/lib/catalog'
+import { AGE_GROUPS, needsProofs } from '@/lib/catalog'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 
@@ -49,7 +49,7 @@ export default function ListingCard({ item, matched, action }) {
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="secondary">{t(`category.${item.category}`)}</Badge>
             <Badge variant="outline">{t(`condition.${item.condition}`)}</Badge>
-            {item.category === 'phones' && item.proofCount > 0 && (
+            {needsProofs(item.category) && item.proofCount > 0 && (
               <Badge variant="outline" className="border-green-600/30 text-green-700">
                 <ShieldCheck />
                 {t('proofs.badge')}

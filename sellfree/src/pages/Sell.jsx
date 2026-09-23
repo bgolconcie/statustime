@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { AGE_GROUPS, BRANDS, CATEGORIES, CONDITIONS, PHONE_PROOFS } from '@/lib/catalog'
+import { AGE_GROUPS, BRANDS, CATEGORIES, CONDITIONS, PHONE_PROOFS, needsProofs } from '@/lib/catalog'
 import { fileToThumbnail } from '@/lib/image'
 import { estimatePhoneValue } from '@/lib/valuation'
 import { api } from '@/lib/api'
@@ -36,7 +36,7 @@ export default function Sell() {
       .catch(() => {})
   }, [])
 
-  const isPhone = form.category === 'phones'
+  const isPhone = needsProofs(form.category)
   const proofsComplete = isPhone && PHONE_PROOFS.every((k) => form.proofs[k])
 
   // Fill in what the screenshots told us, without overwriting what the seller typed
@@ -106,6 +106,7 @@ export default function Sell() {
     e.preventDefault()
     if (!form.title.trim()) return setError(t('sell.errorTitle'))
     if (!form.brand.trim()) return setError(t('sell.errorBrand'))
+    if (!form.image) return setError(t('sell.errorPhoto'))
     if (!form.ageGroups.length) return setError(t('sell.errorAges'))
     if (isPhone && !proofsComplete) return setError(t('proofs.missing'))
     setSaving(true)
@@ -224,7 +225,7 @@ export default function Sell() {
               </div>
             </div>
 
-            {form.category === 'phones' && (
+            {isPhone && (
               <div className="grid gap-3 rounded-lg bg-muted/40 p-4">
                 <div className="space-y-1">
                   <Label>{t('proofs.title')}</Label>

@@ -4,9 +4,9 @@ import { PHONE_PROOFS } from '../src/lib/catalog.js'
 const MODEL = 'claude-opus-5'
 
 const PROOF_LABELS = {
-  modelStorage: 'Screenshot of the phone "About" page (model name, capacity, possibly SIM/carrier lock status)',
+  modelStorage: 'Screenshot of the device "About" page (model name, capacity, possibly SIM/carrier lock status)',
   purchaseDate: 'Screenshot or photo showing the purchase date or warranty status',
-  network: 'Screenshot showing the carrier/SIM lock status (and possibly the IMEI)',
+  network: 'Screenshot showing the carrier/SIM lock status (and possibly the IMEI); for Wi-Fi-only tablets, the About page',
   battery: 'Screenshot of the battery health page',
   diagnostics: 'Screenshot of parts & service history or a diagnostics test result',
 }
@@ -36,16 +36,17 @@ const FACTS_SCHEMA = {
   },
 }
 
-const SYSTEM = `You read screenshots that a seller uploaded for a used phone listing on an Israeli marketplace, and extract the facts needed to price it.
+const SYSTEM = `You read screenshots that a seller uploaded for a used phone or tablet (e.g. iPad) listing on an Israeli marketplace, and extract the facts needed to price it.
 
 Rules:
 - Only report what the images show. Use null (or "unknown") when an image doesn't show a field; never guess model, storage, battery or dates.
 - Screenshots may be in Hebrew or English, from iOS or Android.
 - purchaseDate is year and month (YYYY-MM) when a purchase or warranty-start date is visible.
+- networkLocked is false for Wi-Fi-only tablets.
 - releaseYear and launchPriceIls come from your own knowledge of the identified model and storage: the year the model launched and its typical launch retail price in Israel in shekels, new. Leave them null if the model isn't clearly identified.
 - nonGenuineParts lists parts marked as unknown/non-genuine in parts history (e.g. "display", "battery"); empty if all genuine or not shown.
 - Never copy an IMEI or serial number into your answer.
-- issues: short notes about anything a buyer should know — images that don't match each other, a screenshot that looks edited or unrelated, an image that shows a different phone than the others, or missing information.
+- issues: short notes about anything a buyer should know — images that don't match each other, a screenshot that looks edited or unrelated, an image that shows a different device than the others, or missing information.
 - confidence reflects how clearly the images support the facts.`
 
 let client

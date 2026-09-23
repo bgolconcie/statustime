@@ -4,7 +4,7 @@ import { requireAuth } from '../auth.js'
 import { isUpload } from '../images.js'
 import { appraisalForListing } from './appraisals.js'
 import { estimatePhoneValue } from '../../src/lib/valuation.js'
-import { AGE_GROUPS, CATEGORIES, CONDITIONS, PHONE_PROOFS } from '../../src/lib/catalog.js'
+import { AGE_GROUPS, CATEGORIES, CONDITIONS, PHONE_PROOFS, needsProofs } from '../../src/lib/catalog.js'
 
 const router = Router()
 const CURRENCIES = ['ILS', 'USD']
@@ -57,7 +57,7 @@ function parseListing(body) {
     Number.isFinite(price) && price >= 0 && price <= 1_000_000 &&
     CURRENCIES.includes(body.currency) &&
     ageGroups.length > 0 && ageGroups.every((g) => AGE_GROUPS.some((a) => a.id === g)) &&
-    (image === null || isUpload(image))
+    isUpload(image) // a photo of the item is required
 
   if (!valid) return null
   return { title, description, brand, model, category: body.category, condition: body.condition, price, currency: body.currency, ageGroups, image }
@@ -95,11 +95,11 @@ router.post('/', requireAuth, (req, res) => {
   const data = parseListing(req.body)
   if (!data) return res.status(400).json({ error: 'invalid_input' })
 
-  // Phones must come with all required screenshots
-  const proofs = data.category === 'phones' ? PHONE_PROOFS.map((kind) => [kind, req.body.proofs?.[kind]]) : []
+  // Phones and tablets must come with all required screenshots
+  const proofs = needsProofs(data.category) ? PHONE_PROOFS.map((kind) => [kind, req.body.proofs?.[kind]]) : []
   if (!proofs.every(([, image]) => isUpload(image))) return res.status(400).json({ error: 'missing_proofs' })
 
-  const read = data.category === 'phones' ? appraisalForListing(req.body.appraisalId, req.user.id, req.body.proofs) : null
+  const read = needsProofs(data.category) ? appraisalForListing(req.body.appraisalId, req.user.id, req.body.proofs) : null
   const appraisal = read && { facts: read.facts, valuation: estimatePhoneValue(read.facts, { condition: data.condition }) }
 
   const id = transaction(() => {

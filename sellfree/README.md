@@ -1,6 +1,6 @@
 # SellFree
 
-A second-hand marketplace for phones, computers and TVs: people list devices (no limit on how many) and chat with buyers.
+A second-hand marketplace for phones, tablets, computers and TVs: people list devices (no limit on how many) and chat with buyers.
 Items are tagged with age groups so shoppers see what fits the age they're shopping for.
 The UI picks Hebrew (RTL) or English from the browser language, with a manual switch.
 
@@ -36,7 +36,7 @@ of a chat replies automatically, and the price check is simulated rather than re
 
 ## Phone price check
 
-Phone listings require 5 screenshots of the phone's own data (model & storage, purchase date, network lock, battery health,
+Phone and tablet listings require 5 screenshots of the phone's own data (model & storage, purchase date, network lock, battery health,
 parts/diagnostics). When all 5 are uploaded, the server sends them to Claude (`server/appraisal.js`), which
 reads the facts (model, storage, purchase date, battery %, genuine parts, carrier lock, launch price).
 Physical condition can't be seen in a screenshot, so the estimate uses the condition the seller declares.
