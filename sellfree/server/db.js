@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
 import bcrypt from 'bcryptjs'
-import { CATEGORIES } from '../src/lib/catalog.js'
+import { CATEGORIES, PROOF_IDS } from '../src/lib/catalog.js'
 import { DEMO_CONVERSATION, DEMO_LISTINGS, DEMO_PASSWORD, DEMO_USERS } from '../src/lib/demoData.js'
 import { estimatePhoneValue } from '../src/lib/valuation.js'
 
@@ -121,7 +121,11 @@ function migrate() {
   if (version < 6) {
     db.prepare(`DELETE FROM listings WHERE category NOT IN (${CATEGORIES.map(() => '?').join(', ')})`).run(...CATEGORIES)
   }
-  db.exec('PRAGMA user_version = 6')
+  // v7: the 8 guided proof slots replace the earlier screenshot set
+  if (version < 7) {
+    db.prepare(`DELETE FROM listing_proofs WHERE kind NOT IN (${PROOF_IDS.map(() => '?').join(', ')})`).run(...PROOF_IDS)
+  }
+  db.exec('PRAGMA user_version = 7')
 }
 
 // Demo data so a fresh install has something to browse and chat about

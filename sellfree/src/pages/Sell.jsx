@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ImagePlus } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { AGE_GROUPS, BRANDS, CATEGORIES, CONDITIONS, PHONE_PROOFS, needsProofs } from '@/lib/catalog'
-import { fileToThumbnail } from '@/lib/image'
+import { AGE_GROUPS, BRANDS, CATEGORIES, CONDITIONS, PROOF_IDS, PROOF_SLOTS, REQUIRED_PROOFS } from '@/lib/catalog'
+import { MIN_READABLE_SIZE, readUpload } from '@/lib/image'
 import { estimatePhoneValue } from '@/lib/valuation'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useSpeech } from '@/hooks/useSpeech'
 import CategoryIcon from '@/components/CategoryIcon'
-import ProofUpload from '@/components/ProofUpload'
+import ProofSlot from '@/components/ProofSlot'
 import { AppraisalPanel } from '@/components/Appraisal'
 import { useI18n } from '@/i18n'
 
-
-// Condition suggested from what the AI saw in the photo and screenshots
+// Condition suggested from what the AI saw in the photos and screenshots
 function suggestCondition(facts) {
   if (facts.diagnosticsPassed === false) return 'forParts'
   const parts = [facts.screenCondition, facts.bodyCondition]
@@ -29,17 +29,24 @@ function suggestCondition(facts) {
   return 'good'
 }
 
-const EMPTY = { title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null, proofs: {} }
+const EMPTY = {
+  title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [],
+  proofs: {},
+}
 
 export default function Sell() {
   const { t, lang, ageRange, errorText, currency, currencySymbol } = useI18n()
   const navigate = useNavigate()
+  const speech = useSpeech()
   const [form, setForm] = useState(EMPTY)
+  // Per image: { status: 'checking' | 'valid' | 'invalid' | 'unchecked', reason }
+  const [checks, setChecks] = useState({})
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [myCount, setMyCount] = useState(0)
   const [appraisal, setAppraisal] = useState({ status: 'idle' })
   const appraisalRun = useRef(0)
+  const checkRuns = useRef({})
 
   useEffect(() => {
     api('/listings?mine=1')
@@ -47,10 +54,36 @@ export default function Sell() {
       .catch(() => {})
   }, [])
 
-  const isPhone = needsProofs(form.category)
-  const proofsComplete = isPhone && PHONE_PROOFS.every((k) => form.proofs[k])
-  // The AI check needs the device photo (for scratches and cracks) and all 5 screenshots
-  const readyForCheck = proofsComplete && Boolean(form.image)
+  const filled = PROOF_SLOTS.filter((s) => form.proofs[s.id]).map((s) => s.id)
+  const missing = REQUIRED_PROOFS.filter((id) => !form.proofs[id])
+  // A failed optional image (the box) is just left out; a failed required one has to be retaken
+  const anyInvalid = REQUIRED_PROOFS.some((id) => checks[id]?.status === 'invalid')
+  const anyChecking = filled.some((id) => checks[id]?.status === 'checking')
+  // The full AI check runs once every required image is in and none still needs attention
+  const readyForCheck = missing.length === 0 && !anyInvalid && !anyChecking
+  // Only images that passed (or couldn't be checked) go to the full check and the listing
+  const acceptedProofs = Object.fromEntries(filled.filter((id) => checks[id]?.status !== 'invalid').map((id) => [id, form.proofs[id]]))
+
+  // Check a single image the moment it's added
+  const addImage = async (slot, file) => {
+    setError('')
+    const run = (checkRuns.current[slot.id] = (checkRuns.current[slot.id] ?? 0) + 1)
+    const { dataUrl, width, height } = await readUpload(file)
+    setForm((f) => ({ ...f, proofs: { ...f.proofs, [slot.id]: dataUrl } }))
+    if (Math.min(width, height) < MIN_READABLE_SIZE) {
+      return setChecks((c) => ({ ...c, [slot.id]: { status: 'invalid', reason: t('proofs.tooSmall') } }))
+    }
+    setChecks((c) => ({ ...c, [slot.id]: { status: 'checking' } }))
+    let result
+    try {
+      const { valid, reason } = await api('/appraisals/check-image', { method: 'POST', body: { kind: slot.id, image: dataUrl, lang } })
+      result = valid ? { status: 'valid' } : { status: 'invalid', reason }
+    } catch {
+      // If the check itself isn't available, don't block the seller; the full check still reads it
+      result = { status: 'unchecked' }
+    }
+    if (checkRuns.current[slot.id] === run) setChecks((c) => ({ ...c, [slot.id]: result }))
+  }
 
   // Fill in what the AI found, without overwriting what the seller typed
   const applyAppraisal = useCallback(
@@ -70,17 +103,20 @@ export default function Sell() {
     [currency]
   )
 
-  // Check the device once the photo and all 5 screenshots are in; a newer run supersedes older ones.
-  // Brand and model are only hints, so typing them doesn't trigger a new read.
+  // A newer run supersedes older ones. Brand and model are only hints, so typing them doesn't re-run it.
   const hints = useRef({})
   hints.current = { brand: form.brand, model: form.model, condition: form.condition }
+  // Changes whenever an image is replaced or its check finishes, so the full check re-runs on new images
+  const proofsKey = PROOF_IDS.map((id) => `${checkRuns.current[id] ?? 0}:${checks[id]?.status ?? ''}`).join()
+  const latestProofs = useRef(acceptedProofs)
+  latestProofs.current = acceptedProofs
   const runAppraisal = useCallback(async () => {
     const run = ++appraisalRun.current
     setAppraisal({ status: 'loading' })
     try {
       const { appraisal: result } = await api('/appraisals', {
         method: 'POST',
-        body: { proofs: form.proofs, image: form.image, ...hints.current, lang },
+        body: { proofs: latestProofs.current, ...hints.current, lang },
       })
       if (run !== appraisalRun.current) return
       setAppraisal({ status: 'done', appraisal: result })
@@ -88,7 +124,7 @@ export default function Sell() {
     } catch (err) {
       if (run === appraisalRun.current) setAppraisal({ status: 'error', error: err })
     }
-  }, [form.proofs, form.image, lang, applyAppraisal])
+  }, [lang, applyAppraisal])
 
   useEffect(() => {
     if (readyForCheck) {
@@ -97,7 +133,7 @@ export default function Sell() {
       appraisalRun.current++
       setAppraisal({ status: 'idle' })
     }
-  }, [readyForCheck, runAppraisal])
+  }, [readyForCheck, proofsKey, runAppraisal])
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -107,36 +143,32 @@ export default function Sell() {
       ageGroups: f.ageGroups.includes(id) ? f.ageGroups.filter((g) => g !== id) : [...f.ageGroups, id],
     }))
 
-  const onImage = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const image = await fileToThumbnail(file)
-    setForm((f) => ({ ...f, image }))
-  }
-
   const submit = (addAnother) => async (e) => {
     e.preventDefault()
+    if (missing.length) return setError(t('proofs.missing'))
+    if (anyInvalid) return setError(t('proofs.invalid'))
+    if (anyChecking) return setError(t('proofs.pending'))
     if (!form.title.trim()) return setError(t('sell.errorTitle'))
     if (!form.brand.trim()) return setError(t('sell.errorBrand'))
-    if (!form.image) return setError(t('sell.errorPhoto'))
     if (!form.ageGroups.length) return setError(t('sell.errorAges'))
-    if (isPhone && !proofsComplete) return setError(t('proofs.missing'))
     setSaving(true)
     try {
+      const { proofs: _images, ...fields } = form
       await api('/listings', {
         method: 'POST',
         body: {
-          ...form,
+          ...fields,
           title: form.title.trim(),
           price: Math.max(0, Number(form.price) || 0),
           currency,
-          proofs: isPhone ? form.proofs : {},
-          appraisalId: isPhone && appraisal.status === 'done' ? appraisal.appraisal.id : null,
+          proofs: acceptedProofs,
+          appraisalId: appraisal.status === 'done' ? appraisal.appraisal.id : null,
         },
       })
       setError('')
       if (!addAnother) return navigate('/my-listings')
       setForm(EMPTY)
+      setChecks({})
       setMyCount((n) => n + 1)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
@@ -152,31 +184,12 @@ export default function Sell() {
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">{t('sell.title')}</CardTitle>
-            <CardDescription>
-              {t('sell.subtitle', { count: myCount })}
-            </CardDescription>
+            <CardDescription>{t('sell.subtitle', { count: myCount })}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-5">
-            <label
-              className={cn(
-                'flex aspect-[16/9] cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed text-sm text-muted-foreground hover:bg-muted/50',
-                form.image && 'border-solid'
-              )}
-            >
-              {form.image ? (
-                <img src={form.image} alt="" className="size-full object-cover" />
-              ) : (
-                <>
-                  <ImagePlus className="size-6" />
-                  {t('sell.photo')}
-                </>
-              )}
-              <input type="file" accept="image/*" className="sr-only" onChange={onImage} />
-            </label>
-
             <div className="grid gap-2">
               <Label>{t('sell.category')}</Label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((c) => (
                   <button
                     key={c}
@@ -192,6 +205,37 @@ export default function Sell() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="grid gap-3 rounded-lg bg-muted/40 p-4">
+              <div className="space-y-1">
+                <Label>{t('proofs.title')}</Label>
+                <p className="text-xs text-muted-foreground">{t('proofs.subtitle')}</p>
+              </div>
+              {PROOF_SLOTS.map((slot, i) => (
+                <ProofSlot
+                  key={slot.id}
+                  slot={slot}
+                  number={i + 1}
+                  image={form.proofs[slot.id]}
+                  check={checks[slot.id]}
+                  speech={speech}
+                  onFile={(file) => addImage(slot, file)}
+                />
+              ))}
+              {appraisal.status !== 'idle' && (
+                <AppraisalPanel
+                  // Re-price live as the seller changes the declared condition
+                  state={
+                    appraisal.status === 'done'
+                      ? { ...appraisal, appraisal: { ...appraisal.appraisal, valuation: estimatePhoneValue(appraisal.appraisal.facts, { condition: form.condition }) } }
+                      : appraisal
+                  }
+                  onRetry={runAppraisal}
+                  // The estimate is in shekels; only offer it when the seller prices in shekels
+                  onUsePrice={currency === 'ILS' ? (value) => setForm((f) => ({ ...f, price: String(value) })) : null}
+                />
+              )}
             </div>
 
             <div className="grid gap-2">
@@ -236,40 +280,6 @@ export default function Sell() {
                 <Input id="price" type="number" min={0} placeholder={t('sell.pricePlaceholder')} value={form.price} onChange={set('price')} />
               </div>
             </div>
-
-            {isPhone && (
-              <div className="grid gap-3 rounded-lg bg-muted/40 p-4">
-                <div className="space-y-1">
-                  <Label>{t('proofs.title')}</Label>
-                  <p className="text-xs text-muted-foreground">{t('proofs.subtitle')}</p>
-                </div>
-                {PHONE_PROOFS.map((kind) => (
-                  <ProofUpload
-                    key={kind}
-                    kind={kind}
-                    image={form.proofs[kind]}
-                    onChange={(image) => {
-                      setForm((f) => ({ ...f, proofs: { ...f.proofs, [kind]: image } }))
-                      setError('')
-                    }}
-                  />
-                ))}
-                {proofsComplete && !form.image && <p className="text-sm text-muted-foreground">{t('appraisal.needsPhoto')}</p>}
-                {appraisal.status !== 'idle' && (
-                  <AppraisalPanel
-                    // Re-price live as the seller changes the declared condition
-                    state={
-                      appraisal.status === 'done'
-                        ? { ...appraisal, appraisal: { ...appraisal.appraisal, valuation: estimatePhoneValue(appraisal.appraisal.facts, { condition: form.condition }) } }
-                        : appraisal
-                    }
-                    onRetry={runAppraisal}
-                    // The estimate is in shekels; only offer it when the seller prices in shekels
-                    onUsePrice={currency === 'ILS' ? (value) => setForm((f) => ({ ...f, price: String(value) })) : null}
-                  />
-                )}
-              </div>
-            )}
 
             <div className="grid gap-2">
               <Label>{t('sell.ages')}</Label>

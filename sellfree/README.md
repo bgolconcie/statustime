@@ -36,17 +36,32 @@ of a chat replies automatically, and the price check is simulated rather than re
 
 ## AI device check
 
-Every listing needs a photo of the device and 5 screenshots of its own settings (model & storage, purchase date,
-network lock, battery health, parts/diagnostics). When they're all uploaded, the server sends them to Claude
-(`server/appraisal.js`), which identifies the device and reports storage, purchase date, battery %, screen and body
-condition (scratches, cracks, wear — from the photo), genuine parts, carrier lock, the problems it found, and the
-model's launch price. `src/lib/valuation.js` turns those facts into an estimated market value in ₪; the factors there
-are starting points to calibrate against real sales. Sellers get the result and auto-filled fields; buyers see it on
-the listing next to the asking price.
+Every listing is built from 8 guided images (`PROOF_SLOTS` in `src/lib/catalog.js`); the first 7 are required:
+
+| # | Slot | Type | What it shows |
+|---|---|---|---|
+| 1 | Device Info (`deviceInfo`) | screenshot | About page: model name, model number, storage |
+| 2 | Parts & Lock (`partsLock`) | screenshot | About page scrolled: carrier lock, parts & service history |
+| 3 | Battery Health (`battery`) | screenshot | Maximum capacity % |
+| 4 | Purchase Date (`purchaseDate`) | screenshot | AppleCare & Warranty (or a receipt on Android) |
+| 5 | Screen Test (`screenOn`) | photo | Front, screen on, white image — cracks, dead pixels |
+| 6 | Scratch Check (`screenOff`) | photo | Front, screen off, angled — scratches; also the listing cover |
+| 7 | Back Side (`back`) | photo | Back glass and cameras |
+| 8 | Box & Cable (`box`) | photo, optional | Original box / charging cable — adds to the value |
+
+Each slot shows a drawn example (`src/lib/mockImages.js`), a written instruction and a Listen button that reads it
+aloud with the browser's speech synthesis. Every upload is checked on its own the moment it's added
+(`POST /api/appraisals/check-image`: right image? readable?) and marked Valid or Retake with the reason; images under
+400px on the short side are rejected before that. Once all required images pass, the full check
+(`POST /api/appraisals`, `server/appraisal.js`) identifies the device and reports model number, RAM, storage, purchase
+date, battery % and cycles, screen and body condition, genuine parts, carrier lock, box/cable, the problems it found and
+the model's launch price. `src/lib/valuation.js` turns those facts into an estimated market value in ₪; the factors
+there are starting points to calibrate against real sales. Sellers get the result and auto-filled fields; buyers see it
+on the listing next to the asking price.
 
 This needs Claude API credentials on the server: set `ANTHROPIC_API_KEY` (or log in with `ant auth login`).
 Without them the app still works — the check just reports that it's unavailable.
-Each seller is limited to 20 checks per day.
+Each seller is limited to 20 full checks and 200 image checks per day.
 
 ## Sign in with Google
 

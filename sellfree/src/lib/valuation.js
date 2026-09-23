@@ -56,6 +56,8 @@ export function estimatePhoneValue(facts, { condition, now = Date.now() } = {}) 
     // Already priced in when the seller declares it "for parts"
     { key: 'diagnostics', factor: facts.diagnosticsPassed === false && condition !== 'forParts' ? 0.5 : 1 },
     { key: 'network', factor: facts.networkLocked ? 0.9 : 1 },
+    // Original box and charging cable add a little
+    { key: 'accessories', factor: (facts.includesBox ? 1.03 : 1) * (facts.includesCable ? 1.02 : 1) },
   ]
   const value = factors.reduce((v, f) => v * f.factor, facts.launchPriceIls)
 

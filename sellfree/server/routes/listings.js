@@ -1,10 +1,10 @@
 import { Router } from 'express'
 import { db, transaction } from '../db.js'
 import { requireAuth } from '../auth.js'
-import { isUpload } from '../images.js'
+import { hasAllProofs } from '../images.js'
 import { appraisalForListing } from './appraisals.js'
 import { estimatePhoneValue } from '../../src/lib/valuation.js'
-import { AGE_GROUPS, CATEGORIES, CONDITIONS, PHONE_PROOFS, needsProofs } from '../../src/lib/catalog.js'
+import { AGE_GROUPS, CATEGORIES, CONDITIONS, COVER_PROOF, PROOF_IDS } from '../../src/lib/catalog.js'
 
 const router = Router()
 const CURRENCIES = ['ILS', 'USD']
@@ -45,7 +45,6 @@ function parseListing(body) {
   const model = String(body.model ?? '').trim()
   const price = Number(body.price)
   const ageGroups = Array.isArray(body.ageGroups) ? [...new Set(body.ageGroups)] : []
-  const image = body.image ?? null
 
   const valid =
     title && title.length <= 120 &&
@@ -56,11 +55,10 @@ function parseListing(body) {
     CONDITIONS.includes(body.condition) &&
     Number.isFinite(price) && price >= 0 && price <= 1_000_000 &&
     CURRENCIES.includes(body.currency) &&
-    ageGroups.length > 0 && ageGroups.every((g) => AGE_GROUPS.some((a) => a.id === g)) &&
-    isUpload(image) // a photo of the item is required
+    ageGroups.length > 0 && ageGroups.every((g) => AGE_GROUPS.some((a) => a.id === g))
 
   if (!valid) return null
-  return { title, description, brand, model, category: body.category, condition: body.condition, price, currency: body.currency, ageGroups, image }
+  return { title, description, brand, model, category: body.category, condition: body.condition, price, currency: body.currency, ageGroups }
 }
 
 function ownListing(req, res) {
@@ -86,7 +84,7 @@ router.get('/:id', (req, res) => {
   const row = db.prepare(`${SELECT} WHERE l.id = ?`).get(req.params.id)
   if (!row) return res.status(404).json({ error: 'not_found' })
   const proofs = db.prepare('SELECT kind, image FROM listing_proofs WHERE listing_id = ?').all(row.id)
-  const order = (p) => PHONE_PROOFS.indexOf(p.kind)
+  const order = (p) => PROOF_IDS.indexOf(p.kind)
   res.json({ listing: { ...toListing(row), proofs: proofs.sort((a, b) => order(a) - order(b)) } })
 })
 
@@ -95,11 +93,12 @@ router.post('/', requireAuth, (req, res) => {
   const data = parseListing(req.body)
   if (!data) return res.status(400).json({ error: 'invalid_input' })
 
-  // Phones and tablets must come with all required screenshots
-  const proofs = needsProofs(data.category) ? PHONE_PROOFS.map((kind) => [kind, req.body.proofs?.[kind]]) : []
-  if (!proofs.every(([, image]) => isUpload(image))) return res.status(400).json({ error: 'missing_proofs' })
+  // Every device comes with its required screenshots and photos; the scratch-check photo is the cover
+  if (!hasAllProofs(req.body.proofs)) return res.status(400).json({ error: 'missing_proofs' })
+  const proofs = PROOF_IDS.filter((kind) => req.body.proofs[kind]).map((kind) => [kind, req.body.proofs[kind]])
+  const image = req.body.proofs[COVER_PROOF]
 
-  const read = needsProofs(data.category) ? appraisalForListing(req.body.appraisalId, req.user.id, req.body.proofs, data.image) : null
+  const read = appraisalForListing(req.body.appraisalId, req.user.id, req.body.proofs)
   const appraisal = read && { facts: read.facts, valuation: estimatePhoneValue(read.facts, { condition: data.condition }) }
 
   const id = transaction(() => {
@@ -110,6 +109,7 @@ router.post('/', requireAuth, (req, res) => {
       `)
       .run({
         ...data,
+        image,
         seller: req.user.id,
         ageGroups: JSON.stringify(data.ageGroups),
         appraisal: appraisal && JSON.stringify(appraisal),

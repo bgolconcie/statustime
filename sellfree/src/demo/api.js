@@ -1,11 +1,11 @@
 // In-browser stand-in for the SellFree server, used by the shareable demo build.
 // Same routes and response shapes as server/routes/*; data lives in this browser only.
-import { AGE_GROUPS, CATEGORIES, CONDITIONS, PHONE_PROOFS, needsProofs } from '@/lib/catalog'
+import { AGE_GROUPS, CATEGORIES, CONDITIONS, COVER_PROOF, PROOF_IDS, REQUIRED_PROOFS } from '@/lib/catalog'
 import { DEMO_CONVERSATION, DEMO_LISTINGS, DEMO_PASSWORD, DEMO_USERS } from '@/lib/demoData'
 import { estimatePhoneValue } from '@/lib/valuation'
 
 const TOKEN_KEY = 'sellfree.token'
-const DB_KEY = 'sellfree.demo.db.v3'
+const DB_KEY = 'sellfree.demo.db.v4'
 
 export function getToken() {
   try {
@@ -106,9 +106,9 @@ export function resetDemo() {
 const nextId = () => ++db.nextId
 
 // Short fingerprint of a set of screenshots, so appraisals don't store the images again
-function fingerprint(proofs, photo) {
+function fingerprint(proofs) {
   let h = 5381
-  for (const s of [photo ?? '', ...PHONE_PROOFS.map((k) => proofs?.[k] ?? '')]) {
+  for (const s of PROOF_IDS.map((k) => proofs?.[k] ?? '')) {
     for (let i = 0; i < s.length; i += 7) h = ((h << 5) + h + s.charCodeAt(i)) | 0
     h = ((h << 5) + h + s.length) | 0
   }
@@ -204,17 +204,22 @@ const LAUNCH_PRICES = [
   [/galaxy s2[345]/i, 3600], [/galaxy a/i, 1100], [/pixel/i, 3000], [/redmi|xiaomi/i, 1200],
 ]
 
-// Simulated device check (the real app sends the photo and screenshots to Claude)
-function simulatedFacts({ brand, model }) {
+// Simulated device check (the real app sends the screenshots and photos to Claude)
+function simulatedFacts({ brand, model, proofs }) {
   const name = `${brand ?? ''} ${model ?? ''}`.trim() || 'Apple iPhone 13'
   const launchPriceIls = LAUNCH_PRICES.find(([re]) => re.test(name))?.[1] ?? 2500
   return {
     brand: brand || 'Apple',
     model: model || 'iPhone 13',
+    modelNumber: /iphone 13/i.test(name) ? 'A2633' : null,
+    ramGb: 4,
     storageGb: 128,
     purchaseDate: '2022-09',
     releaseYear: 2022,
     batteryHealthPct: 86,
+    batteryCycles: 420,
+    includesBox: Boolean(proofs?.box),
+    includesCable: Boolean(proofs?.box),
     screenCondition: 'lightScratches',
     bodyCondition: 'lightWear',
     problems: [lang() === 'he' ? 'שריטות קלות במסך' : 'Light scratches on the screen'],
@@ -225,8 +230,8 @@ function simulatedFacts({ brand, model }) {
     confidence: 'medium',
     issues: [
       lang() === 'he'
-        ? 'הדגמה: הבדיקה כאן מדומה. באפליקציה האמיתית ה-AI בודק את התמונה וצילומי המסך.'
-        : 'Demo: this check is simulated. In the real app the AI inspects the photo and screenshots.',
+        ? 'הדגמה: הבדיקה כאן מדומה. באפליקציה האמיתית ה-AI בודק את צילומי המסך והתמונות.'
+        : 'Demo: this check is simulated. In the real app the AI inspects the screenshots and photos.',
     ],
   }
 }
@@ -241,14 +246,12 @@ function parseListing(body) {
   const valid =
     title && brand && CATEGORIES.includes(body.category) && CONDITIONS.includes(body.condition) &&
     Number.isFinite(price) && price >= 0 && ageGroups.length > 0 && ageGroups.every((g) => AGE_GROUPS.some((a) => a.id === g))
-  // A photo of the item is required
-  if (!valid || typeof body.image !== 'string' || !body.image.startsWith('data:image/')) fail('invalid_input')
+  if (!valid) fail('invalid_input')
   return {
     title, brand,
     model: String(body.model ?? '').trim(),
     description: String(body.description ?? '').trim(),
     category: body.category, condition: body.condition, price, currency: body.currency, ageGroups,
-    image: body.image,
   }
 }
 
@@ -306,12 +309,13 @@ const routes = [
   ['POST', /^\/listings$/, (_, body) => {
     const me = requireUser()
     const data = parseListing(body)
-    const isPhone = needsProofs(data.category)
-    const proofs = isPhone ? PHONE_PROOFS.map((kind) => ({ kind, image: body.proofs?.[kind] })) : []
-    if (!proofs.every((p) => typeof p.image === 'string' && p.image.startsWith('data:image/'))) fail('missing_proofs')
-    const read = isPhone && db.appraisals.find((a) => a.id === body.appraisalId && a.userId === me.id && a.fingerprint === fingerprint(body.proofs, data.image))
+    // Every device comes with its required screenshots and photos; the scratch-check photo is the cover
+    const isImage = (v) => typeof v === 'string' && v.startsWith('data:image/')
+    if (!REQUIRED_PROOFS.every((k) => isImage(body.proofs?.[k]))) fail('missing_proofs')
+    const proofs = PROOF_IDS.filter((k) => isImage(body.proofs[k])).map((kind) => ({ kind, image: body.proofs[kind] }))
+    const read = db.appraisals.find((a) => a.id === body.appraisalId && a.userId === me.id && a.fingerprint === fingerprint(body.proofs))
     const listing = {
-      id: nextId(), sellerId: me.id, ...data, i18n: null, status: 'available', proofs, createdAt: Date.now(),
+      id: nextId(), sellerId: me.id, ...data, image: body.proofs[COVER_PROOF], i18n: null, status: 'available', proofs, createdAt: Date.now(),
       appraisal: read ? { facts: read.facts, valuation: estimatePhoneValue(read.facts, { condition: data.condition }) } : null,
     }
     db.listings.push(listing)
@@ -377,12 +381,19 @@ const routes = [
     return { message: toMessage(message, me.id) }
   }],
 
+  // Simulated per-image check: a short pause, then valid (too-small images are caught before this)
+  ['POST', /^\/appraisals\/check-image$/, async (_, body) => {
+    requireUser()
+    if (!PROOF_IDS.includes(body.kind) || !body.image) fail('invalid_input')
+    await sleep(1500)
+    return { valid: true, reason: '' }
+  }],
   ['POST', /^\/appraisals$/, async (_, body) => {
     const me = requireUser()
-    if (!PHONE_PROOFS.every((k) => body.proofs?.[k]) || !body.image) fail('missing_proofs')
+    if (!REQUIRED_PROOFS.every((k) => body.proofs?.[k])) fail('missing_proofs')
     await sleep(2500)
     const facts = simulatedFacts(body)
-    const appraisal = { id: nextId(), userId: me.id, fingerprint: fingerprint(body.proofs, body.image), facts }
+    const appraisal = { id: nextId(), userId: me.id, fingerprint: fingerprint(body.proofs), facts }
     db.appraisals = [...db.appraisals.slice(-19), appraisal]
     return { appraisal: { id: appraisal.id, facts, valuation: estimatePhoneValue(facts, { condition: body.condition }) } }
   }],

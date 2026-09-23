@@ -13,14 +13,27 @@ function factRows(facts, t, locale) {
   const unknown = t('fact.unknown')
   return [
     ['fact.model', [facts.brand, facts.model].filter(Boolean).join(' ') || unknown],
+    ['fact.modelNumber', facts.modelNumber || unknown],
     ['fact.storage', facts.storageGb ? `${facts.storageGb} GB` : unknown],
+    ['fact.ram', facts.ramGb ? `${facts.ramGb} GB` : unknown],
     ['fact.purchased', facts.purchaseDate ? formatMonth(facts.purchaseDate, locale) : unknown],
     ['fact.battery', facts.batteryHealthPct != null ? `${facts.batteryHealthPct}%` : unknown],
+    ['fact.cycles', facts.batteryCycles != null ? String(facts.batteryCycles) : unknown],
     ['fact.screen', t(`screen.${facts.screenCondition ?? 'unknown'}`)],
     ['fact.body', t(`body.${facts.bodyCondition ?? 'unknown'}`)],
     ['fact.parts', facts.nonGenuineParts.length ? t('fact.nonGenuine', { parts: facts.nonGenuineParts.join(', ') }) : t('fact.allGenuine')],
     ['fact.diagnostics', facts.diagnosticsPassed == null ? unknown : facts.diagnosticsPassed ? t('fact.passed') : t('fact.failed')],
     ['fact.network', facts.networkLocked == null ? unknown : facts.networkLocked ? t('fact.locked') : t('fact.unlocked')],
+    [
+      'fact.accessories',
+      facts.includesBox && facts.includesCable
+        ? t('fact.boxAndCable')
+        : facts.includesBox
+          ? t('fact.boxOnly')
+          : facts.includesCable
+            ? t('fact.cableOnly')
+            : t('fact.nothingExtra'),
+    ],
   ]
 }
 
@@ -114,7 +127,8 @@ function Factors({ valuation }) {
     <div className="flex flex-wrap gap-1.5">
       {valuation.factors.map((f) => (
         <Badge key={f.key} variant="outline" className="font-normal">
-          {t(`factor.${f.key}`, { years: valuation.ageYears })} −{Math.round((1 - f.factor) * 100)}%
+          {t(`factor.${f.key}`, { years: valuation.ageYears })}{' '}
+          {f.factor > 1 ? `+${Math.round((f.factor - 1) * 100)}%` : `−${Math.round((1 - f.factor) * 100)}%`}
         </Badge>
       ))}
     </div>
