@@ -1,6 +1,6 @@
 # SellFree
 
-A second-hand marketplace for phones, tablets, computers and TVs: people list devices (no limit on how many) and chat with buyers.
+A second-hand marketplace for phones and tablets: people list devices (no limit on how many) and chat with buyers.
 Items are tagged with age groups so shoppers see what fits the age they're shopping for.
 The UI picks Hebrew (RTL) or English from the browser language, with a manual switch.
 
@@ -34,18 +34,19 @@ of a chat replies automatically, and the price check is simulated rather than re
   - `pages/` — Browse, ListingDetail, Sell, MyListings, Messages, Login
   - `i18n/` — English/Hebrew strings and language detection
 
-## Phone price check
+## AI device check
 
-Phone and tablet listings require 5 screenshots of the phone's own data (model & storage, purchase date, network lock, battery health,
-parts/diagnostics). When all 5 are uploaded, the server sends them to Claude (`server/appraisal.js`), which
-reads the facts (model, storage, purchase date, battery %, genuine parts, carrier lock, launch price).
-Physical condition can't be seen in a screenshot, so the estimate uses the condition the seller declares.
-`src/lib/valuation.js` turns those facts into an estimated value in ₪; the factors there are starting points
-to calibrate against real sales. Sellers get the estimate and auto-filled fields; buyers see it on the listing.
+Every listing needs a photo of the device and 5 screenshots of its own settings (model & storage, purchase date,
+network lock, battery health, parts/diagnostics). When they're all uploaded, the server sends them to Claude
+(`server/appraisal.js`), which identifies the device and reports storage, purchase date, battery %, screen and body
+condition (scratches, cracks, wear — from the photo), genuine parts, carrier lock, the problems it found, and the
+model's launch price. `src/lib/valuation.js` turns those facts into an estimated market value in ₪; the factors there
+are starting points to calibrate against real sales. Sellers get the result and auto-filled fields; buyers see it on
+the listing next to the asking price.
 
 This needs Claude API credentials on the server: set `ANTHROPIC_API_KEY` (or log in with `ant auth login`).
-Without them the app still works — the price check just reports that it's unavailable.
-Each seller is limited to 20 price checks per day.
+Without them the app still works — the check just reports that it's unavailable.
+Each seller is limited to 20 checks per day.
 
 ## Sign in with Google
 

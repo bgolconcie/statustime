@@ -18,6 +18,17 @@ import { AppraisalPanel } from '@/components/Appraisal'
 import { useI18n } from '@/i18n'
 
 
+// Condition suggested from what the AI saw in the photo and screenshots
+function suggestCondition(facts) {
+  if (facts.diagnosticsPassed === false) return 'forParts'
+  const parts = [facts.screenCondition, facts.bodyCondition]
+  if (parts.some((c) => c === 'cracked' || c === 'damaged')) return 'fair'
+  if (parts.some((c) => c === 'deepScratches' || c === 'heavyWear')) return 'good'
+  if (parts.includes('unknown')) return null
+  if (parts.every((c) => c === 'flawless')) return 'likeNew'
+  return 'good'
+}
+
 const EMPTY = { title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null, proofs: {} }
 
 export default function Sell() {
@@ -38,13 +49,14 @@ export default function Sell() {
 
   const isPhone = needsProofs(form.category)
   const proofsComplete = isPhone && PHONE_PROOFS.every((k) => form.proofs[k])
+  // The AI check needs the device photo (for scratches and cracks) and all 5 screenshots
+  const readyForCheck = proofsComplete && Boolean(form.image)
 
-  // Fill in what the screenshots told us, without overwriting what the seller typed
+  // Fill in what the AI found, without overwriting what the seller typed
   const applyAppraisal = useCallback(
     ({ facts }) =>
       setForm((f) => {
-        // A failed diagnostics screenshot means the phone is for parts
-        const condition = facts.diagnosticsPassed === false ? 'forParts' : f.condition
+        const condition = suggestCondition(facts) ?? f.condition
         const valuation = estimatePhoneValue(facts, { condition })
         return {
           ...f,
@@ -58,7 +70,7 @@ export default function Sell() {
     [currency]
   )
 
-  // Read the screenshots once all 5 are in; a newer run supersedes older ones.
+  // Check the device once the photo and all 5 screenshots are in; a newer run supersedes older ones.
   // Brand and model are only hints, so typing them doesn't trigger a new read.
   const hints = useRef({})
   hints.current = { brand: form.brand, model: form.model, condition: form.condition }
@@ -68,7 +80,7 @@ export default function Sell() {
     try {
       const { appraisal: result } = await api('/appraisals', {
         method: 'POST',
-        body: { proofs: form.proofs, ...hints.current, lang },
+        body: { proofs: form.proofs, image: form.image, ...hints.current, lang },
       })
       if (run !== appraisalRun.current) return
       setAppraisal({ status: 'done', appraisal: result })
@@ -76,16 +88,16 @@ export default function Sell() {
     } catch (err) {
       if (run === appraisalRun.current) setAppraisal({ status: 'error', error: err })
     }
-  }, [form.proofs, lang, applyAppraisal])
+  }, [form.proofs, form.image, lang, applyAppraisal])
 
   useEffect(() => {
-    if (proofsComplete) {
+    if (readyForCheck) {
       runAppraisal()
     } else {
       appraisalRun.current++
       setAppraisal({ status: 'idle' })
     }
-  }, [proofsComplete, runAppraisal])
+  }, [readyForCheck, runAppraisal])
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -242,6 +254,7 @@ export default function Sell() {
                     }}
                   />
                 ))}
+                {proofsComplete && !form.image && <p className="text-sm text-muted-foreground">{t('appraisal.needsPhoto')}</p>}
                 {appraisal.status !== 'idle' && (
                   <AppraisalPanel
                     // Re-price live as the seller changes the declared condition

@@ -9,5 +9,6 @@ export const isUpload = (image) =>
 
 export const hasAllProofs = (proofs) => PHONE_PROOFS.every((kind) => isUpload(proofs?.[kind]))
 
-export const proofsHash = (proofs) =>
-  crypto.createHash('sha256').update(PHONE_PROOFS.map((kind) => proofs[kind]).join('|')).digest('hex')
+// Identifies the exact photo + screenshots an appraisal was made from
+export const proofsHash = (proofs, photo) =>
+  crypto.createHash('sha256').update([photo, ...PHONE_PROOFS.map((kind) => proofs[kind])].join('|')).digest('hex')

@@ -105,11 +105,10 @@ function addColumn(table, column, definition) {
 
 function migrate() {
   const version = db.prepare('PRAGMA user_version').get().user_version
-  // v2: the marketplace is limited to phones, computers and TVs
+  // v2: brand and model
   if (version < 2) {
     addColumn('listings', 'brand', "TEXT NOT NULL DEFAULT ''")
     addColumn('listings', 'model', "TEXT NOT NULL DEFAULT ''")
-    db.prepare(`DELETE FROM listings WHERE category NOT IN (${CATEGORIES.map(() => '?').join(', ')})`).run(...CATEGORIES)
   }
   // v3: phone listings carry a screenshot appraisal
   if (version < 3) addColumn('listings', 'appraisal', 'TEXT')
@@ -118,7 +117,11 @@ function migrate() {
   // v5: sign in with Google
   if (version < 5) addColumn('users', 'google_sub', 'TEXT')
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)')
-  db.exec('PRAGMA user_version = 5')
+  // v6: the marketplace is limited to phones and tablets
+  if (version < 6) {
+    db.prepare(`DELETE FROM listings WHERE category NOT IN (${CATEGORIES.map(() => '?').join(', ')})`).run(...CATEGORIES)
+  }
+  db.exec('PRAGMA user_version = 6')
 }
 
 // Demo data so a fresh install has something to browse and chat about
@@ -137,8 +140,8 @@ function seed() {
   if (!Object.values(userIds).every(Boolean)) return
 
   const addListing = db.prepare(`
-    INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, i18n, appraisal, created_at)
-    VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, 'ILS', $ages, $i18n, $appraisal, $createdAt)
+    INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, image, i18n, appraisal, created_at)
+    VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, 'ILS', $ages, $image, $i18n, $appraisal, $createdAt)
   `)
   const addProof = db.prepare('INSERT INTO listing_proofs (listing_id, kind, image) VALUES (?, ?, ?)')
   const ids = DEMO_LISTINGS.map((item, i) => {
@@ -152,6 +155,7 @@ function seed() {
       model: item.model,
       price: item.price,
       ages: JSON.stringify(item.ageGroups),
+      image: item.image,
       i18n: JSON.stringify(item.i18n),
       appraisal: item.facts
         ? JSON.stringify({ facts: item.facts, valuation: estimatePhoneValue(item.facts, { condition: item.condition }) })

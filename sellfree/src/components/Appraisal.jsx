@@ -1,4 +1,4 @@
-import { AlertTriangle, Loader2, ScanSearch, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, CircleAlert, CircleCheck, Loader2, ScanSearch, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useI18n } from '@/i18n'
@@ -16,6 +16,8 @@ function factRows(facts, t, locale) {
     ['fact.storage', facts.storageGb ? `${facts.storageGb} GB` : unknown],
     ['fact.purchased', facts.purchaseDate ? formatMonth(facts.purchaseDate, locale) : unknown],
     ['fact.battery', facts.batteryHealthPct != null ? `${facts.batteryHealthPct}%` : unknown],
+    ['fact.screen', t(`screen.${facts.screenCondition ?? 'unknown'}`)],
+    ['fact.body', t(`body.${facts.bodyCondition ?? 'unknown'}`)],
     ['fact.parts', facts.nonGenuineParts.length ? t('fact.nonGenuine', { parts: facts.nonGenuineParts.join(', ') }) : t('fact.allGenuine')],
     ['fact.diagnostics', facts.diagnosticsPassed == null ? unknown : facts.diagnosticsPassed ? t('fact.passed') : t('fact.failed')],
     ['fact.network', facts.networkLocked == null ? unknown : facts.networkLocked ? t('fact.locked') : t('fact.unlocked')],
@@ -36,6 +38,35 @@ export function FactList({ facts }) {
         </div>
       ))}
     </dl>
+  )
+}
+
+// Defects the AI found on the device itself
+function Problems({ problems }) {
+  const { t } = useI18n()
+  if (!problems) return null
+  if (!problems.length) {
+    return (
+      <p className="flex items-center gap-1.5 text-sm font-medium text-green-700 dark:text-green-400">
+        <CircleCheck className="size-4" />
+        {t('appraisal.noProblems')}
+      </p>
+    )
+  }
+  return (
+    <div className="rounded-md border border-red-500/30 bg-red-50 p-3 text-sm text-red-900 dark:bg-red-950/30 dark:text-red-200">
+      <p className="mb-1 flex items-center gap-1.5 font-medium">
+        <CircleAlert className="size-4" />
+        {t('appraisal.problems')}
+      </p>
+      <ul className="list-disc space-y-0.5 ps-5">
+        {problems.map((problem, i) => (
+          <li key={i}>
+            <bdi>{problem}</bdi>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -132,6 +163,7 @@ export function AppraisalPanel({ state, onRetry, onUsePrice }) {
             }
           />
           <Factors valuation={state.appraisal.valuation} />
+          <Problems problems={state.appraisal.facts.problems} />
           <FactList facts={state.appraisal.facts} />
           <Issues issues={state.appraisal.facts.issues} />
           <p className="text-xs text-muted-foreground">{t(`appraisal.confidence.${state.appraisal.facts.confidence}`)}</p>
@@ -168,6 +200,7 @@ export function AppraisalSummary({ listing }) {
         )}
       </div>
       <Estimate valuation={valuation} />
+      <Problems problems={facts.problems} />
       <FactList facts={facts} />
       <Issues issues={facts.issues} />
     </div>

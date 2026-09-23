@@ -99,7 +99,7 @@ router.post('/', requireAuth, (req, res) => {
   const proofs = needsProofs(data.category) ? PHONE_PROOFS.map((kind) => [kind, req.body.proofs?.[kind]]) : []
   if (!proofs.every(([, image]) => isUpload(image))) return res.status(400).json({ error: 'missing_proofs' })
 
-  const read = needsProofs(data.category) ? appraisalForListing(req.body.appraisalId, req.user.id, req.body.proofs) : null
+  const read = needsProofs(data.category) ? appraisalForListing(req.body.appraisalId, req.user.id, req.body.proofs, data.image) : null
   const appraisal = read && { facts: read.facts, valuation: estimatePhoneValue(read.facts, { condition: data.condition }) }
 
   const id = transaction(() => {

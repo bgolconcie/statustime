@@ -1,7 +1,10 @@
 // Turns facts read from a phone's screenshots into an estimated resale value (ILS).
 // Every factor here is a starting point; calibrate against real sales over time.
 
-// Screenshots can't show scratches or cracks, so physical condition is what the seller declares
+// Physical condition as the AI saw it in the device photo
+const SCREEN = { flawless: 1, lightScratches: 0.95, deepScratches: 0.85, cracked: 0.6 }
+const BODY = { flawless: 1, lightWear: 0.97, heavyWear: 0.9, damaged: 0.8 }
+// Fallback when the photo didn't show it: the seller's declared condition
 const CONDITION = { new: 1, likeNew: 0.97, good: 0.9, fair: 0.75, forParts: 0.3 }
 
 const FIRST_YEAR_LOSS = 0.3
@@ -36,9 +39,18 @@ export function estimatePhoneValue(facts, { condition, now = Date.now() } = {}) 
   if (!facts?.launchPriceIls) return null
 
   const age = ageInYears(facts, now)
+  const seen = facts.screenCondition in SCREEN || facts.bodyCondition in BODY
+  const physical = seen
+    ? [
+        { key: 'screen', factor: SCREEN[facts.screenCondition] ?? 1 },
+        { key: 'body', factor: BODY[facts.bodyCondition] ?? 1 },
+        // A device the seller says is for parts is priced that way whatever the photo shows
+        { key: 'condition', factor: condition === 'forParts' ? CONDITION.forParts : 1 },
+      ]
+    : [{ key: 'condition', factor: CONDITION[condition] ?? CONDITION.good }]
   const factors = [
     { key: 'age', factor: ageFactor(age) },
-    { key: 'condition', factor: CONDITION[condition] ?? CONDITION.good },
+    ...physical,
     { key: 'battery', factor: batteryFactor(facts.batteryHealthPct) },
     { key: 'parts', factor: facts.nonGenuineParts?.length ? 0.9 : 1 },
     // Already priced in when the seller declares it "for parts"

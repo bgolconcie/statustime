@@ -1,5 +1,5 @@
-// SellFree is only for second-hand phones, tablets, computers and TVs
-export const CATEGORIES = ['phones', 'tablets', 'computers', 'tvs']
+// SellFree is only for second-hand phones and tablets
+export const CATEGORIES = ['phones', 'tablets']
 
 export const CONDITIONS = ['new', 'likeNew', 'good', 'fair', 'forParts']
 
@@ -13,8 +13,6 @@ export const needsProofs = (category) => category === 'phones' || category === '
 export const BRANDS = {
   phones: ['Apple', 'Samsung', 'Xiaomi', 'Google', 'OnePlus', 'Motorola', 'Nokia'],
   tablets: ['Apple', 'Samsung', 'Lenovo', 'Xiaomi', 'Huawei', 'Microsoft'],
-  computers: ['Apple', 'Lenovo', 'HP', 'Dell', 'Asus', 'Acer', 'Microsoft', 'MSI'],
-  tvs: ['Samsung', 'LG', 'Sony', 'TCL', 'Hisense', 'Philips', 'Xiaomi'],
 }
 
 export const AGE_GROUPS = [

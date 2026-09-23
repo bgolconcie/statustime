@@ -5,7 +5,7 @@ import { DEMO_CONVERSATION, DEMO_LISTINGS, DEMO_PASSWORD, DEMO_USERS } from '@/l
 import { estimatePhoneValue } from '@/lib/valuation'
 
 const TOKEN_KEY = 'sellfree.token'
-const DB_KEY = 'sellfree.demo.db.v2'
+const DB_KEY = 'sellfree.demo.db.v3'
 
 export function getToken() {
   try {
@@ -50,7 +50,7 @@ function seed() {
     price: item.price,
     currency: 'ILS',
     ageGroups: item.ageGroups,
-    image: null,
+    image: item.image,
     i18n: item.i18n,
     status: 'available',
     proofs: item.proofs ?? [],
@@ -106,9 +106,9 @@ export function resetDemo() {
 const nextId = () => ++db.nextId
 
 // Short fingerprint of a set of screenshots, so appraisals don't store the images again
-function fingerprint(proofs) {
+function fingerprint(proofs, photo) {
   let h = 5381
-  for (const s of PHONE_PROOFS.map((k) => proofs?.[k] ?? '')) {
+  for (const s of [photo ?? '', ...PHONE_PROOFS.map((k) => proofs?.[k] ?? '')]) {
     for (let i = 0; i < s.length; i += 7) h = ((h << 5) + h + s.charCodeAt(i)) | 0
     h = ((h << 5) + h + s.length) | 0
   }
@@ -204,7 +204,7 @@ const LAUNCH_PRICES = [
   [/galaxy s2[345]/i, 3600], [/galaxy a/i, 1100], [/pixel/i, 3000], [/redmi|xiaomi/i, 1200],
 ]
 
-// Simulated reading of the screenshots (the real app sends them to Claude)
+// Simulated device check (the real app sends the photo and screenshots to Claude)
 function simulatedFacts({ brand, model }) {
   const name = `${brand ?? ''} ${model ?? ''}`.trim() || 'Apple iPhone 13'
   const launchPriceIls = LAUNCH_PRICES.find(([re]) => re.test(name))?.[1] ?? 2500
@@ -215,6 +215,9 @@ function simulatedFacts({ brand, model }) {
     purchaseDate: '2022-09',
     releaseYear: 2022,
     batteryHealthPct: 86,
+    screenCondition: 'lightScratches',
+    bodyCondition: 'lightWear',
+    problems: [lang() === 'he' ? 'שריטות קלות במסך' : 'Light scratches on the screen'],
     nonGenuineParts: [],
     diagnosticsPassed: true,
     networkLocked: false,
@@ -222,8 +225,8 @@ function simulatedFacts({ brand, model }) {
     confidence: 'medium',
     issues: [
       lang() === 'he'
-        ? 'הדגמה: הנתונים כאן מדומים. באפליקציה האמיתית הם נקראים מצילומי המסך.'
-        : 'Demo: these facts are simulated. In the real app they are read from the screenshots.',
+        ? 'הדגמה: הבדיקה כאן מדומה. באפליקציה האמיתית ה-AI בודק את התמונה וצילומי המסך.'
+        : 'Demo: this check is simulated. In the real app the AI inspects the photo and screenshots.',
     ],
   }
 }
@@ -306,7 +309,7 @@ const routes = [
     const isPhone = needsProofs(data.category)
     const proofs = isPhone ? PHONE_PROOFS.map((kind) => ({ kind, image: body.proofs?.[kind] })) : []
     if (!proofs.every((p) => typeof p.image === 'string' && p.image.startsWith('data:image/'))) fail('missing_proofs')
-    const read = isPhone && db.appraisals.find((a) => a.id === body.appraisalId && a.userId === me.id && a.fingerprint === fingerprint(body.proofs))
+    const read = isPhone && db.appraisals.find((a) => a.id === body.appraisalId && a.userId === me.id && a.fingerprint === fingerprint(body.proofs, data.image))
     const listing = {
       id: nextId(), sellerId: me.id, ...data, i18n: null, status: 'available', proofs, createdAt: Date.now(),
       appraisal: read ? { facts: read.facts, valuation: estimatePhoneValue(read.facts, { condition: data.condition }) } : null,
@@ -376,10 +379,10 @@ const routes = [
 
   ['POST', /^\/appraisals$/, async (_, body) => {
     const me = requireUser()
-    if (!PHONE_PROOFS.every((k) => body.proofs?.[k])) fail('missing_proofs')
+    if (!PHONE_PROOFS.every((k) => body.proofs?.[k]) || !body.image) fail('missing_proofs')
     await sleep(2500)
     const facts = simulatedFacts(body)
-    const appraisal = { id: nextId(), userId: me.id, fingerprint: fingerprint(body.proofs), facts }
+    const appraisal = { id: nextId(), userId: me.id, fingerprint: fingerprint(body.proofs, body.image), facts }
     db.appraisals = [...db.appraisals.slice(-19), appraisal]
     return { appraisal: { id: appraisal.id, facts, valuation: estimatePhoneValue(facts, { condition: body.condition }) } }
   }],
