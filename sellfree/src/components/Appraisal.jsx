@@ -16,8 +16,6 @@ function factRows(facts, t, locale) {
     ['fact.storage', facts.storageGb ? `${facts.storageGb} GB` : unknown],
     ['fact.purchased', facts.purchaseDate ? formatMonth(facts.purchaseDate, locale) : unknown],
     ['fact.battery', facts.batteryHealthPct != null ? `${facts.batteryHealthPct}%` : unknown],
-    ['fact.screen', t(`screen.${facts.screenCondition}`)],
-    ['fact.body', t(`body.${facts.bodyCondition}`)],
     ['fact.parts', facts.nonGenuineParts.length ? t('fact.nonGenuine', { parts: facts.nonGenuineParts.join(', ') }) : t('fact.allGenuine')],
     ['fact.diagnostics', facts.diagnosticsPassed == null ? unknown : facts.diagnosticsPassed ? t('fact.passed') : t('fact.failed')],
     ['fact.network', facts.networkLocked == null ? unknown : facts.networkLocked ? t('fact.locked') : t('fact.unlocked')],

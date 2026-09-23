@@ -10,7 +10,7 @@ const DAILY_LIMIT = 20
 
 // Reads a phone's 5 screenshots with Claude and prices it
 router.post('/', requireAuth, async (req, res, next) => {
-  const { proofs, brand, model, lang } = req.body
+  const { proofs, brand, model, condition, lang } = req.body
   if (!hasAllProofs(proofs)) return res.status(400).json({ error: 'missing_proofs' })
 
   const { n } = db
@@ -20,7 +20,7 @@ router.post('/', requireAuth, async (req, res, next) => {
 
   try {
     const facts = await extractPhoneFacts(proofs, { sellerBrand: brand, sellerModel: model, lang: lang === 'he' ? 'he' : 'en' })
-    const valuation = estimatePhoneValue(facts)
+    const valuation = estimatePhoneValue(facts, { condition })
     const id = db
       .prepare('INSERT INTO appraisals (user_id, proofs_hash, facts, valuation, created_at) VALUES (?, ?, ?, ?, ?)')
       .run(req.user.id, proofsHash(proofs), JSON.stringify(facts), JSON.stringify(valuation), Date.now()).lastInsertRowid
@@ -34,12 +34,13 @@ router.post('/', requireAuth, async (req, res, next) => {
   }
 })
 
-// The appraisal a listing may carry: owned by the seller and made from exactly these screenshots
+// The facts a listing may carry: from an appraisal owned by the seller and made from exactly these screenshots.
+// The caller prices them with the listing's declared condition.
 export function appraisalForListing(appraisalId, userId, proofs) {
   if (!appraisalId) return null
   const row = db.prepare('SELECT * FROM appraisals WHERE id = ? AND user_id = ?').get(appraisalId, userId)
   if (!row || row.proofs_hash !== proofsHash(proofs)) return null
-  return { facts: JSON.parse(row.facts), valuation: JSON.parse(row.valuation) }
+  return { facts: JSON.parse(row.facts) }
 }
 
 export default router

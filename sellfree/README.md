@@ -30,9 +30,10 @@ Demo accounts (created on first run): `dana@sellfree.test` / `yossi@sellfree.tes
 
 ## Phone price check
 
-Phone listings require 5 screenshots (model & storage, purchase date, screen & body photo, battery health,
+Phone listings require 5 screenshots of the phone's own data (model & storage, purchase date, network lock, battery health,
 parts/diagnostics). When all 5 are uploaded, the server sends them to Claude (`server/appraisal.js`), which
-reads the facts (model, storage, purchase date, battery %, condition, genuine parts, carrier lock, launch price).
+reads the facts (model, storage, purchase date, battery %, genuine parts, carrier lock, launch price).
+Physical condition can't be seen in a screenshot, so the estimate uses the condition the seller declares.
 `src/lib/valuation.js` turns those facts into an estimated value in ₪; the factors there are starting points
 to calibrate against real sales. Sellers get the estimate and auto-filled fields; buyers see it on the listing.
 

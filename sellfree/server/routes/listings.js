@@ -3,6 +3,7 @@ import { db, transaction } from '../db.js'
 import { requireAuth } from '../auth.js'
 import { isUpload } from '../images.js'
 import { appraisalForListing } from './appraisals.js'
+import { estimatePhoneValue } from '../../src/lib/valuation.js'
 import { AGE_GROUPS, CATEGORIES, CONDITIONS, PHONE_PROOFS } from '../../src/lib/catalog.js'
 
 const router = Router()
@@ -98,7 +99,8 @@ router.post('/', requireAuth, (req, res) => {
   const proofs = data.category === 'phones' ? PHONE_PROOFS.map((kind) => [kind, req.body.proofs?.[kind]]) : []
   if (!proofs.every(([, image]) => isUpload(image))) return res.status(400).json({ error: 'missing_proofs' })
 
-  const appraisal = data.category === 'phones' ? appraisalForListing(req.body.appraisalId, req.user.id, req.body.proofs) : null
+  const read = data.category === 'phones' ? appraisalForListing(req.body.appraisalId, req.user.id, req.body.proofs) : null
+  const appraisal = read && { facts: read.facts, valuation: estimatePhoneValue(read.facts, { condition: data.condition }) }
 
   const id = transaction(() => {
     const listingId = db

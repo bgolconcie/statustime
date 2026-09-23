@@ -9,6 +9,7 @@ import { NativeSelect } from '@/components/ui/native-select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { AGE_GROUPS, BRANDS, CATEGORIES, CONDITIONS, PHONE_PROOFS } from '@/lib/catalog'
 import { fileToThumbnail } from '@/lib/image'
+import { estimatePhoneValue } from '@/lib/valuation'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import CategoryIcon from '@/components/CategoryIcon'
@@ -16,15 +17,6 @@ import ProofUpload from '@/components/ProofUpload'
 import { AppraisalPanel } from '@/components/Appraisal'
 import { useI18n } from '@/i18n'
 
-function suggestCondition(facts) {
-  if (facts.diagnosticsPassed === false) return 'forParts'
-  const worst = [facts.screenCondition, facts.bodyCondition]
-  if (worst.some((c) => c === 'cracked' || c === 'damaged')) return 'fair'
-  if (worst.some((c) => c === 'deepScratches' || c === 'heavyWear')) return 'good'
-  if (worst.every((c) => c === 'flawless')) return 'likeNew'
-  if (worst.includes('unknown')) return null
-  return 'good'
-}
 
 const EMPTY = { title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [], image: null, proofs: {} }
 
@@ -49,22 +41,27 @@ export default function Sell() {
 
   // Fill in what the screenshots told us, without overwriting what the seller typed
   const applyAppraisal = useCallback(
-    ({ facts, valuation }) =>
-      setForm((f) => ({
-        ...f,
-        brand: f.brand || facts.brand || '',
-        model: f.model || facts.model || '',
-        title: f.title || [facts.brand, facts.model, facts.storageGb && `${facts.storageGb}GB`].filter(Boolean).join(' '),
-        condition: suggestCondition(facts) ?? f.condition,
-        price: f.price === '' && valuation && currency === 'ILS' ? String(valuation.value) : f.price,
-      })),
+    ({ facts }) =>
+      setForm((f) => {
+        // A failed diagnostics screenshot means the phone is for parts
+        const condition = facts.diagnosticsPassed === false ? 'forParts' : f.condition
+        const valuation = estimatePhoneValue(facts, { condition })
+        return {
+          ...f,
+          brand: f.brand || facts.brand || '',
+          model: f.model || facts.model || '',
+          title: f.title || [facts.brand, facts.model, facts.storageGb && `${facts.storageGb}GB`].filter(Boolean).join(' '),
+          condition,
+          price: f.price === '' && valuation && currency === 'ILS' ? String(valuation.value) : f.price,
+        }
+      }),
     [currency]
   )
 
   // Read the screenshots once all 5 are in; a newer run supersedes older ones.
   // Brand and model are only hints, so typing them doesn't trigger a new read.
   const hints = useRef({})
-  hints.current = { brand: form.brand, model: form.model }
+  hints.current = { brand: form.brand, model: form.model, condition: form.condition }
   const runAppraisal = useCallback(async () => {
     const run = ++appraisalRun.current
     setAppraisal({ status: 'loading' })
@@ -246,7 +243,12 @@ export default function Sell() {
                 ))}
                 {appraisal.status !== 'idle' && (
                   <AppraisalPanel
-                    state={appraisal}
+                    // Re-price live as the seller changes the declared condition
+                    state={
+                      appraisal.status === 'done'
+                        ? { ...appraisal, appraisal: { ...appraisal.appraisal, valuation: estimatePhoneValue(appraisal.appraisal.facts, { condition: form.condition }) } }
+                        : appraisal
+                    }
                     onRetry={runAppraisal}
                     // The estimate is in shekels; only offer it when the seller prices in shekels
                     onUsePrice={currency === 'ILS' ? (value) => setForm((f) => ({ ...f, price: String(value) })) : null}

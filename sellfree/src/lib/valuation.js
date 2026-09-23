@@ -1,8 +1,8 @@
 // Turns facts read from a phone's screenshots into an estimated resale value (ILS).
 // Every factor here is a starting point; calibrate against real sales over time.
 
-const SCREEN = { flawless: 1, lightScratches: 0.95, deepScratches: 0.85, cracked: 0.6, unknown: 0.9 }
-const BODY = { flawless: 1, lightWear: 0.97, heavyWear: 0.9, damaged: 0.8, unknown: 0.95 }
+// Screenshots can't show scratches or cracks, so physical condition is what the seller declares
+const CONDITION = { new: 1, likeNew: 0.97, good: 0.9, fair: 0.75, forParts: 0.3 }
 
 const FIRST_YEAR_LOSS = 0.3
 const YEARLY_LOSS_AFTER = 0.15
@@ -32,17 +32,17 @@ function batteryFactor(pct) {
 
 const roundTo10 = (n) => Math.round(n / 10) * 10
 
-export function estimatePhoneValue(facts, now = Date.now()) {
+export function estimatePhoneValue(facts, { condition, now = Date.now() } = {}) {
   if (!facts?.launchPriceIls) return null
 
   const age = ageInYears(facts, now)
   const factors = [
     { key: 'age', factor: ageFactor(age) },
-    { key: 'screen', factor: SCREEN[facts.screenCondition] ?? SCREEN.unknown },
-    { key: 'body', factor: BODY[facts.bodyCondition] ?? BODY.unknown },
+    { key: 'condition', factor: CONDITION[condition] ?? CONDITION.good },
     { key: 'battery', factor: batteryFactor(facts.batteryHealthPct) },
     { key: 'parts', factor: facts.nonGenuineParts?.length ? 0.9 : 1 },
-    { key: 'diagnostics', factor: facts.diagnosticsPassed === false ? 0.5 : 1 },
+    // Already priced in when the seller declares it "for parts"
+    { key: 'diagnostics', factor: facts.diagnosticsPassed === false && condition !== 'forParts' ? 0.5 : 1 },
     { key: 'network', factor: facts.networkLocked ? 0.9 : 1 },
   ]
   const value = factors.reduce((v, f) => v * f.factor, facts.launchPriceIls)

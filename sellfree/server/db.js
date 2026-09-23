@@ -111,7 +111,9 @@ function migrate() {
   }
   // v3: phone listings carry a screenshot appraisal
   if (version < 3) addColumn('listings', 'appraisal', 'TEXT')
-  db.exec('PRAGMA user_version = 3')
+  // v4: the condition photo was replaced by a network-lock screenshot
+  if (version < 4) db.exec("DELETE FROM listing_proofs WHERE kind = 'condition'")
+  db.exec('PRAGMA user_version = 4')
 }
 
 // Simple stand-in "screenshots" for demo phones
@@ -131,15 +133,15 @@ function mockScreenshot(title, rows) {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
 }
 
-function demoAppraisal(facts) {
-  return JSON.stringify({ facts, valuation: estimatePhoneValue(facts) })
+function demoAppraisal(facts, condition) {
+  return JSON.stringify({ facts, valuation: estimatePhoneValue(facts, { condition }) })
 }
 
 function demoProofs(brand, model, storage, purchased, battery) {
   return {
     modelStorage: mockScreenshot('About', [['Model Name', `${brand} ${model}`], ['Capacity', storage], ['Network', 'No SIM restrictions']]),
     purchaseDate: mockScreenshot('Warranty', [['Purchase Date', purchased], ['Limited Warranty', 'Expired']]),
-    condition: mockScreenshot('Condition', [['Screen', 'No scratches'], ['Back', 'Minor wear'], ['Case', 'Always used']]),
+    network: mockScreenshot('About', [['Carrier Lock', 'No SIM restrictions'], ['IMEI', '35 •••••• •••••• 0']]),
     battery: mockScreenshot('Battery Health', [['Maximum Capacity', battery], ['Peak Performance', 'Normal']]),
     diagnostics: mockScreenshot('Diagnostics', [['Display', 'Genuine'], ['Battery', 'Genuine'], ['Camera', 'Genuine'], ['All tests', 'Passed']]),
   }
@@ -193,25 +195,25 @@ function seed() {
 
   const addProof = db.prepare('INSERT INTO listing_proofs (listing_id, kind, image) VALUES (?, ?, ?)')
   const setAppraisal = db.prepare('UPDATE listings SET appraisal = ? WHERE id = ?')
-  // [item index, storage GB, purchase YYYY-MM, battery %, screen, launch price ILS, release year]
+  // [item index, storage GB, purchase YYYY-MM, battery %, launch price ILS, release year]
   const phoneProofs = [
-    [0, 128, '2022-03', 87, 'lightScratches', 3700, 2021],
-    [1, 64, '2024-01', 94, 'flawless', 900, 2023],
-    [6, null, '2025-08', 100, 'flawless', 130, 2019],
-    [7, 128, '2021-06', 79, 'cracked', 1100, 2021],
+    [0, 128, '2022-03', 87, 3700, 2021],
+    [1, 64, '2024-01', 94, 900, 2023],
+    [6, null, '2025-08', 100, 130, 2019],
+    [7, 128, '2021-06', 79, 1100, 2021],
   ]
-  for (const [index, storageGb, purchaseDate, batteryHealthPct, screenCondition, launchPriceIls, releaseYear] of phoneProofs) {
-    const [, , brand, model] = items[index]
+  for (const [index, storageGb, purchaseDate, batteryHealthPct, launchPriceIls, releaseYear] of phoneProofs) {
+    const [, , brand, model, , , condition] = items[index]
     const [year, month] = purchaseDate.split('-')
     const monthName = new Date(Number(year), Number(month) - 1).toLocaleString('en', { month: 'short' })
     const proofs = demoProofs(brand, model, storageGb ? `${storageGb} GB` : '—', `${monthName} ${year}`, `${batteryHealthPct}%`)
     for (const kind of PHONE_PROOFS) addProof.run(ids[index], kind, proofs[kind])
     setAppraisal.run(
       demoAppraisal({
-        brand, model, storageGb, purchaseDate, releaseYear, batteryHealthPct, screenCondition,
-        bodyCondition: 'lightWear', nonGenuineParts: [], diagnosticsPassed: true, networkLocked: false,
+        brand, model, storageGb, purchaseDate, releaseYear, batteryHealthPct,
+        nonGenuineParts: [], diagnosticsPassed: true, networkLocked: false,
         launchPriceIls, confidence: 'high', issues: [],
-      }),
+      }, condition),
       ids[index]
     )
   }
