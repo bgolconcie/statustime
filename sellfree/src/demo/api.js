@@ -281,7 +281,11 @@ const routes = [
     return { token: `demo-${user.id}`, user: publicUser(user) }
   }],
   ['GET', /^\/auth\/me$/, () => ({ user: publicUser(requireUser()) })],
-  ['GET', /^\/auth\/config$/, () => ({ googleClientId: 'demo' })],
+  ['GET', /^\/auth\/config$/, () => ({ googleClientId: 'demo', demoLogin: true })],
+  ['POST', /^\/auth\/demo$/, (_, body) => {
+    const user = db.users.find((u) => u.email === body.email && DEMO_USERS.some((d) => d.email === u.email)) ?? fail('not_found', 404)
+    return { token: `demo-${user.id}`, user: publicUser(user) }
+  }],
   // Simulated Google sign-in: one stand-in Gmail account per browser
   ['POST', /^\/auth\/google$/, () => {
     const email = 'gmail.demo@example.com'

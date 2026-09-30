@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { OAuth2Client } from 'google-auth-library'
 import { db } from '../db.js'
 import { publicUser, requireAuth, signToken } from '../auth.js'
+import { DEMO_USERS } from '../../src/lib/demoData.js'
 
 const router = Router()
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -11,8 +12,19 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || null
 const google = GOOGLE_CLIENT_ID && new OAuth2Client(GOOGLE_CLIENT_ID)
 
+// One-click sign-in as a sample user, for testing only. Never set this on a live server.
+const DEMO_LOGIN = process.env.ALLOW_DEMO_LOGIN === 'true'
+
 router.get('/config', (req, res) => {
-  res.json({ googleClientId: GOOGLE_CLIENT_ID })
+  res.json({ googleClientId: GOOGLE_CLIENT_ID, demoLogin: DEMO_LOGIN })
+})
+
+router.post('/demo', (req, res) => {
+  if (!DEMO_LOGIN) return res.status(404).json({ error: 'not_found' })
+  const demo = DEMO_USERS.find((u) => u.email === req.body.email)
+  const row = demo && db.prepare('SELECT * FROM users WHERE email = ?').get(demo.email)
+  if (!row) return res.status(404).json({ error: 'not_found' })
+  res.json({ token: signToken(row), user: publicUser(row) })
 })
 
 router.post('/register', (req, res) => {

@@ -73,4 +73,4 @@ account with the same (Google-verified) email. Without the variable the button i
 
 ## Env vars
 
-`PORT`, `ANTHROPIC_API_KEY`, `GOOGLE_CLIENT_ID`, `JWT_SECRET` (otherwise a random secret is stored in `server/data/`), `DATA_DIR`.
+`PORT`, `ANTHROPIC_API_KEY`, `GOOGLE_CLIENT_ID`, `ALLOW_DEMO_LOGIN` (`true` shows one-click sign-in as the sample users — testing only, never on a live server), `JWT_SECRET` (otherwise a random secret is stored in `server/data/`), `DATA_DIR`.
