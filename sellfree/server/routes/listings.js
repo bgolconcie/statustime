@@ -4,7 +4,7 @@ import { requireAuth } from '../auth.js'
 import { hasAllProofs } from '../images.js'
 import { appraisalForListing } from './appraisals.js'
 import { estimatePhoneValue } from '../../src/lib/valuation.js'
-import { AGE_GROUPS, CATEGORIES, CONDITIONS, COVER_PROOF, PROOF_IDS } from '../../src/lib/catalog.js'
+import { CATEGORIES, CONDITIONS, COVER_PROOF, PROOF_IDS } from '../../src/lib/catalog.js'
 
 const router = Router()
 const CURRENCIES = ['ILS', 'USD']
@@ -28,7 +28,6 @@ export function toListing(row) {
     model: row.model,
     price: row.price,
     currency: row.currency,
-    ageGroups: JSON.parse(row.age_groups),
     image: row.image,
     i18n: row.i18n ? JSON.parse(row.i18n) : null,
     status: row.status,
@@ -44,7 +43,6 @@ function parseListing(body) {
   const brand = String(body.brand ?? '').trim()
   const model = String(body.model ?? '').trim()
   const price = Number(body.price)
-  const ageGroups = Array.isArray(body.ageGroups) ? [...new Set(body.ageGroups)] : []
 
   const valid =
     title && title.length <= 120 &&
@@ -54,11 +52,10 @@ function parseListing(body) {
     CATEGORIES.includes(body.category) &&
     CONDITIONS.includes(body.condition) &&
     Number.isFinite(price) && price >= 0 && price <= 1_000_000 &&
-    CURRENCIES.includes(body.currency) &&
-    ageGroups.length > 0 && ageGroups.every((g) => AGE_GROUPS.some((a) => a.id === g))
+    CURRENCIES.includes(body.currency)
 
   if (!valid) return null
-  return { title, description, brand, model, category: body.category, condition: body.condition, price, currency: body.currency, ageGroups }
+  return { title, description, brand, model, category: body.category, condition: body.condition, price, currency: body.currency }
 }
 
 function ownListing(req, res) {
@@ -105,13 +102,12 @@ router.post('/', requireAuth, (req, res) => {
     const listingId = db
       .prepare(`
         INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, image, appraisal, created_at)
-        VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, $currency, $ageGroups, $image, $appraisal, $createdAt)
+        VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, $currency, '[]', $image, $appraisal, $createdAt)
       `)
       .run({
         ...data,
         image,
         seller: req.user.id,
-        ageGroups: JSON.stringify(data.ageGroups),
         appraisal: appraisal && JSON.stringify(appraisal),
         createdAt: Date.now(),
       }).lastInsertRowid

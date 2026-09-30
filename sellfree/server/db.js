@@ -35,7 +35,7 @@ db.exec(`
     model       TEXT NOT NULL DEFAULT '',
     price       REAL NOT NULL,
     currency    TEXT NOT NULL,
-    age_groups  TEXT NOT NULL,            -- JSON array of age group ids
+    age_groups  TEXT NOT NULL DEFAULT '[]', -- no longer used (age matching was removed)
     image       TEXT,                     -- data URL thumbnail
     appraisal   TEXT,                     -- JSON { facts, valuation } read from the phone's screenshots
     i18n        TEXT,                     -- optional JSON { title: { en, he }, description: { en, he } }
@@ -145,7 +145,7 @@ function seed() {
 
   const addListing = db.prepare(`
     INSERT INTO listings (seller_id, title, description, category, condition, brand, model, price, currency, age_groups, image, i18n, appraisal, created_at)
-    VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, 'ILS', $ages, $image, $i18n, $appraisal, $createdAt)
+    VALUES ($seller, $title, $description, $category, $condition, $brand, $model, $price, 'ILS', '[]', $image, $i18n, $appraisal, $createdAt)
   `)
   const addProof = db.prepare('INSERT INTO listing_proofs (listing_id, kind, image) VALUES (?, ?, ?)')
   const ids = DEMO_LISTINGS.map((item, i) => {
@@ -158,7 +158,6 @@ function seed() {
       brand: item.brand,
       model: item.model,
       price: item.price,
-      ages: JSON.stringify(item.ageGroups),
       image: item.image,
       i18n: JSON.stringify(item.i18n),
       appraisal: item.facts

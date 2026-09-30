@@ -1,11 +1,11 @@
 // In-browser stand-in for the SellFree server, used by the shareable demo build.
 // Same routes and response shapes as server/routes/*; data lives in this browser only.
-import { AGE_GROUPS, CATEGORIES, CONDITIONS, COVER_PROOF, PROOF_IDS, REQUIRED_PROOFS } from '@/lib/catalog'
+import { CATEGORIES, CONDITIONS, COVER_PROOF, PROOF_IDS, REQUIRED_PROOFS } from '@/lib/catalog'
 import { DEMO_CONVERSATION, DEMO_LISTINGS, DEMO_PASSWORD, DEMO_USERS } from '@/lib/demoData'
 import { estimatePhoneValue } from '@/lib/valuation'
 
 const TOKEN_KEY = 'sellfree.token'
-const DB_KEY = 'sellfree.demo.db.v4'
+const DB_KEY = 'sellfree.demo.db.v5'
 
 export function getToken() {
   try {
@@ -49,7 +49,6 @@ function seed() {
     model: item.model,
     price: item.price,
     currency: 'ILS',
-    ageGroups: item.ageGroups,
     image: item.image,
     i18n: item.i18n,
     status: 'available',
@@ -242,16 +241,15 @@ function parseListing(body) {
   const title = String(body.title ?? '').trim()
   const brand = String(body.brand ?? '').trim()
   const price = Number(body.price)
-  const ageGroups = Array.isArray(body.ageGroups) ? [...new Set(body.ageGroups)] : []
   const valid =
     title && brand && CATEGORIES.includes(body.category) && CONDITIONS.includes(body.condition) &&
-    Number.isFinite(price) && price >= 0 && ageGroups.length > 0 && ageGroups.every((g) => AGE_GROUPS.some((a) => a.id === g))
+    Number.isFinite(price) && price >= 0
   if (!valid) fail('invalid_input')
   return {
     title, brand,
     model: String(body.model ?? '').trim(),
     description: String(body.description ?? '').trim(),
-    category: body.category, condition: body.condition, price, currency: body.currency, ageGroups,
+    category: body.category, condition: body.condition, price, currency: body.currency,
   }
 }
 

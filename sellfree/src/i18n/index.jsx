@@ -42,9 +42,6 @@ export function I18nProvider({ children }) {
   const t = (key, vars = {}) =>
     (translations[lang][key] ?? translations.en[key] ?? key).replace(/\{(\w+)\}/g, (_, v) => vars[v] ?? '')
 
-  // Isolate ranges like "3–12" so RTL text doesn't reorder the numbers
-  const ageRange = (id) => `\u2068${t(`ageRange.${id}`)}\u2069`
-
   const errorText = (err) => {
     const key = `error.${err?.code ?? err}`
     return key in translations.en ? t(key) : t('error.generic')
@@ -73,7 +70,7 @@ export function I18nProvider({ children }) {
     .find((p) => p.type === 'currency').value
 
   return (
-    <I18nContext.Provider value={{ lang, setLang, dir, currency, currencySymbol, t, ageRange, errorText, formatTime, localize, listingText, formatPrice }}>
+    <I18nContext.Provider value={{ lang, setLang, dir, currency, currencySymbol, t, errorText, formatTime, localize, listingText, formatPrice }}>
       {children}
     </I18nContext.Provider>
   )

@@ -29,8 +29,8 @@ function demoProofs({ category, brand, model, look }, facts) {
   return PROOF_IDS.filter((kind) => images[kind]).map((kind) => ({ kind, image: images[kind] }))
 }
 
-const listing = (seller, category, brand, model, [en, he], [dEn, dHe], condition, price, ageGroups, look = {}) => ({
-  seller, category, brand, model, condition, price, ageGroups, look,
+const listing = (seller, category, brand, model, [en, he], [dEn, dHe], condition, price, look = {}) => ({
+  seller, category, brand, model, condition, price, look,
   title: he,
   description: dHe,
   i18n: { title: { en, he }, description: { en: dEn, he: dHe } },
@@ -50,27 +50,27 @@ function device({ look, ...item }, facts) {
 // Newest first; prices in shekels
 export const DEMO_LISTINGS = [
   device(
-    listing('dana', 'phones', 'Apple', 'iPhone 13', ['iPhone 13, 128GB, blue', 'iPhone 13, 128GB, כחול'], ['Battery 87%, always used with a case.', 'סוללה 87%, תמיד היה עם כיסוי.'], 'likeNew', 1900, ['teens', 'adults'], { body: '#1e3a5f' }),
+    listing('dana', 'phones', 'Apple', 'iPhone 13', ['iPhone 13, 128GB, blue', 'iPhone 13, 128GB, כחול'], ['Battery 87%, always used with a case.', 'סוללה 87%, תמיד היה עם כיסוי.'], 'likeNew', 1900, { body: '#1e3a5f' }),
     { modelNumber: 'A2633', ramGb: 4, storageGb: 128, purchaseDate: '2022-03', batteryHealthPct: 87, batteryCycles: 512, launchPriceIls: 3700, releaseYear: 2021, screenCondition: 'flawless', includesBox: true, includesCable: true }
   ),
   device(
-    listing('dana', 'phones', 'Samsung', 'Galaxy A14', ['Samsung Galaxy A14 — great first phone', 'Samsung Galaxy A14 — טלפון ראשון מעולה'], ['Simple and durable, parental controls set up.', 'פשוט ועמיד, מוגדרות הגבלות הורים.'], 'good', 450, ['kids', 'teens'], { body: '#111827' }),
+    listing('dana', 'phones', 'Samsung', 'Galaxy A14', ['Samsung Galaxy A14 — great first phone', 'Samsung Galaxy A14 — טלפון ראשון מעולה'], ['Simple and durable, parental controls set up.', 'פשוט ועמיד, מוגדרות הגבלות הורים.'], 'good', 450, { body: '#111827' }),
     { modelNumber: 'SM-A145F', ramGb: 4, storageGb: 64, purchaseDate: '2024-01', batteryHealthPct: 94, launchPriceIls: 900, releaseYear: 2023, includesCable: true }
   ),
   device(
-    listing('yossi', 'tablets', 'Apple', 'iPad (9th generation)', ['iPad 9th gen, 64GB, Wi‑Fi', 'אייפד דור 9, 64GB, Wi‑Fi'], ['With a keyboard case. Great for school.', 'כולל כיסוי עם מקלדת. מעולה ללימודים.'], 'good', 900, ['kids', 'teens', 'adults'], { body: '#9ca3af' }),
+    listing('yossi', 'tablets', 'Apple', 'iPad (9th generation)', ['iPad 9th gen, 64GB, Wi‑Fi', 'אייפד דור 9, 64GB, Wi‑Fi'], ['With a keyboard case. Great for school.', 'כולל כיסוי עם מקלדת. מעולה ללימודים.'], 'good', 900, { body: '#9ca3af' }),
     { modelNumber: 'A2602', ramGb: 3, storageGb: 64, purchaseDate: '2022-11', batteryHealthPct: null, launchPriceIls: 1600, releaseYear: 2021, includesBox: true, includesCable: true }
   ),
   device(
-    listing('yossi', 'tablets', 'Samsung', 'Galaxy Tab A8', ['Samsung Galaxy Tab A8, 32GB', 'Samsung Galaxy Tab A8, 32GB'], ['Kids profile set up, comes with a sturdy case.', 'מוגדר פרופיל ילדים, מגיע עם כיסוי עמיד.'], 'good', 450, ['kids'], { body: '#374151' }),
+    listing('yossi', 'tablets', 'Samsung', 'Galaxy Tab A8', ['Samsung Galaxy Tab A8, 32GB', 'Samsung Galaxy Tab A8, 32GB'], ['Kids profile set up, comes with a sturdy case.', 'מוגדר פרופיל ילדים, מגיע עם כיסוי עמיד.'], 'good', 450, { body: '#374151' }),
     { modelNumber: 'SM-X200', ramGb: 3, storageGb: 32, purchaseDate: '2023-06', batteryHealthPct: 88, launchPriceIls: 1000, releaseYear: 2022, bodyCondition: 'heavyWear' }
   ),
   device(
-    listing('yossi', 'phones', 'Nokia', '105', ['Nokia 105 — basic phone, large keys', 'Nokia 105 — טלפון בסיסי עם מקשים גדולים'], ['Long battery life, easy to use.', 'סוללה שמחזיקה הרבה, קל לשימוש.'], 'new', 120, ['seniors'], { body: '#1d4ed8' }),
+    listing('yossi', 'phones', 'Nokia', '105', ['Nokia 105 — basic phone, large keys', 'Nokia 105 — טלפון בסיסי עם מקשים גדולים'], ['Long battery life, easy to use.', 'סוללה שמחזיקה הרבה, קל לשימוש.'], 'new', 120, { body: '#1d4ed8' }),
     { modelNumber: 'TA-1174', storageGb: null, purchaseDate: '2025-08', batteryHealthPct: 100, launchPriceIls: 130, releaseYear: 2019, screenCondition: 'flawless', bodyCondition: 'flawless', includesBox: true, includesCable: true }
   ),
   device(
-    listing('dana', 'phones', 'Xiaomi', 'Redmi Note 10', ['Xiaomi Redmi Note 10, cracked screen', 'Xiaomi Redmi Note 10, מסך סדוק'], ['Works, but the screen is cracked. For parts or repair.', 'עובד, אבל המסך סדוק. לחלקים או לתיקון.'], 'forParts', 150, ['adults'], { body: '#0f172a', cracked: true }),
+    listing('dana', 'phones', 'Xiaomi', 'Redmi Note 10', ['Xiaomi Redmi Note 10, cracked screen', 'Xiaomi Redmi Note 10, מסך סדוק'], ['Works, but the screen is cracked. For parts or repair.', 'עובד, אבל המסך סדוק. לחלקים או לתיקון.'], 'forParts', 150, { body: '#0f172a', cracked: true }),
     {
       modelNumber: 'M2101K7AG', ramGb: 4, storageGb: 128, purchaseDate: '2021-06', batteryHealthPct: 79, launchPriceIls: 1100, releaseYear: 2021,
       screenCondition: 'cracked', bodyCondition: 'heavyWear', problems: ['מסך סדוק', 'סוללה מתחת ל-80%'],

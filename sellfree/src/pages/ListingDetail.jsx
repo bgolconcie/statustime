@@ -4,7 +4,6 @@ import { ArrowLeft, MessageCircle, ShieldCheck, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { AgeGroupsText } from '@/components/ListingCard'
 import { needsProofs } from '@/lib/catalog'
 import PageState from '@/components/PageState'
 import CategoryIcon from '@/components/CategoryIcon'
@@ -120,9 +119,6 @@ export default function ListingDetail() {
               )}
             </div>
           )}
-          <p className="text-sm text-muted-foreground">
-            <AgeGroupsText ageGroups={listing.ageGroups} />
-          </p>
 
           <div className="flex items-center gap-3 rounded-lg border p-3">
             <div className="flex size-9 items-center justify-center rounded-full bg-muted">

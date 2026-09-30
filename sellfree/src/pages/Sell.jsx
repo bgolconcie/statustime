@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { AGE_GROUPS, BRANDS, CATEGORIES, CONDITIONS, PROOF_IDS, PROOF_SLOTS, REQUIRED_PROOFS } from '@/lib/catalog'
+import { BRANDS, CATEGORIES, CONDITIONS, PROOF_IDS, PROOF_SLOTS, REQUIRED_PROOFS } from '@/lib/catalog'
 import { MIN_READABLE_SIZE, readUpload } from '@/lib/image'
 import { estimatePhoneValue } from '@/lib/valuation'
 import { api } from '@/lib/api'
@@ -30,12 +29,12 @@ function suggestCondition(facts) {
 }
 
 const EMPTY = {
-  title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '', ageGroups: [],
+  title: '', brand: '', model: '', description: '', category: CATEGORIES[0], condition: CONDITIONS[1], price: '',
   proofs: {},
 }
 
 export default function Sell() {
-  const { t, lang, ageRange, errorText, currency, currencySymbol } = useI18n()
+  const { t, lang, errorText, currency, currencySymbol } = useI18n()
   const navigate = useNavigate()
   const speech = useSpeech()
   const [form, setForm] = useState(EMPTY)
@@ -137,11 +136,6 @@ export default function Sell() {
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
-  const toggleAge = (id) =>
-    setForm((f) => ({
-      ...f,
-      ageGroups: f.ageGroups.includes(id) ? f.ageGroups.filter((g) => g !== id) : [...f.ageGroups, id],
-    }))
 
   const submit = (addAnother) => async (e) => {
     e.preventDefault()
@@ -150,7 +144,6 @@ export default function Sell() {
     if (anyChecking) return setError(t('proofs.pending'))
     if (!form.title.trim()) return setError(t('sell.errorTitle'))
     if (!form.brand.trim()) return setError(t('sell.errorBrand'))
-    if (!form.ageGroups.length) return setError(t('sell.errorAges'))
     setSaving(true)
     try {
       const { proofs: _images, ...fields } = form
@@ -281,21 +274,6 @@ export default function Sell() {
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label>{t('sell.ages')}</Label>
-              <div className="flex flex-wrap gap-2">
-                {AGE_GROUPS.map((g) => {
-                  const active = form.ageGroups.includes(g.id)
-                  return (
-                    <Button key={g.id} type="button" size="sm" variant={active ? 'default' : 'outline'} onClick={() => toggleAge(g.id)}>
-                      {active && <Check />}
-                      {t(`ageGroup.${g.id}`)} <span className="opacity-70">{ageRange(g.id)}</span>
-                    </Button>
-                  )
-                })}
-              </div>
-              <p className="text-xs text-muted-foreground">{t('sell.agesHint')}</p>
-            </div>
 
             {error && <p className="text-sm font-medium text-red-600">{error}</p>}
           </CardContent>

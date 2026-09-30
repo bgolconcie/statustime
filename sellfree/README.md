@@ -1,7 +1,7 @@
 # SellFree
 
 A second-hand marketplace for phones and tablets: people list devices (no limit on how many) and chat with buyers.
-Items are tagged with age groups so shoppers see what fits the age they're shopping for.
+
 The UI picks Hebrew (RTL) or English from the browser language, with a manual switch.
 
 ## Run locally
