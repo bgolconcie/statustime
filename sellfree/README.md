@@ -6,7 +6,8 @@ The UI picks Hebrew (RTL) or English from the browser language, with a manual sw
 
 ## Run locally
 
-Requires Node.js 22.13+ (uses the built-in `node:sqlite`).
+Requires Node.js 22.13 or newer (uses the built-in `node:sqlite`). On an older version `npm install` stops with
+EBADENGINE and the server prints how to upgrade: install the current LTS from https://nodejs.org.
 
 ```bash
 cd sellfree

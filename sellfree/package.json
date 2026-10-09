@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:api": "node --watch --disable-warning=ExperimentalWarning server/index.js",
+    "dev:api": "node --watch --disable-warning=ExperimentalWarning server/start.js",
     "dev:web": "vite",
     "build": "vite build",
-    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "start": "node --disable-warning=ExperimentalWarning server/start.js",
     "preview": "vite preview",
     "build:demo": "vite build --config vite.demo.config.js && node scripts/bundle-demo.js"
   },
