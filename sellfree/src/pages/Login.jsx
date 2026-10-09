@@ -5,9 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import GoogleButton from '@/components/GoogleButton'
-import OrDivider from '@/components/OrDivider'
 import { api } from '@/lib/api'
-import { DEMO_USERS } from '@/lib/demoData'
 import { useAuth } from '@/lib/auth'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -21,17 +19,18 @@ export default function Login() {
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [demoLogin, setDemoLogin] = useState(false)
+  // Sample accounts exist only off a live server (and in the demo); hint at them there
+  const [sampleAccounts, setSampleAccounts] = useState(false)
 
   useEffect(() => {
     api('/auth/config')
-      .then((d) => setDemoLogin(Boolean(d.demoLogin)))
+      .then((d) => setSampleAccounts(Boolean(d.sampleAccounts)))
       .catch(() => {})
   }, [])
 
   if (user) return <Navigate to={from} replace />
 
-  // Sign in with a mode ('login', 'register', 'google', 'demo') and go back where the user came from
+  // Sign in with a mode ('login', 'register', 'google') and go back where the user came from
   const signIn = async (mode, body) => {
     setBusy(true)
     setError('')
@@ -79,23 +78,6 @@ export default function Login() {
             <CardDescription>{t('auth.subtitle')}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            {demoLogin && (
-              <>
-                <div className="grid gap-2 rounded-lg border border-dashed p-3">
-                  <p className="text-sm font-medium">{t('auth.quickTitle')}</p>
-                  <p className="text-xs text-muted-foreground">{t('auth.quickHint')}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {DEMO_USERS.map((u) => (
-                      <Button key={u.key} type="button" variant="secondary" disabled={busy} onClick={() => signIn('demo', { email: u.email })}>
-                        {u.name}
-                        <span className="text-xs opacity-70">· {t(`auth.role.${u.role}`)}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <OrDivider />
-              </>
-            )}
             <GoogleButton onCredential={(credential) => signIn('google', { credential })} />
             {mode === 'register' && (
               <div className="grid gap-2">
@@ -127,7 +109,7 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={busy}>
               {mode === 'login' ? t('auth.loginTab') : t('auth.registerTitle')}
             </Button>
-            {mode === 'login' && <p className="text-center text-xs text-muted-foreground">{t('auth.demo')}</p>}
+            {mode === 'login' && sampleAccounts && <p className="text-center text-xs text-muted-foreground">{t('auth.demo')}</p>}
           </CardFooter>
         </Card>
       </form>

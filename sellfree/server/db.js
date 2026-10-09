@@ -131,8 +131,10 @@ function migrate() {
   db.exec('PRAGMA user_version = 7')
 }
 
-// Demo data so a fresh install has something to browse and chat about
+// Sample users, listings and a chat so a fresh install has something to browse.
+// Never on a live server: the sample accounts have a published password.
 function seed() {
+  if (process.env.NODE_ENV === 'production') return
   const now = Date.now()
   if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n === 0) {
     const hash = bcrypt.hashSync(DEMO_PASSWORD, 10)

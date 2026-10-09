@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs'
 import { OAuth2Client } from 'google-auth-library'
 import { db } from '../db.js'
 import { publicUser, requireAuth, signToken } from '../auth.js'
-import { DEMO_USERS } from '../../src/lib/demoData.js'
 
 const router = Router()
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -12,23 +11,12 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || null
 const google = GOOGLE_CLIENT_ID && new OAuth2Client(GOOGLE_CLIENT_ID)
 
-// One-click sign-in as a sample user, for testing. On by default except on a live server
-// (NODE_ENV=production); ALLOW_DEMO_LOGIN=true or false overrides either way.
-const DEMO_LOGIN = process.env.ALLOW_DEMO_LOGIN
-  ? process.env.ALLOW_DEMO_LOGIN === 'true'
-  : process.env.NODE_ENV !== 'production'
 
 router.get('/config', (req, res) => {
-  res.json({ googleClientId: GOOGLE_CLIENT_ID, demoLogin: DEMO_LOGIN })
+  // Sample accounts are only created off a live server (see db.js)
+  res.json({ googleClientId: GOOGLE_CLIENT_ID, sampleAccounts: process.env.NODE_ENV !== 'production' })
 })
 
-router.post('/demo', (req, res) => {
-  if (!DEMO_LOGIN) return res.status(404).json({ error: 'not_found' })
-  const demo = DEMO_USERS.find((u) => u.email === req.body.email)
-  const row = demo && db.prepare('SELECT * FROM users WHERE email = ?').get(demo.email)
-  if (!row) return res.status(404).json({ error: 'not_found' })
-  res.json({ token: signToken(row), user: publicUser(row) })
-})
 
 router.post('/register', (req, res) => {
   const name = String(req.body.name ?? '').trim()

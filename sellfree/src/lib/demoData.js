@@ -5,8 +5,8 @@ import { devicePhoto, mockScreenshot } from './mockImages.js'
 export const DEMO_PASSWORD = 'demo1234'
 
 export const DEMO_USERS = [
-  { key: 'dana', name: 'Dana', email: 'dana@sellfree.test', role: 'seller' },
-  { key: 'yossi', name: 'Yossi', email: 'yossi@sellfree.test', role: 'buyer' },
+  { key: 'dana', name: 'Dana', email: 'dana@sellfree.test' },
+  { key: 'yossi', name: 'Yossi', email: 'yossi@sellfree.test' },
 ]
 
 // The 8 images a seller would have attached, drawn to match each sample device
