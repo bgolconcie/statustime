@@ -12,8 +12,11 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || null
 const google = GOOGLE_CLIENT_ID && new OAuth2Client(GOOGLE_CLIENT_ID)
 
-// One-click sign-in as a sample user, for testing only. Never set this on a live server.
-const DEMO_LOGIN = process.env.ALLOW_DEMO_LOGIN === 'true'
+// One-click sign-in as a sample user, for testing. On by default except on a live server
+// (NODE_ENV=production); ALLOW_DEMO_LOGIN=true or false overrides either way.
+const DEMO_LOGIN = process.env.ALLOW_DEMO_LOGIN
+  ? process.env.ALLOW_DEMO_LOGIN === 'true'
+  : process.env.NODE_ENV !== 'production'
 
 router.get('/config', (req, res) => {
   res.json({ googleClientId: GOOGLE_CLIENT_ID, demoLogin: DEMO_LOGIN })

@@ -16,7 +16,8 @@ npm run dev     # API on :3001 + Vite on http://localhost:5173
 
 Production-style: `npm run build && npm start` → http://localhost:3001
 
-Demo accounts (created on first run): `dana@sellfree.test` / `yossi@sellfree.test`, password `demo1234`.
+Demo accounts (created on first run): `dana@sellfree.test` / `yossi@sellfree.test`, password `demo1234` — or use
+"Quick sign-in for testing" on the sign-in page, no email or password needed.
 
 ## Shareable demo
 
@@ -73,4 +74,4 @@ account with the same (Google-verified) email. Without the variable the button i
 
 ## Env vars
 
-`PORT`, `ANTHROPIC_API_KEY`, `GOOGLE_CLIENT_ID`, `ALLOW_DEMO_LOGIN` (`true` shows one-click sign-in as the sample users — testing only, never on a live server), `JWT_SECRET` (otherwise a random secret is stored in `server/data/`), `DATA_DIR`.
+`PORT`, `ANTHROPIC_API_KEY`, `GOOGLE_CLIENT_ID`, `ALLOW_DEMO_LOGIN` (one-click sign-in as the sample users for testing; on by default, off when `NODE_ENV=production`; set `true`/`false` to override), `JWT_SECRET` (otherwise a random secret is stored in `server/data/`), `DATA_DIR`.

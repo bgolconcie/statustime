@@ -11,6 +11,9 @@ fs.mkdirSync(DATA_DIR, { recursive: true })
 
 export const db = new DatabaseSync(path.join(DATA_DIR, 'sellfree.db'))
 
+// Wait for a lock (e.g. another process starting on the same file) instead of failing
+db.exec('PRAGMA busy_timeout = 5000')
+
 db.exec(`
   PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;
