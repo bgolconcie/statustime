@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { Globe, LogOut, MessageCircle, Plus, ShoppingBag } from 'lucide-react'
+import { Globe, LogOut, MessageCircle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import Logo from '@/components/Logo'
 import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
@@ -37,9 +38,8 @@ export default function Header() {
   return (
     <header className="sticky top-[env(safe-area-inset-top,0px)] z-10 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4">
-        <Link to="/" className="flex items-center gap-2 font-semibold">
-          <ShoppingBag className="size-5" />
-          SellFree
+        <Link to="/" className="flex items-center" aria-label="SellFree">
+          <Logo className="h-6 w-auto" />
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2">
           <Button variant="ghost" size="sm" onClick={() => setLang(lang === 'he' ? 'en' : 'he')}>

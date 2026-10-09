@@ -26,6 +26,12 @@ created when `NODE_ENV` isn't `production`, so a live server starts empty.
 and inlines it into one page, `dist-demo/sellfree-demo.html`. Data stays in the viewer's browser, the other side
 of a chat replies automatically, and the price check is simulated rather than read by Claude.
 
+## Brand
+
+Logo "E": a bold S with a price-tag hole, ink `#111827` with "Free" in amber `#f59e0b`, set in Inter.
+`brand/` holds the logo (light and dark SVG) and the app icon (SVG and 1024px PNG); `public/` holds the
+favicon and home-screen icons; `src/components/Logo.jsx` draws it in the header (outlines, follows the theme).
+
 ## Structure
 
 - `server/` — Express API + SQLite (`server/data/sellfree.db`, created automatically, git-ignored)
